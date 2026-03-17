@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NEST™ – Bell Schedule</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+
+<body id="bell-body">
+  <div class="bg-watermark"></div>
+  <!-- HEADER -->
+      <header>
+        <div class="logo-container">
+            <a href="index.html">
+                <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
+            </a>
+        </div>
+        <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+            
+            <!-- Quick Links Dropdown -->
+            <div class="header-dropdown">
+                <button class="dropdown-btn" aria-haspopup="true">Quick Links ▾</button>
+                <div class="dropdown-content">
+                    <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+                    <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+                    <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/viewform" target="_blank">🚀 Join Us</a>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <div class="header-qr" title="Hover to enlarge">
+                <img src="assets/qr-code.png" alt="QR Code">
+            </div>
+        </div>
+    </header>
+
+  <main class="bell-layout">
+      <!-- Loading State -->
+      <div id="bell-loading" style="text-align: center; font-size: 1.5rem; margin-top: 100px; color: var(--text-light); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+          Loading Live Schedule Data...
+      </div>
+
+      <!-- Main Content (Hidden until loaded) -->
+      <div id="bell-content" style="display: none; width: 100%;">
+          <div class="bell-grid">
+              <!-- Today -->
+              <div class="bell-card today-card">
+                  <h2 id="today-title" class="bell-title">Today's Schedule</h2>
+                  <table class="bell-table" id="today-table">
+                      <tbody>
+                          <!-- Populated by JS -->
+                      </tbody>
+                  </table>
+              </div>
+
+              <!-- Upcoming -->
+              <div class="bell-card upcoming-card">
+                  <h2 id="upcoming-title" class="bell-title">Upcoming</h2>
+                  <table class="bell-table" id="upcoming-table">
+                      <tbody>
+                          <!-- Populated by JS -->
+                      </tbody>
+                  </table>
+              </div>
+          </div>
+
+          <!-- Ticker / Footer -->
+          <div class="bell-ticker">
+              <span id="ticker-text">Upcoming: ...</span>
+          </div>
+      </div>
+  </main>
+
+      <footer class="site-footer" style="background: rgba(0,0,0,0.3); border-top: none; position: fixed; bottom: 0; width: 100%;">
+        <div class="footer-content">
+            <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+            <div class="footer-links">
+                <!-- Help & Support Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank">💻 Computer Look-up</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank">🎫 Tech Ticket</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank">🌤️ Weather Report</a>
+                    </div>
+                </div>
+
+                <!-- About Me Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="mailto:mpenalver@bethelsd.org">Email me</a>
+                        <a href="tel:2538006221">253.800.6221</a>
+                        <a href="https://drive.google.com/open?id=1g53pPu0Wrv_gr1FJbRP3h2uZrkMlqn-J&usp=drive_fs" target="_blank">Download card</a>
+                        <a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/bell-v2.js"></script>
+
+  
+</body>
+
+</html>
