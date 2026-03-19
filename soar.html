@@ -2,13 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>NEST™ – Bell Schedule</title>
+  <title>NEST™ – SOAR Matrix</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
-<body id="bell-body">
+<body>
   <div class="bg-watermark"></div>
   <!-- HEADER -->
       <header>
@@ -37,44 +37,37 @@
         </div>
     </header>
 
-  <main class="bell-layout">
-      <!-- Loading State -->
-      <div id="bell-loading" style="text-align: center; font-size: 1.5rem; margin-top: 100px; color: var(--text-light); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-          Loading Live Schedule Data...
-      </div>
-
-      <!-- Main Content (Hidden until loaded) -->
-      <div id="bell-content" style="display: none; width: 100%;">
-          <div class="bell-grid">
-              <!-- Today -->
-              <div class="bell-card today-card">
-                  <h2 id="today-title" class="bell-title">Today's Schedule</h2>
-                  <table class="bell-table" id="today-table">
-                      <tbody>
-                          <!-- Populated by JS -->
-                      </tbody>
-                  </table>
-              </div>
-
-              <!-- Upcoming -->
-              <div class="bell-card upcoming-card">
-                  <h2 id="upcoming-title" class="bell-title">Upcoming</h2>
-                  <table class="bell-table" id="upcoming-table">
-                      <tbody>
-                          <!-- Populated by JS -->
-                      </tbody>
-                  </table>
-              </div>
-          </div>
-
-          <!-- Ticker / Footer -->
-          <div class="bell-ticker">
-              <span id="ticker-text">Upcoming: ...</span>
-          </div>
-      </div>
+  <!-- SOAR LAYOUT -->
+  <main class="soar-split-layout">
+    <!-- LEFT SIDEBAR -->
+    <div class="soar-sidebar">
+        <div id="soar-btn-S" class="soar-letter" onmouseover="showSOAR('S')">S</div>
+        <div id="soar-btn-O" class="soar-letter" onmouseover="showSOAR('O')">O</div>
+        <div id="soar-btn-A" class="soar-letter" onmouseover="showSOAR('A')">A</div>
+        <div id="soar-btn-R" class="soar-letter" onmouseover="showSOAR('R')">R</div>
+    </div>
+    
+    <!-- RIGHT CONTENT AREA -->
+    <div class="soar-content-area fade-in" style="animation-delay: 0.2s;">
+        <div id="soar-text-display">
+            <div style="text-align: center; padding: 100px 20px;">
+                <h2 style="color: var(--primary-orange); font-size: 3rem; margin-bottom: 16px;">SOAR Matrix</h2>
+                <p style="color: var(--text-muted); font-size: 1.3rem;">Hover over a letter on the left to view the classroom expectations.</p>
+            </div>
+        </div>
+    </div>
   </main>
 
-      <footer class="site-footer" style="background: rgba(0,0,0,0.3); border-top: none; position: fixed; bottom: 0; width: 100%;">
+  <!-- DECIBEL METER MODAL -->
+  <div id="db-modal" class="modal-overlay" onclick="closeDbMeter(event)">
+      <div class="modal-content" onclick="event.stopPropagation()">
+          <div class="modal-loading">Loading Decibel Meter...</div>
+          <button class="modal-close" onclick="closeDbMeter()">&times;</button>
+          <iframe id="db-iframe" src="" allow="microphone; autoplay; camera"></iframe>
+      </div>
+  </div>
+
+      <footer class="site-footer">
         <div class="footer-content">
             <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
             <div class="footer-links">
@@ -103,9 +96,5 @@
     </footer>
 
   <script src="js/main.js"></script>
-  <script src="js/bell.js"></script>
-
-  
 </body>
-
 </html>

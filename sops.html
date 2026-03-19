@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>NEST™ – Bell Schedule</title>
+  <title>NEST™ – SOPs</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 
-<body id="bell-body">
-  <div class="bg-watermark"></div>
+<body>
   <!-- HEADER -->
       <header>
         <div class="logo-container">
@@ -37,44 +36,48 @@
         </div>
     </header>
 
-  <main class="bell-layout">
-      <!-- Loading State -->
-      <div id="bell-loading" style="text-align: center; font-size: 1.5rem; margin-top: 100px; color: var(--text-light); text-shadow: 0 2px 4px rgba(0,0,0,0.5);">
-          Loading Live Schedule Data...
+  <!-- SOPs LAYOUT -->
+  <div class="sops-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sops-sidebar">
+      <h2>SOPs</h2>
+
+      <button class="sops-link active">Community Agreements</button>
+      <button class="sops-link">Division Norms</button>
+      <button class="sops-link">Manager Norms</button>
+      <button class="sops-link">First 5 / Last 5</button>
+      <button class="sops-link">Magic Spinner</button>
+      <button class="sops-link">Team Roles</button>
+      <button class="sops-link">Rules of Engagement</button>
+      <button class="sops-link">Break Protocol</button>
+      <button class="sops-link">Presentation Norms</button>
+      <button class="sops-link">Peer Editing</button>
+      <button class="sops-link">File Naming</button>
+      <button class="sops-link">Team Workbooks</button>
+      <button class="sops-link">3D Printing</button>
+      <button class="sops-link">Corrections</button>
+      <button class="sops-link">Mission Statement</button>
+    </aside>
+
+    <!-- CONTENT AREA -->
+    <main class="sops-content">
+      <h1>Community Agreements</h1>
+      <p class="subtitle">
+        Shared expectations for how we work together at NEST™
+      </p>
+
+      <div class="placeholder">
+        <p>
+          SOP content will display here.<br />
+          Clicking items on the left will change this content.
+        </p>
       </div>
+    </main>
 
-      <!-- Main Content (Hidden until loaded) -->
-      <div id="bell-content" style="display: none; width: 100%;">
-          <div class="bell-grid">
-              <!-- Today -->
-              <div class="bell-card today-card">
-                  <h2 id="today-title" class="bell-title">Today's Schedule</h2>
-                  <table class="bell-table" id="today-table">
-                      <tbody>
-                          <!-- Populated by JS -->
-                      </tbody>
-                  </table>
-              </div>
+  </div>
 
-              <!-- Upcoming -->
-              <div class="bell-card upcoming-card">
-                  <h2 id="upcoming-title" class="bell-title">Upcoming</h2>
-                  <table class="bell-table" id="upcoming-table">
-                      <tbody>
-                          <!-- Populated by JS -->
-                      </tbody>
-                  </table>
-              </div>
-          </div>
-
-          <!-- Ticker / Footer -->
-          <div class="bell-ticker">
-              <span id="ticker-text">Upcoming: ...</span>
-          </div>
-      </div>
-  </main>
-
-      <footer class="site-footer" style="background: rgba(0,0,0,0.3); border-top: none; position: fixed; bottom: 0; width: 100%;">
+      <footer class="site-footer">
         <div class="footer-content">
             <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
             <div class="footer-links">
@@ -103,9 +106,5 @@
     </footer>
 
   <script src="js/main.js"></script>
-  <script src="js/bell.js"></script>
-
-  
 </body>
-
 </html>

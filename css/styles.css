@@ -1409,3 +1409,207 @@ header, .site-footer, .footer-content, .header-right {
     z-index: 999999 !important;
     border: 1px solid rgba(255,255,255,0.1);
 }
+
+
+/* =========================================
+   AGGRESSIVE DROPDOWN OVERRIDES
+   ========================================= */
+.header-dropdown:hover > .dropdown-content,
+.header-dropdown:focus-within > .dropdown-content,
+.header-dropdown .dropdown-content.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.footer-dropdown:hover > .footer-dropdown-content,
+.footer-dropdown:focus-within > .footer-dropdown-content,
+.footer-dropdown .footer-dropdown-content.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure the containers themselves allow the dropdowns to spill out */
+header, .header-right, .site-footer, .footer-content, .footer-links {
+    overflow: visible !important;
+    contain: none !important;
+}
+
+/* Ensure the absolute positioning isn't getting swallowed */
+.header-dropdown, .footer-dropdown {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+.header-dropdown .dropdown-content {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    z-index: 9999999 !important;
+}
+
+.footer-dropdown .footer-dropdown-content {
+    position: absolute !important;
+    bottom: 100% !important;
+    right: 0 !important;
+    z-index: 9999999 !important;
+}
+
+/* =========================================
+   FIX FOR .dropdown-content CLASS CONFLICT
+   ========================================= */
+.header-dropdown .dropdown-content {
+    /* Override the max-height animation from the main menu cards */
+    max-height: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: block !important; /* Keep it in the DOM but hidden */
+    overflow: visible !important;
+    
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    z-index: 9999999 !important;
+    
+    background-color: var(--dark-bg) !important;
+    min-width: 200px !important;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    margin-top: 10px !important;
+    padding: 0 !important;
+    
+    /* Smooth fade in */
+    transition: opacity 0.2s ease, visibility 0.2s ease !important;
+}
+
+/* Override the anchor tags inside the header dropdown so they don't look like main menu buttons */
+.header-dropdown .dropdown-content a {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    color: var(--text-light) !important;
+}
+
+.header-dropdown .dropdown-content a:hover {
+    background: rgba(255,255,255,0.1) !important;
+    color: white !important;
+}
+
+.header-dropdown:hover > .dropdown-content,
+.header-dropdown:focus-within > .dropdown-content,
+.header-dropdown .dropdown-content.show {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Same for footer */
+.footer-dropdown .footer-dropdown-content {
+    max-height: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    display: block !important;
+    overflow: visible !important;
+    
+    position: absolute !important;
+    bottom: 100% !important;
+    right: 0 !important;
+    z-index: 9999999 !important;
+    
+    background-color: var(--dark-bg) !important;
+    min-width: 200px !important;
+    box-shadow: 0px -8px 16px 0px rgba(0,0,0,0.5) !important;
+    border-radius: 8px !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    margin-bottom: 10px !important;
+    padding: 0 !important;
+    
+    transition: opacity 0.2s ease, visibility 0.2s ease !important;
+}
+
+.footer-dropdown:hover > .footer-dropdown-content,
+.footer-dropdown:focus-within > .footer-dropdown-content,
+.footer-dropdown .footer-dropdown-content.show {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* =========================================
+   FIX FOR SOPS AND SOAR PAGES
+   ========================================= */
+main.sops-content, main.soar-split-layout {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    min-height: 80vh;
+}
+
+/* Ensure the main container doesn't get collapsed */
+.dashboard, .sops-content, .soar-split-layout {
+    position: relative;
+    z-index: 10;
+}
+
+/* Ensure the sidebar menu in SOPs is clickable and visible */
+.sops-sidebar {
+    position: relative;
+    z-index: 20;
+}
+
+/* Ensure the SOAR letters are clickable and visible */
+.soar-sidebar {
+    position: relative;
+    z-index: 20;
+}
+
+/* =========================================
+   RESTORE SOPS AND SOAR LAYOUTS
+   ========================================= */
+.sops-layout {
+    display: flex !important;
+    flex: 1 !important;
+    max-width: 1600px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    padding: 20px 40px !important;
+    gap: 40px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.soar-split-layout {
+    display: flex !important;
+    flex: 1 !important;
+    flex-direction: row !important;
+    padding: 40px !important;
+    max-width: 1500px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    gap: 50px !important;
+    align-items: flex-start !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.sops-sidebar, .soar-sidebar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.sops-content, .soar-content-area {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex: 1 !important;
+}
+
+#soar-text-display {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}

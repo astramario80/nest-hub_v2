@@ -1,3 +1,4 @@
+(function() {
 
 const slideDisplayUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS48SaNAi_BcEsa09RJINK8kX5Su6eJ6g2YvL4dAMqBBNo_09qilAG1tTBXAgSwFoRY1kCLHwR-VBG1/pub?gid=0&single=true&output=csv";
 const currentScheduleUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS48SaNAi_BcEsa09RJINK8kX5Su6eJ6g2YvL4dAMqBBNo_09qilAG1tTBXAgSwFoRY1kCLHwR-VBG1/pub?gid=927955961&single=true&output=csv";
@@ -32,30 +33,60 @@ function parseCSV(text) {
 }
 
 async function loadBellSchedule() {
+    const loadingEl = document.getElementById('bell-loading');
+    
     try {
-        // We append a timestamp to bypass browser caching
+        loadingEl.innerHTML = "Step 1: Initiating connection to Google Sheets...<br><span style='font-size:0.8rem;color:#888;'>This might take a second.</span>";
+        
         const cacheBuster = "&t=" + new Date().getTime();
-        const [slideRes, currentRes] = await Promise.all([
-            fetch(slideDisplayUrl + cacheBuster),
-            fetch(currentScheduleUrl + cacheBuster)
-        ]);
+        
+        loadingEl.innerHTML = "Step 2: Fetching SlideDisplay data...";
+        const slideRes = await fetch(slideDisplayUrl + cacheBuster);
+        
+        loadingEl.innerHTML = "Step 3: Fetching CurrentSchedule data...";
+        const currentRes = await fetch(currentScheduleUrl + cacheBuster);
 
         if (!slideRes.ok || !currentRes.ok) {
-            throw new Error("Google Sheets returned an error (Status " + slideRes.status + ").");
+            throw new Error("Google Sheets returned an error (Status " + slideRes.status + " / " + currentRes.status + ").");
         }
+        
+        loadingEl.innerHTML = "Step 4: Downloading text data...";
         const slideText = await slideRes.text();
         const currentText = await currentRes.text();
+
+        if (slideText.includes("<html") || currentText.includes("<html") || slideText.includes("<!DOCTYPE") || currentText.includes("<!DOCTYPE")) {
+            throw new Error("Google Sheets returned a webpage instead of a CSV file. This means the Bethel School District security wall is blocking the request and redirecting to a login page. You must use Option 3 (Google Apps Script Web App) or ensure the sheet is published completely publicly.");
+        }
 
         if (slideText.includes("#REF!") || currentText.includes("#REF!")) {
             throw new Error("Google Sheets IMPORTRANGE Error: You need to open your new Google Sheet and click 'Allow Access' on the #REF! cell so it can pull the data from the original sheet.");
         }
 
+        loadingEl.innerHTML = "Step 5: Parsing CSV data...";
         const slideData = parseCSV(slideText);
         const currentData = parseCSV(currentText);
 
+        loadingEl.innerHTML = "Step 6: Building interface...";
+
         // 1. Background Color
-        const bgColor = currentData[1] && currentData[1][2] ? currentData[1][2] : '#E87722';
-        document.getElementById('bell-body').style.backgroundColor = bgColor;
+        // Look specifically for a hex code in the second row (index 1), third column (index 2)
+        let bgColor = '#E87722'; // Default NEST Orange
+        
+        if (currentData.length > 1 && currentData[1].length > 2) {
+            let potentialColor = currentData[1][2].trim();
+            // Verify it actually looks like a hex code (#FFF or #FFFFFF)
+            if (/^#([0-9A-F]{3}){1,2}$/i.test(potentialColor)) {
+                bgColor = potentialColor;
+            }
+        }
+        
+        // Also check if the body exists before applying
+        const bellBody = document.getElementById('bell-body');
+        if (bellBody) {
+            bellBody.style.backgroundColor = bgColor;
+            // Add a smooth transition
+            bellBody.style.transition = "background-color 1s ease";
+        }
 
         // 2. Today's Schedule
         const todayTitle = slideData[7] && slideData[7][0] ? slideData[7][0] : 'No School Today';
@@ -114,21 +145,23 @@ async function loadBellSchedule() {
         }
 
         // Show content
-        document.getElementById('bell-loading').style.display = 'none';
+        loadingEl.style.display = 'none';
         document.getElementById('bell-content').style.display = 'block';
 
     } catch (e) {
         console.error(e);
-        let errorMsg = "Failed to load schedule data. ";
+        let errorMsg = "<strong>Failed to load schedule data.</strong><br><br>";
         
         if (window.location.protocol === 'file:') {
-            errorMsg += "<br><br><span style='font-size: 1rem; color: #ff9999;'>Note: Browsers block fetching live data when opening HTML files directly from your computer (file://).<br>This will work perfectly once you upload it to Netlify or run a local server!</span>";
+            errorMsg += "<span style='font-size: 1.1rem; color: #ff9999;'>Note: Browsers block fetching live data when opening HTML files directly from your computer (file://).<br>This will work perfectly once you upload it to Netlify!</span>";
         } else {
-            errorMsg += "<br><br><span style='font-size: 1rem; color: #ff9999;'>Error details: " + e.message + "</span>";
+            errorMsg += "<span style='font-size: 1.1rem; color: #ff9999;'>" + e.message + "</span>";
         }
         
-        document.getElementById('bell-loading').innerHTML = errorMsg;
+        loadingEl.innerHTML = errorMsg;
     }
 }
 
 document.addEventListener('DOMContentLoaded', loadBellSchedule);
+
+})();
