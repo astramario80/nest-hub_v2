@@ -1662,3 +1662,78 @@ main.sops-content {
 #ca-text-display {
     font-size: 1.2rem !important;
 }
+
+/* =========================================
+   FIX FOR BELL SCHEDULE FOOTER DROPDOWNS
+   ========================================= */
+.site-footer {
+    position: relative;
+    z-index: 999999 !important;
+}
+
+.footer-dropdown {
+    position: relative;
+    z-index: 999999 !important;
+}
+
+.footer-dropdown-content {
+    z-index: 999999 !important;
+}
+
+/* Ensure the bell ticker doesn't block the footer */
+.bell-ticker {
+    position: relative;
+    z-index: 10;
+}
+
+/* Ensure the bell layout doesn't overlap the footer */
+.bell-layout {
+    position: relative;
+    z-index: 10;
+    padding-bottom: 60px; /* Give the footer some breathing room */
+}
+
+/* =========================================
+   FIX FOR MAIN MENU CARD DROPDOWN JOLTINESS
+   ========================================= */
+.card {
+    position: relative !important; /* Make card the anchor for absolute positioning */
+    overflow: visible !important; /* Allow the dropdown to break out of the card */
+}
+
+/* Redefine the dropdown content to float over the page */
+.card .dropdown-content {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background-color: var(--card-bg) !important;
+    border-radius: 0 0 16px 16px !important; /* Rounded bottom corners */
+    box-shadow: 0 12px 32px rgba(0,0,0,0.5) !important;
+    z-index: 100 !important;
+    
+    /* Scroll handling inside the floating dropdown */
+    max-height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    overflow-y: auto !important;
+    transition: all 0.3s ease !important;
+    
+    /* Add padding so it looks like part of the card when expanded */
+    padding: 0 24px !important;
+    margin-top: 0 !important;
+    border-top: 1px solid rgba(255,255,255,0.05) !important;
+}
+
+.card:hover .dropdown-content {
+    max-height: 350px !important; /* Maximum height before scrolling */
+    opacity: 1 !important;
+    visibility: visible !important;
+    padding-top: 16px !important;
+    padding-bottom: 24px !important;
+}
+
+/* Ensure the dashboard grid rows don't stretch when dropdowns appear */
+.dashboard {
+    align-items: start !important;
+}
