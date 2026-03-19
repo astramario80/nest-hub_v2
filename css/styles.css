@@ -162,7 +162,7 @@ header {
 
 /* Scroll handling for long dropdowns */
 .card:hover .dropdown-content {
-    max-height: 400px;
+    max-height: 600px;
     opacity: 1;
     margin-top: 20px;
     overflow-y: auto;
@@ -702,7 +702,7 @@ header {
 }
 
 .nested-dropdown:hover .nested-dropdown-content {
-    max-height: 400px;
+    max-height: 600px;
     opacity: 1;
     padding-bottom: 8px;
     margin-top: 4px;
@@ -1726,7 +1726,7 @@ main.sops-content {
 }
 
 .card:hover .dropdown-content {
-    max-height: 350px !important; /* Maximum height before scrolling */
+    max-height: 800px !important; /* Maximum height before scrolling */
     opacity: 1 !important;
     visibility: visible !important;
     padding-top: 16px !important;
