@@ -152,9 +152,7 @@ const sopsData = {
         </div>
         <div class="ca-display-box">
             <p id="ca-text-display">
-                <strong style="color: var(--primary-orange); font-size: 1.2rem;">NEST™ Motto:</strong><br>
-                <em>Never leave an Eagle behind.</em><br><br>
-                <span style="font-size: 0.9rem; color: var(--text-muted);">Hover over a core value above to see its description.</span>
+                <strong style="color: var(--primary-orange); font-size: 1.2rem;">NEST™ Motto:</strong><br><em style="font-size: 1.2rem;">Never leave an Eagle behind.</em><br><br><span style="font-size: 1.2rem; color: var(--text-muted);">Hover over a core value above to see its description.</span>
             </p>
         </div>
       </div>
@@ -601,7 +599,7 @@ const caDescriptions = {
     living: "<strong>Living Document.</strong> We believe that we change. And because we change, so do our beliefs. Accordingly, we believe that these community agreements need to evolve with us."
 };
 
-const defaultCAText = `<strong style="color: var(--primary-orange); font-size: 1.2rem;">NEST™ Motto:</strong><br><em>Never leave an Eagle behind.</em><br><br><span style="font-size: 0.9rem; color: var(--text-muted);">Hover over a core value above to see its description.</span>`;
+const defaultCAText = `<strong style="color: var(--primary-orange); font-size: 1.2rem;">NEST™ Motto:</strong><br><em style="font-size: 1.2rem;">Never leave an Eagle behind.</em><br><br><span style="font-size: 1.2rem; color: var(--text-muted);">Hover over a core value above to see its description.</span>`;
 
 window.showCA = function(key) {
     const display = document.getElementById('ca-text-display');

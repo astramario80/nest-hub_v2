@@ -1613,3 +1613,52 @@ main.sops-content, main.soar-split-layout {
     visibility: visible !important;
     opacity: 1 !important;
 }
+
+/* =========================================
+   FIX FOR SOPS TITLE AND SUBTITLE STACKING
+   ========================================= */
+main.sops-content {
+    display: flex !important;
+    flex-direction: column !important; /* Force vertical stacking */
+    align-items: flex-start !important;
+}
+
+.sops-content h1 {
+    display: block !important;
+    width: 100% !important;
+    color: var(--primary-orange) !important;
+    font-size: 2.8rem !important;
+    margin-bottom: 8px !important;
+    line-height: 1.2 !important;
+    word-wrap: break-word !important;
+}
+
+.sops-content .subtitle {
+    display: block !important;
+    width: 100% !important;
+    color: var(--text-muted) !important;
+    font-size: 1.3rem !important;
+    margin-bottom: 32px !important;
+    padding-bottom: 16px !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+    line-height: 1.4 !important;
+    word-wrap: break-word !important;
+}
+
+.sops-content .placeholder {
+    width: 100% !important;
+}
+
+/* =========================================
+   FIX FOR COMMUNITY AGREEMENTS JOLTINESS
+   ========================================= */
+.ca-display-box {
+    min-height: 180px !important; /* Increased to fit the longest text without expanding */
+    height: 180px !important; /* Fixed height to prevent any joltiness */
+    font-size: 1.2rem !important; /* Standardized font size */
+    overflow: hidden !important; /* Prevent scrollbars if text is slightly too long */
+}
+
+#ca-text-display {
+    font-size: 1.2rem !important;
+}
