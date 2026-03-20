@@ -2398,40 +2398,42 @@ body {
   transform: scale(0.997);
 }
 
+
 /* ====== DROPDOWN STACKING + NO-JOLT FIX (2026-03-20) ====== */
-/* Cards need predictable stacking so expanded menus render above other cards (mobile + desktop). */
 .card{position:relative; z-index:1;}
 .card:hover{z-index:2000;}
-/* In case the grid/container uses transforms, force dropdown layer above siblings. */
-.card .dropdown-content{position:relative; z-index:2100;}
+.card.open{z-index:3000;}
 
-/* Nested dropdown should NOT push items down; it should overlay within the dropdown panel. */
-.nested-dropdown{position:relative; overflow:visible;}
-.nested-dropdown-content{
-  position:absolute;
-  left:0;
-  right:0;
-  top:100%;
-  z-index:2200;
-  margin-top:6px;
-  background: rgba(0,0,0,0.35);
-  border-radius: 8px;
-  padding: 8px 8px 8px 12px;
+
+/* ====== NESTED DROPDOWNS: CLICK/TAP ACCORDION (AUTO-CLOSE) ====== */
+.dropdown-content .nested-dropdown { position: relative; }
+
+.dropdown-content .nested-dropdown .nested-dropdown-content {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  margin-top: 8px;
+  background: rgba(0,0,0,0.28);
+  border-radius: 10px;
+  padding: 10px 10px 10px 14px;
   max-height: 0;
   overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition: max-height .25s ease, opacity .18s ease;
 }
-.nested-dropdown:hover .nested-dropdown-content{
-  max-height: 420px;
+
+.dropdown-content .nested-dropdown.open .nested-dropdown-content {
+  max-height: 520px;
   overflow-y: auto;
   opacity: 1;
   visibility: visible;
 }
-.nested-dropdown-content{opacity:0; visibility:hidden; transition: opacity .2s ease, max-height .25s ease;}
 
-/* Touch devices: hover isn't reliable; keep dropdowns above by stacking and allow tap-driven .show classes. */
-@media (hover: none) and (pointer: coarse){
-  .card{z-index:1;}
-  .card.open{z-index:3000;}
-  .card .dropdown-content{z-index:3100;}
+/* Disable hover-open behavior for nested sections (we use click). */
+.dropdown-content .nested-dropdown:hover .nested-dropdown-content {
+  max-height: 0;
+  opacity: 0;
+  visibility: hidden;
 }
-
