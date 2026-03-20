@@ -576,14 +576,14 @@
     const yearEl = document.getElementById("current-year");
     if (yearEl) yearEl.textContent = new Date().getFullYear();
     // Route from inventory navigation (supports both new nav + legacy cards)
-    const navTargets = $(".inv-nav-item, .inv-device-card");
+    const navTargets = $$(".inv-nav-item, .inv-device-card");
     navTargets.forEach(btn => {
       btn.addEventListener("click", () => {
         const view = btn.getAttribute("data-view");
         if (view) showPanel(view);
 
         // active state for the horizontal nav
-        $(".inv-nav-item").forEach(x => x.classList.remove("active"));
+        $$(".inv-nav-item").forEach(x => x.classList.remove("active"));
         if (btn.classList.contains("inv-nav-item")) btn.classList.add("active");
       });
     });
