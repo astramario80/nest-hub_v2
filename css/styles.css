@@ -2397,3 +2397,28 @@ body {
 .inv-table tbody tr:active {
   transform: scale(0.997);
 }
+
+/* =========================================
+   FIX FOR MAIN MENU CARDS GETTING BLOCKED
+   ========================================= */
+/* 1. Pop the hovered card to the very front so dropdowns don't fall behind other cards */
+.card:hover {
+    z-index: 999;
+}
+/* 2. On mobile/smaller screens, make the dropdowns push content down (accordion style) 
+      so they never get cut off off-screen */
+@media (max-width: 768px) {
+    .card .dropdown-content {
+        position: relative !important;
+        box-shadow: none !important;
+        border-radius: 8px !important;
+        border-top: none !important;
+        padding: 0 !important;
+    }
+    
+    .card:hover .dropdown-content {
+        padding-top: 15px !important;
+        padding-bottom: 0 !important;
+        max-height: 1200px !important; /* Allows plenty of room for nested dropdowns */
+    }
+}
