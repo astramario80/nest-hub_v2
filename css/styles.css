@@ -2343,3 +2343,57 @@ body {
   background: rgba(232, 119, 34, 0.16);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
+
+/* Inventory Director gear link */
+.inventory-gear {
+  border: 1px solid rgba(232, 119, 34, 0.45);
+  background: rgba(232, 119, 34, 0.10);
+  color: var(--text-light);
+  padding: 10px 12px;
+  border-radius: 12px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.inventory-gear:hover {
+  transform: translateY(-1px);
+  background: rgba(232, 119, 34, 0.18);
+}
+
+.inventory-gear span {
+  font-size: 0.95rem;
+}
+
+.inventory-gear:active {
+  transform: translateY(0);
+}
+
+/* Click animations */
+.inv-nav-item:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.inventory-panel {
+  transform-origin: top center;
+}
+
+.inventory-panel.panel-pop {
+  animation: invPanelPop 260ms ease;
+}
+
+@keyframes invPanelPop {
+  0% { transform: scale(0.992); opacity: 0.85; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.inv-table tbody tr {
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.inv-table tbody tr:active {
+  transform: scale(0.997);
+}
