@@ -842,54 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    
-
-    /* ===== CARD DROPDOWN TOGGLE (MAIN MENU) =====
-       - Hover can still reveal on desktop via CSS
-       - Click/tap the .card-header toggles dropdown (and closes others)
-       - Click/tap anywhere outside closes
-    */
-    const cardHeaders = document.querySelectorAll('.card .card-header');
-    cardHeaders.forEach(header => {
-        header.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            closeAllDropdowns();
-            const card = header.closest('.card');
-            const content = card ? card.querySelector('.dropdown-content') : null;
-            if (card) card.classList.toggle('open');
-            if (content) content.classList.toggle('show');
-        });
-    });
-
-    /* ===== NESTED DROPDOWNS (ACCORDION, AUTO-CLOSE) ===== */
-    document.querySelectorAll('.dropdown-content').forEach(menu => {
-        const nested = Array.from(menu.querySelectorAll('.nested-dropdown'));
-        if (!nested.length) return;
-
-        function closeSiblings(except){
-            nested.forEach(nb => {
-                if (except && nb === except) return;
-                nb.classList.remove('open');
-            });
-        }
-
-        nested.forEach(nb => {
-            const toggle = nb.querySelector('.nested-dropdown-toggle') || nb;
-            const panel = nb.querySelector('.nested-dropdown-content');
-            if (!panel) return;
-
-            toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const willOpen = !nb.classList.contains('open');
-                closeSiblings(nb);
-                nb.classList.toggle('open', willOpen);
-            });
-        });
-    });
-
-// Close dropdowns when clicking anywhere else on the screen
+    // Close dropdowns when clicking anywhere else on the screen
     window.addEventListener('click', (e) => {
         if (!e.target.matches('.dropdown-btn') && !e.target.matches('.footer-dropdown-title')) {
             closeAllDropdowns();

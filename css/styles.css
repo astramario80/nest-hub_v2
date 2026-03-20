@@ -2397,30 +2397,3 @@ body {
 .inv-table tbody tr:active {
   transform: scale(0.997);
 }
-
-.card.open{z-index:3000;}
-
-
-/* CARD DROPDOWN CLICK SUPPORT */
-.card .dropdown-content{display:none;}
-.card:hover .dropdown-content{display:block;}
-.card .dropdown-content.show{display:block;}
-
-
-/* ====== NESTED DROPDOWNS: CLICK/TAP ACCORDION (AUTO-CLOSE) ====== */
-.dropdown-content .nested-dropdown .nested-dropdown-content{
-  position: static !important;
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  visibility: hidden;
-  transition: max-height .25s ease, opacity .18s ease;
-}
-.dropdown-content .nested-dropdown.open .nested-dropdown-content{
-  max-height: 520px;
-  overflow-y: auto;
-  opacity: 1;
-  visibility: visible;
-}
-/* Disable hover-open for nested */
-.dropdown-content .nested-dropdown:hover .nested-dropdown-content{max-height:0;opacity:0;visibility:hidden;}
