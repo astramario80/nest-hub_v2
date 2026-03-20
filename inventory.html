@@ -44,7 +44,6 @@
 
       <div class="inventory-actions">
         <button class="inventory-btn" id="refresh-all">↻ Refresh</button>
-        <a class="inventory-btn secondary" href="index.html">← Back to NEST™ Hub</a>
       </div>
     </div>
 
@@ -59,7 +58,7 @@
       </button>
 
       <button class="inv-device-card" data-view="drones">
-        <div class="inv-device-emoji">🚁</div>
+        <div class="inv-device-emoji">🛸</div>
         <div class="inv-device-text">
           <div class="inv-device-name">Drones</div>
           <div class="inv-device-desc">Status • Drone # • Student (Period) • Equipment • Notes</div>
@@ -98,7 +97,6 @@
           <h2>🧰 Engineering Essentials Kits</h2>
           <p class="panel-subtitle">Live view (scrubbed): status, kit number, first name + period, notes.</p>
         </div>
-        <button class="inventory-btn secondary" data-back>← Back</button>
       </div>
 
       <div class="panel-body">
@@ -118,7 +116,6 @@
           <h2>🚁 Drones</h2>
           <p class="panel-subtitle">Live view (scrubbed): status, drone number, student + period, equipment, notes.</p>
         </div>
-        <button class="inventory-btn secondary" data-back>← Back</button>
       </div>
 
       <div class="panel-body">
@@ -139,7 +136,6 @@
           <h2>💻 Laptops</h2>
           <p class="panel-subtitle">Use lookup to find a laptop assignment, or open a period matrix.</p>
         </div>
-        <button class="inventory-btn secondary" data-back>← Back</button>
       </div>
 
       <div class="panel-body">
@@ -191,7 +187,6 @@
           <h2>🔌 USBs</h2>
           <p class="panel-subtitle">Search a USB by number or browse in ranges of 30.</p>
         </div>
-        <button class="inventory-btn secondary" data-back>← Back</button>
       </div>
 
       <div class="panel-body">
@@ -246,7 +241,6 @@
           <h2>📻 Radios</h2>
           <p class="panel-subtitle">Live view (scrubbed): status, radio number, student + period, notes.</p>
         </div>
-        <button class="inventory-btn secondary" data-back>← Back</button>
       </div>
 
       <div class="panel-body">
@@ -263,8 +257,32 @@
     <div class="inv-toast" id="inv-toast" aria-live="polite" aria-atomic="true" hidden></div>
   </main>
 
-  <footer>
-    © Copyright 2023 by Mario Penalver, MA MAE
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+      <div class="footer-links">
+        <!-- Help & Support Dropdown -->
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank">💻 Computer Look-up</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank">🎫 Tech Ticket</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank">🌤️ Weather Report</a>
+          </div>
+        </div>
+
+        <!-- About Me Dropdown -->
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </footer>
 
   <script src="js/main.js"></script>
