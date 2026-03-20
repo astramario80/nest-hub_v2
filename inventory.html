@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEST™ Inventory Lookup</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="bg-watermark"></div>
+
+  <header>
+    <div class="logo-container">
+      <a href="index.html">
+        <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;" />
+      </a>
+    </div>
+
+    <div class="header-right">
+      <div id="today-date" class="date-display">Today is...</div>
+
+      <div class="header-dropdown">
+        <button class="dropdown-btn" aria-haspopup="true">Quick Links ▾</button>
+        <div class="dropdown-content">
+          <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+          <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/viewform" target="_blank">🚀 Join Us</a>
+        </div>
+      </div>
+
+      <div class="header-qr" title="Hover to enlarge">
+        <img src="assets/qr-code.png" alt="QR Code" />
+      </div>
+    </div>
+  </header>
+
+  <main class="inventory-page">
+    <div class="inventory-top">
+      <div class="inventory-title">
+        <h1>Inventory Lookup</h1>
+        <p class="inventory-subtitle">Live, from the Director of Inventory.</p>
+      </div>
+
+      <div class="inventory-actions">
+        <a class="inventory-gear" href="https://docs.google.com/spreadsheets/d/1gAksPMtChw2vwC61aBDqVBEx8BrgG2GLbqX31Ld2ZqM/edit?gid=2070835384#gid=2070835384" target="_blank" title="Open Device Assignments (Inventory Directors)">
+          ⚙️
+          <span>Director View</span>
+        </a>
+        <button class="inventory-btn" id="refresh-all">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- INVENTORY NAV: consolidated horizontal menu -->
+    <nav class="inv-nav" aria-label="Inventory device navigation">
+      <button class="inv-nav-item" type="button" data-view="kits">
+        <span class="inv-nav-ico">🧰</span>
+        <span class="inv-nav-label">EE Kits</span>
+        <span class="inv-nav-tip">Status • Kit # • Student (P) • Notes</span>
+      </button>
+
+      <button class="inv-nav-item" type="button" data-view="drones">
+        <span class="inv-nav-ico">🛸</span>
+        <span class="inv-nav-label">Drones</span>
+        <span class="inv-nav-tip">Status • Drone # • Student (P) • Equipment • Notes</span>
+      </button>
+
+      <button class="inv-nav-item" type="button" data-view="laptops">
+        <span class="inv-nav-ico">💻</span>
+        <span class="inv-nav-label">Laptops</span>
+        <span class="inv-nav-tip">Lookup by laptop # • Period matrices</span>
+      </button>
+
+      <button class="inv-nav-item" type="button" data-view="usbs">
+        <span class="inv-nav-ico">💾</span>
+        <span class="inv-nav-label">USBs</span>
+        <span class="inv-nav-tip">Search by USB # • Browse ranges of 30</span>
+      </button>
+
+      <button class="inv-nav-item" type="button" data-view="radios">
+        <span class="inv-nav-ico">📻</span>
+        <span class="inv-nav-label">Radios</span>
+        <span class="inv-nav-tip">Status • Radio # • Student (P) • Notes</span>
+      </button>
+    </nav>
+
+    <div class="inv-nav-spacer" aria-hidden="true"></div>
+
+    <div class="inv-nav-hint">Click a device above to open its live inventory table.</div>
+
+    <div class="inv-divider" aria-hidden="true"></div>
+
+    <div class="inv-top-gap" aria-hidden="true"></div>
+
+    <!-- DEVICE PANELS -->
+    
+    <!-- DETAIL PANELS -->
+    <section class="inventory-panel" id="panel-kits" data-panel="kits" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>🧰 Engineering Essentials Kits</h2>
+          <p class="panel-subtitle">Live view (scrubbed): status, kit number, first name + period, notes.</p>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <div class="panel-tools">
+          <input class="inv-input" id="kits-filter" placeholder="Filter (type kit #, status, student, note)…" autocomplete="off" />
+        </div>
+
+        <div class="inv-table-wrap">
+          <table class="inv-table" id="kits-table"></table>
+        </div>
+      </div>
+    </section>
+
+    <section class="inventory-panel" id="panel-drones" data-panel="drones" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>🚁 Drones</h2>
+          <p class="panel-subtitle">Live view (scrubbed): status, drone number, student + period, equipment, notes.</p>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <div class="panel-tools">
+          <input class="inv-input" id="drones-filter" placeholder="Filter (type drone #, status, student, equipment, note)…" autocomplete="off" />
+        </div>
+
+        <div class="inv-table-wrap">
+          <table class="inv-table" id="drones-table"></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAPTOPS: landing + period subpages -->
+    <section class="inventory-panel" id="panel-laptops" data-panel="laptops" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>💻 Laptops</h2>
+          <p class="panel-subtitle">Use lookup to find a laptop assignment, or open a period matrix.</p>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <!-- Laptops Home -->
+        <div class="subview" data-subview="laptops-home">
+          <div class="panel-tools two-col">
+            <div>
+              <div class="tool-label">Laptop Lookup</div>
+              <div class="tool-row">
+                <select class="inv-select" id="laptop-select"></select>
+                <button class="inventory-btn" id="laptop-lookup-btn">Lookup</button>
+              </div>
+              <div class="tool-help">Select a laptop # to see which period/group has it assigned.</div>
+            </div>
+
+            <div>
+              <div class="tool-label">Period Views</div>
+              <div class="pill-row" id="laptop-period-pills"></div>
+              <div class="tool-help">Click a period to open that matrix view.</div>
+            </div>
+          </div>
+
+          <div class="inv-card" id="laptop-lookup-result" hidden>
+            <div class="inv-card-title">Laptop Assignment</div>
+            <div class="inv-card-body" id="laptop-lookup-body"></div>
+          </div>
+
+          <div class="inv-muted" style="margin-top: 18px;">Tip: The period matrix is the fastest way to find “who has what” during class.</div>
+        </div>
+
+        <!-- Laptops Period Matrix -->
+        <div class="subview" data-subview="laptops-period" hidden>
+          <div class="subview-header">
+            <button class="inventory-btn secondary" id="laptops-back-home">← Back to Laptops</button>
+            <div class="subview-title" id="laptops-period-title">Period</div>
+          </div>
+
+          <div class="inv-table-wrap">
+            <table class="inv-table" id="laptops-period-table"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- USBS: landing + ranges of 30 -->
+    <section class="inventory-panel" id="panel-usbs" data-panel="usbs" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>🔌 USBs</h2>
+          <p class="panel-subtitle">Search a USB by number or browse in ranges of 30.</p>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <!-- USB Home -->
+        <div class="subview" data-subview="usbs-home">
+          <div class="panel-tools two-col">
+            <div>
+              <div class="tool-label">USB Lookup</div>
+              <div class="tool-row">
+                <input class="inv-input" id="usb-search" placeholder="Type a USB # (ex: 87)…" inputmode="numeric" autocomplete="off" />
+                <button class="inventory-btn" id="usb-search-btn">Search</button>
+              </div>
+              <div class="tool-help">Search returns status, assignment (if any), and notes.</div>
+            </div>
+
+            <div>
+              <div class="tool-label">Browse Ranges</div>
+              <div class="pill-row" id="usb-range-pills"></div>
+              <div class="tool-help">Each range shows 30 USBs at a time.</div>
+            </div>
+          </div>
+
+          <div class="inv-card" id="usb-search-result" hidden>
+            <div class="inv-card-title">USB Result</div>
+            <div class="inv-card-body" id="usb-search-body"></div>
+          </div>
+
+          <div class="inv-muted" style="margin-top: 18px;">Most USBs will be unassigned — browse ranges when you need to audit or assign.</div>
+        </div>
+
+        <!-- USB Range Table -->
+        <div class="subview" data-subview="usbs-range" hidden>
+          <div class="subview-header">
+            <button class="inventory-btn secondary" id="usbs-back-home">← Back to USBs</button>
+            <div class="subview-title" id="usbs-range-title">USBs</div>
+          </div>
+
+          <div class="panel-tools">
+            <input class="inv-input" id="usbs-filter" placeholder="Filter within this range…" autocomplete="off" />
+          </div>
+
+          <div class="inv-table-wrap">
+            <table class="inv-table" id="usbs-range-table"></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="inventory-panel" id="panel-radios" data-panel="radios" hidden>
+      <div class="panel-header">
+        <div>
+          <h2>📻 Radios</h2>
+          <p class="panel-subtitle">Live view (scrubbed): status, radio number, student + period, notes.</p>
+        </div>
+      </div>
+
+      <div class="panel-body">
+        <div class="panel-tools">
+          <input class="inv-input" id="radios-filter" placeholder="Filter (type radio #, status, student, note)…" autocomplete="off" />
+        </div>
+
+        <div class="inv-table-wrap">
+          <table class="inv-table" id="radios-table"></table>
+        </div>
+      </div>
+    </section>
+
+    <div class="inv-toast" id="inv-toast" aria-live="polite" aria-atomic="true" hidden></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+      <div class="footer-links">
+        <!-- Help & Support Dropdown -->
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank">💻 Computer Look-up</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank">🎫 Tech Ticket</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank">🌤️ Weather Report</a>
+          </div>
+        </div>
+
+        <!-- About Me Dropdown -->
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/inventory.js"></script>
+</body>
+</html>
