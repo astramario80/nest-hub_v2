@@ -205,7 +205,7 @@
 
   // ---------- View switching ----------
   function showPanel(panelKey) {
-    $(".inventory-panel").forEach(p => {
+    $$(".inventory-panel").forEach(p => {
       const isMatch = p.getAttribute("data-panel") === panelKey;
       p.hidden = !isMatch;
       if (isMatch) {
