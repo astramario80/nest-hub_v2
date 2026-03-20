@@ -568,10 +568,22 @@
   function initPage() {
     const yearEl = document.getElementById("current-year");
     if (yearEl) yearEl.textContent = new Date().getFullYear();
-    // Route from inventory top nav
-    $(".inv-nav-item").forEach(btn => {
-      btn.addEventListener("click", () => showPanel(btn.getAttribute("data-view")));
+    // Route from inventory navigation (supports both new nav + legacy cards)
+    const navTargets = $(".inv-nav-item, .inv-device-card");
+    navTargets.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const view = btn.getAttribute("data-view");
+        if (view) showPanel(view);
+
+        // active state for the horizontal nav
+        $(".inv-nav-item").forEach(x => x.classList.remove("active"));
+        if (btn.classList.contains("inv-nav-item")) btn.classList.add("active");
+      });
     });
+
+    if (!navTargets.length) {
+      showToast("Inventory nav not found — check HTML/JS sync.");
+    }
 
     // Back buttons for panels
     $$('[data-back]').forEach(btn => {
