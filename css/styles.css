@@ -2398,42 +2398,29 @@ body {
   transform: scale(0.997);
 }
 
-
-/* ====== DROPDOWN STACKING + NO-JOLT FIX (2026-03-20) ====== */
-.card{position:relative; z-index:1;}
-.card:hover{z-index:2000;}
 .card.open{z-index:3000;}
 
 
-/* ====== NESTED DROPDOWNS: CLICK/TAP ACCORDION (AUTO-CLOSE) ====== */
-.dropdown-content .nested-dropdown { position: relative; }
+/* CARD DROPDOWN CLICK SUPPORT */
+.card .dropdown-content{display:none;}
+.card:hover .dropdown-content{display:block;}
+.card .dropdown-content.show{display:block;}
 
-.dropdown-content .nested-dropdown .nested-dropdown-content {
+
+/* ====== NESTED DROPDOWNS: CLICK/TAP ACCORDION (AUTO-CLOSE) ====== */
+.dropdown-content .nested-dropdown .nested-dropdown-content{
   position: static !important;
-  left: auto !important;
-  right: auto !important;
-  top: auto !important;
-  margin-top: 8px;
-  background: rgba(0,0,0,0.28);
-  border-radius: 10px;
-  padding: 10px 10px 10px 14px;
   max-height: 0;
   overflow: hidden;
   opacity: 0;
   visibility: hidden;
   transition: max-height .25s ease, opacity .18s ease;
 }
-
-.dropdown-content .nested-dropdown.open .nested-dropdown-content {
+.dropdown-content .nested-dropdown.open .nested-dropdown-content{
   max-height: 520px;
   overflow-y: auto;
   opacity: 1;
   visibility: visible;
 }
-
-/* Disable hover-open behavior for nested sections (we use click). */
-.dropdown-content .nested-dropdown:hover .nested-dropdown-content {
-  max-height: 0;
-  opacity: 0;
-  visibility: hidden;
-}
+/* Disable hover-open for nested */
+.dropdown-content .nested-dropdown:hover .nested-dropdown-content{max-height:0;opacity:0;visibility:hidden;}

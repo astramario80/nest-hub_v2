@@ -842,7 +842,54 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Close dropdowns when clicking anywhere else on the screen
+    
+
+    /* ===== CARD DROPDOWN TOGGLE (MAIN MENU) =====
+       - Hover can still reveal on desktop via CSS
+       - Click/tap the .card-header toggles dropdown (and closes others)
+       - Click/tap anywhere outside closes
+    */
+    const cardHeaders = document.querySelectorAll('.card .card-header');
+    cardHeaders.forEach(header => {
+        header.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeAllDropdowns();
+            const card = header.closest('.card');
+            const content = card ? card.querySelector('.dropdown-content') : null;
+            if (card) card.classList.toggle('open');
+            if (content) content.classList.toggle('show');
+        });
+    });
+
+    /* ===== NESTED DROPDOWNS (ACCORDION, AUTO-CLOSE) ===== */
+    document.querySelectorAll('.dropdown-content').forEach(menu => {
+        const nested = Array.from(menu.querySelectorAll('.nested-dropdown'));
+        if (!nested.length) return;
+
+        function closeSiblings(except){
+            nested.forEach(nb => {
+                if (except && nb === except) return;
+                nb.classList.remove('open');
+            });
+        }
+
+        nested.forEach(nb => {
+            const toggle = nb.querySelector('.nested-dropdown-toggle') || nb;
+            const panel = nb.querySelector('.nested-dropdown-content');
+            if (!panel) return;
+
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const willOpen = !nb.classList.contains('open');
+                closeSiblings(nb);
+                nb.classList.toggle('open', willOpen);
+            });
+        });
+    });
+
+// Close dropdowns when clicking anywhere else on the screen
     window.addEventListener('click', (e) => {
         if (!e.target.matches('.dropdown-btn') && !e.target.matches('.footer-dropdown-title')) {
             closeAllDropdowns();
@@ -857,101 +904,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
-
-
-/* =========================
- Main Menu Card Dropdowns (Tap/Click Toggle)
- - Hover can still reveal (CSS), but click toggles open/closed
- - Click outside closes
- - ESC closes
- ========================= */
-
-document.addEventListener('DOMContentLoaded', () => {
-  const cards = Array.from(document.querySelectorAll('.card'));
-  if (!cards.length) return;
-
-  const dropdownSelector = '.dropdown-content';
-
-  function getDropdowns(card){
-    return Array.from(card.querySelectorAll(dropdownSelector));
-  }
-
-  function setOpen(card, open){
-    const dropdowns = getDropdowns(card);
-    if (!dropdowns.length) return;
-    card.classList.toggle('open', open);
-    dropdowns.forEach(d => {
-      d.classList.toggle('show', open);
-      d.setAttribute('aria-hidden', open ? 'false' : 'true');
-    });
-  }
-
-  function closeAll(except=null){
-    cards.forEach(c => {
-      if (except && c === except) return;
-      setOpen(c, false);
-    });
-  }
-
-  // Click header (preferred) to toggle; fall back to whole card.
-  cards.forEach(card => {
-    const dropdowns = getDropdowns(card);
-    if (!dropdowns.length) return;
-
-    const toggle = card.querySelector('.card-header') || card;
-
-    toggle.addEventListener('click', (e) => {
-      // if clicking inside dropdown links, ignore
-      if (e.target.closest('.dropdown-content')) return;
-      e.preventDefault();
-      e.stopPropagation();
-
-      const willOpen = !card.classList.contains('open');
-      closeAll(card);
-      setOpen(card, willOpen);
-    });
-  });
-
-  document.addEventListener('click', () => closeAll());
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAll(); });
-});
-
-
-/* =========================
- Nested Dropdowns (Accordion) — Auto-close siblings
- ========================= */
-
-document.addEventListener('DOMContentLoaded', () => {
-  const menus = Array.from(document.querySelectorAll('.dropdown-content'));
-  if (!menus.length) return;
-
-  menus.forEach(menu => {
-    const nestedBlocks = Array.from(menu.querySelectorAll('.nested-dropdown'));
-    if (!nestedBlocks.length) return;
-
-    function closeSiblings(except){
-      nestedBlocks.forEach(nb => {
-        if (except && nb === except) return;
-        nb.classList.remove('open');
-        const panel = nb.querySelector('.nested-dropdown-content');
-        if (panel) panel.setAttribute('aria-hidden','true');
-      });
-    }
-
-    nestedBlocks.forEach(nb => {
-      const toggle = nb.querySelector('.nested-dropdown-toggle') || nb;
-      const panel = nb.querySelector('.nested-dropdown-content');
-      if (!panel) return;
-
-      toggle.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const willOpen = !nb.classList.contains('open');
-        closeSiblings(nb);
-        nb.classList.toggle('open', willOpen);
-        panel.setAttribute('aria-hidden', willOpen ? 'false' : 'true');
-      });
-    });
-  });
 });
