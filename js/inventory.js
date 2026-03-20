@@ -128,6 +128,14 @@
     // We'll also drop fully empty rows.
     const cleaned = rows.filter(r => r.some(c => (c || "").trim() !== ""));
 
+    // Drop a header row if it looks like one (ex: contains words like Status / Notes)
+    if (cleaned.length) {
+      const h = cleaned[0].map(c => (c || "").toString().trim().toLowerCase());
+      const headerHints = ["status", "notes", "note", "student", "assigned", "equipment", "kit", "drone", "radio", "usb", "laptop", "number", "#"];
+      const looksLikeHeader = h.some(cell => headerHints.some(hh => cell === hh || cell.includes(hh)));
+      if (looksLikeHeader) cleaned.shift();
+    }
+
     return cleaned;
   }
 
@@ -558,8 +566,10 @@
 
   // ---------- Wire up page interactions ----------
   function initPage() {
-    // Route from device cards
-    $$(".inv-device-card").forEach(btn => {
+    const yearEl = document.getElementById("current-year");
+    if (yearEl) yearEl.textContent = new Date().getFullYear();
+    // Route from inventory top nav
+    $(".inv-nav-item").forEach(btn => {
       btn.addEventListener("click", () => showPanel(btn.getAttribute("data-view")));
     });
 

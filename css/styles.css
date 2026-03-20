@@ -2224,3 +2224,115 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* =========================
+   INVENTORY NAV (CONSOLIDATED TOP BAR)
+   ========================= */
+
+.inv-nav {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.inv-nav-item {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.94);
+  padding: 10px 12px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  transition: transform 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: invNavIn 380ms ease forwards;
+}
+
+.inv-nav-item:nth-child(1) { animation-delay: 40ms; }
+.inv-nav-item:nth-child(2) { animation-delay: 90ms; }
+.inv-nav-item:nth-child(3) { animation-delay: 140ms; }
+.inv-nav-item:nth-child(4) { animation-delay: 190ms; }
+.inv-nav-item:nth-child(5) { animation-delay: 240ms; }
+
+@keyframes invNavIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.inv-nav-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(232, 119, 34, 0.55);
+  background: rgba(232, 119, 34, 0.10);
+}
+
+.inv-nav-ico {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: rgba(232, 119, 34, 0.12);
+  border: 1px solid rgba(232, 119, 34, 0.25);
+  font-size: 22px;
+}
+
+.inv-nav-label {
+  font-size: 0.98rem;
+}
+
+.inv-nav-tip {
+  position: absolute;
+  left: 10px;
+  top: calc(100% + 10px);
+  width: max-content;
+  max-width: min(520px, 90vw);
+  background: rgba(0, 0, 0, 0.86);
+  border: 1px solid rgba(232, 119, 34, 0.35);
+  color: rgba(255, 255, 255, 0.92);
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 6;
+  white-space: normal;
+}
+
+.inv-nav-item:hover .inv-nav-tip {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.inv-nav-hint {
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.74);
+  font-weight: 700;
+}
+
+.inv-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 14px;
+}
+
+.inv-top-gap { height: 6px; }
+
+@media (max-width: 680px) {
+  .inv-nav { gap: 8px; }
+  .inv-nav-item { width: 100%; justify-content: flex-start; }
+  .inv-nav-tip { left: 8px; }
+}
+
+/* Remove old card grid spacing if still present */
+.inv-nav-spacer { display: none; }
+
