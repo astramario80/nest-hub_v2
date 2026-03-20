@@ -2397,3 +2397,41 @@ body {
 .inv-table tbody tr:active {
   transform: scale(0.997);
 }
+
+/* ====== DROPDOWN STACKING + NO-JOLT FIX (2026-03-20) ====== */
+/* Cards need predictable stacking so expanded menus render above other cards (mobile + desktop). */
+.card{position:relative; z-index:1;}
+.card:hover{z-index:2000;}
+/* In case the grid/container uses transforms, force dropdown layer above siblings. */
+.card .dropdown-content{position:relative; z-index:2100;}
+
+/* Nested dropdown should NOT push items down; it should overlay within the dropdown panel. */
+.nested-dropdown{position:relative; overflow:visible;}
+.nested-dropdown-content{
+  position:absolute;
+  left:0;
+  right:0;
+  top:100%;
+  z-index:2200;
+  margin-top:6px;
+  background: rgba(0,0,0,0.35);
+  border-radius: 8px;
+  padding: 8px 8px 8px 12px;
+  max-height: 0;
+  overflow: hidden;
+}
+.nested-dropdown:hover .nested-dropdown-content{
+  max-height: 420px;
+  overflow-y: auto;
+  opacity: 1;
+  visibility: visible;
+}
+.nested-dropdown-content{opacity:0; visibility:hidden; transition: opacity .2s ease, max-height .25s ease;}
+
+/* Touch devices: hover isn't reliable; keep dropdowns above by stacking and allow tap-driven .show classes. */
+@media (hover: none) and (pointer: coarse){
+  .card{z-index:1;}
+  .card.open{z-index:3000;}
+  .card .dropdown-content{z-index:3100;}
+}
+
