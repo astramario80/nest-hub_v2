@@ -2273,6 +2273,19 @@ body {
 }
 
 .inv-nav-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inv-nav-ico-img{
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  display: block;
+}
+
+.inv-nav-ico {
   width: 34px;
   height: 34px;
   display: grid;
@@ -2559,24 +2572,30 @@ img.tripometer-gif{
   gap: 18px;
   align-items: center;
 }
-.trip-surround .trip-card--top:nth-of-type(1){ grid-area: top1; }
-.trip-surround .trip-card--top:nth-of-type(2){ grid-area: top2; }
-.trip-surround .trip-card--side:nth-of-type(3){ grid-area: left; }
-.trip-surround .tripometer-gif-center{ grid-area: center; padding: 6px 0; }
-.trip-surround .trip-card--side:nth-of-type(5){ grid-area: right; }
-.trip-surround .trip-card--robotics{ grid-area: robotics; max-width: 420px; margin: 0 auto; }
-/* Prevent top cards from stretching too wide on big screens */
-.trip-surround .trip-card--top{
-  justify-self: center;
-  width: 100%;
-  max-width: 320px; /* adjust: 280–360 */
+
+/* Bulletproof: force children to participate in the grid (prevents stray floats/positioning) */
+.trip-surround > *{
+  position: relative;
+  inset: auto;
+  float: none;
 }
-/* Optional: keep side cards consistent too */
+
+/* Explicit grid areas (avoid nth-of-type fragility) */
+.trip-area-top1{ grid-area: top1; }
+.trip-area-top2{ grid-area: top2; }
+.trip-area-left{ grid-area: left; }
+.trip-area-center{ grid-area: center; }
+.trip-area-right{ grid-area: right; }
+.trip-area-robotics{ grid-area: robotics; max-width: 420px; margin: 0 auto; }
+
+/* Prevent cards from stretching on ultrawide screens */
+.trip-surround .trip-card--top,
 .trip-surround .trip-card--side{
   justify-self: center;
   width: 100%;
   max-width: 320px;
 }
+
 @media (max-width: 900px){
   .trip-surround{
     grid-template-columns: 1fr 1fr;
@@ -2586,8 +2605,8 @@ img.tripometer-gif{
       "left right"
       "robotics robotics";
   }
-  .tripometer-gif-center img,
-  img.tripometer-gif{ max-width: 280px; width: min(280px, 78vw); }
+  .trip-surround .trip-card--top,
+  .trip-surround .trip-card--side{ max-width: 320px; }
 }
 @media (max-width: 520px){
   .trip-surround{
