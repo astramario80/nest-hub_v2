@@ -2528,3 +2528,21 @@ body {
 .card .dropdown-content {
   transform: none !important;
 }
+
+
+/* Trip-o-Meter landing hero */
+.tripometer-gif-center{
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 22px 0 10px;
+}
+.tripometer-gif-center img,
+img.tripometer-gif{
+  display:block;
+  max-width: 640px;
+  width: min(640px, 86vw);
+  height: auto;
+}
+

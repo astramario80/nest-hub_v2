@@ -682,7 +682,7 @@ const soarData = {
         <table class="soar-table">
             <tr>
                 <th>Entering Classroom</th>
-                <td>Arrive on time. Log in to your assigned laptop, open the NEST™ Hub, and open Canvas to preview and/or complete projects for the course.</td>
+                <td>Arrive on time. Log in to your assigned laptop, open the NEST™ Menu, and open Canvas to preview and/or complete projects for the course.</td>
             </tr>
             <tr>
                 <th>Instruction Time</th>
