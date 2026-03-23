@@ -2455,3 +2455,76 @@ body {
     z-index: 5;
   }
 }
+
+/* =====================================================================
+   PATCH ADDED BY JUMA — 2026-03-23
+   Purpose: Keep MAIN MENU CARD dropdowns contained inside their cards
+   ===================================================================== */
+
+/* This file is generated patch content only. 
+   Mario: copy the CSS block below into your repo's css/styles.css near the existing dropdown/card rules.
+   It intentionally overrides earlier conflicting rules using higher specificity + !important.
+*/
+
+/* =========================================================
+   MAIN MENU CARD DROPDOWNS — KEEP CONTAINED INSIDE THE CARD
+   Goal: dropdown expands the card (accordion) instead of floating over other cards,
+   at ALL breakpoints (desktop multi-column + mobile single-column).
+   This prevents overlap and footer collisions.
+   ========================================================= */
+
+/* Ensure the card is the containing block */
+.card {
+  position: relative;
+}
+
+/* Default: accordion behavior (contained) */
+.card .dropdown-content {
+  position: relative !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+
+  /* contained visual */
+  background: transparent !important;
+  box-shadow: none !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  border-radius: 0 0 16px 16px !important;
+
+  /* collapsed state */
+  max-height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+  margin-top: 0 !important;
+  padding: 0 24px !important;
+
+  transition: max-height 0.45s ease, opacity 0.25s ease, visibility 0.25s ease, padding 0.25s ease;
+}
+
+/* Expanded state (hover-based, as your UI currently works) */
+.card:hover .dropdown-content,
+.card:focus-within .dropdown-content {
+  max-height: 1200px !important; /* generous to fit nested dropdowns */
+  opacity: 1 !important;
+  visibility: visible !important;
+  overflow: visible !important;
+  padding-top: 16px !important;
+  padding-bottom: 20px !important;
+}
+
+/* Nested dropdowns should remain contained, too */
+.card .nested-dropdown-content {
+  overflow: hidden;
+}
+
+/* IMPORTANT: keep header dropdown and footer dropdown floating (they should not be affected) */
+.header-dropdown .dropdown-content,
+.footer-dropdown .footer-dropdown-content {
+  position: absolute !important;
+}
+
+/* If any earlier rule forced floating dropdowns for cards, neutralize it */
+.card .dropdown-content {
+  transform: none !important;
+}
