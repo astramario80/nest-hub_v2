@@ -2732,3 +2732,355 @@ img.tripometer-gif{
 }
 
 /* End Control Center landing page */
+
+/* =========================================================
+   LEADERSHIP LOOKUP PAGE
+   ========================================================= */
+.leadership-page{
+  flex: 1;
+  padding: 20px 40px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.leadership-hero{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 14px;
+}
+
+.leadership-hero h1{
+  color: var(--primary-orange);
+  font-size: 3rem;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.leadership-hero .subtitle{
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+}
+
+.leadership-hero-img{
+  display:block;
+  max-width: 320px;
+  width: min(320px, 70vw);
+  height: auto;
+}
+
+.leadership-controls{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 14px;
+  display: grid;
+  grid-template-columns: 220px 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.leadership-label{
+  display:block;
+  font-weight: 700;
+  color: var(--text-light);
+  margin-bottom: 6px;
+}
+
+.leadership-select,
+.leadership-input{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.08);
+  background: rgba(17, 24, 39, 0.65);
+  color: var(--text-light);
+  outline: none;
+}
+
+.leadership-input::placeholder{ color: rgba(255,255,255,0.45); }
+
+.leadership-clear{
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.10);
+  background: rgba(232, 119, 34, 0.12);
+  color: var(--text-light);
+  font-weight: 800;
+  cursor: pointer;
+}
+.leadership-clear:hover{
+  background: rgba(232, 119, 34, 0.20);
+  border-color: rgba(232,119,34,0.5);
+}
+
+.leadership-exec{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.55);
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.leadership-exec-title{
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.leadership-exec-list{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.exec-pill{
+  border-radius: 14px;
+  padding: 12px 12px;
+  background: rgba(0,0,0,0.22);
+  border: 2px solid rgba(232,119,34,0.25);
+}
+
+.exec-role{
+  font-weight: 900;
+  color: var(--primary-orange);
+  margin-bottom: 6px;
+}
+.exec-name{
+  font-weight: 800;
+  color: var(--text-light);
+}
+.exec-division{
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.leadership-results{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto 26px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.55);
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.leadership-results-head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.results-title{
+  font-weight: 900;
+  color: var(--text-light);
+}
+
+.division-hiring{
+  display:inline-flex;
+  align-items:center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.18);
+  color: var(--text-light);
+  text-decoration: none;
+  font-weight: 800;
+}
+.division-hiring:hover{
+  border-color: rgba(232,119,34,0.55);
+  background: rgba(232, 119, 34, 0.12);
+}
+
+.results-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.leader-row{
+  display:grid;
+  grid-template-columns: 1.4fr 0.8fr 0.8fr;
+  gap: 10px;
+  align-items:center;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.20);
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.leader-pos{
+  font-weight: 900;
+  color: var(--text-light);
+}
+.leader-name{
+  font-weight: 900;
+  color: #ffffff;
+  text-align: right;
+}
+.leader-div{
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.results-empty,
+.exec-empty{
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.missing-roles{
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 2px dashed rgba(255,255,255,0.12);
+}
+
+.missing-title{
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.missing-list{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.missing-item{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(0,0,0,0.20);
+  border: 2px solid rgba(255,255,255,0.06);
+}
+
+.missing-pos{
+  font-weight: 900;
+  color: var(--text-light);
+}
+
+.missing-hiring-img{
+  width: 120px;
+  height: auto;
+  display:block;
+}
+
+@media (max-width: 820px){
+  .leadership-controls{ grid-template-columns: 1fr; }
+  .leader-row{ grid-template-columns: 1fr; }
+  .leader-name, .leader-div{ text-align: left; }
+  .leadership-hero{ grid-template-columns: 1fr; }
+  .leadership-hero-right{ justify-self: start; }
+}
+
+/* Menu inline icon (used in dropdown links) */
+.menu-ico{
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: -4px;
+  margin-right: 8px;
+}
+
+/* End Leadership lookup page */
+
+/* ========================================================= */
+
+
+/* =========================================================
+   LEADERSHIP JOBS PAGE
+   ========================================================= */
+.jobs-panel{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.jobs-head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.jobs-title{
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-light);
+}
+
+.jobs-apply-img{
+  width: 128px;
+  height: auto;
+  display: block;
+}
+
+.jobs-note{
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+.jobs-list{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.job-card{
+  background: rgba(17, 24, 39, 0.65);
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 18px 18px;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+}
+
+.job-row{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.job-card h2{
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--primary-orange);
+}
+
+.job-card p{
+  margin: 8px 0;
+  color: var(--text-light);
+  line-height: 1.35;
+}
+
+.job-card strong{
+  color: #ffffff;
+}
+
+/* End Leadership Jobs page */
+
+/* ========================================================= */

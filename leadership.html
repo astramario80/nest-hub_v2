@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEST™ Menu - Leadership Team</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="bg-watermark"></div>
+
+  <header>
+    <div class="logo-container">
+      <a href="index.html">
+        <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;" />
+      </a>
+    </div>
+
+    <div class="header-right">
+      <div id="today-date" class="date-display">Today is...</div>
+
+      <!-- Quick Links Dropdown -->
+      <div class="header-dropdown">
+        <button class="dropdown-btn" aria-haspopup="true">Quick Links ▾</button>
+        <div class="dropdown-content">
+          <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+          <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/viewform" target="_blank">🚀 Join Us</a>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      <div class="header-qr" title="Hover to enlarge">
+        <img src="assets/qr-code.png" alt="QR Code" />
+      </div>
+    </div>
+  </header>
+
+  <main class="leadership-page fade-in">
+
+    <section class="leadership-hero" aria-label="Leadership lookup">
+      <div class="leadership-hero-left">
+        <h1>Leadership Team</h1>
+        <p class="subtitle">Search by <strong>Division</strong> or <strong>Position</strong>. First names only.</p>
+      </div>
+
+      <div class="leadership-hero-right" aria-hidden="true">
+        <img class="leadership-hero-img" src="assets/leadership_landing_page.gif" alt="Leadership" />
+      </div>
+    </section>
+
+    <section class="leadership-controls" aria-label="Leadership search controls">
+      <div class="leadership-mode">
+        <label class="leadership-label" for="leadership-mode">Search by</label>
+        <select id="leadership-mode" class="leadership-select">
+          <option value="division" selected>Division</option>
+          <option value="position">Position</option>
+        </select>
+      </div>
+
+      <div class="leadership-filter" id="leadership-division-wrap">
+        <label class="leadership-label" for="leadership-division">Division</label>
+        <select id="leadership-division" class="leadership-select">
+          <option value="">Choose a division…</option>
+          <option>Division 1</option>
+          <option>Division 2</option>
+          <option>Division 3</option>
+          <option>Division 4</option>
+          <option>Division 5</option>
+          <option>Division 7</option>
+          <option>NEST™ Robotics</option>
+        </select>
+      </div>
+
+      <div class="leadership-filter" id="leadership-position-wrap" style="display:none;">
+        <label class="leadership-label" for="leadership-position">Position</label>
+        <input id="leadership-position" class="leadership-input" type="text" placeholder="Start typing a position…" autocomplete="off" />
+      </div>
+
+      <div class="leadership-actions">
+        <button id="leadership-clear" class="leadership-clear" type="button">Clear</button>
+      </div>
+    </section>
+
+    <!-- Always-on exec strip (CTSO exec pinned) -->
+    <section class="leadership-exec" aria-label="CTSO Executive Team">
+      <div class="leadership-exec-title">CTSO Executive (Always On)</div>
+      <div id="exec-list" class="leadership-exec-list"></div>
+    </section>
+
+    <!-- Result panel -->
+    <section class="leadership-results" aria-label="Leadership search results">
+      <div class="leadership-results-head">
+        <div id="results-title" class="results-title">Select a division or type a position to begin.</div>
+        <a id="division-hiring-link" class="division-hiring" href="#" target="_blank" style="display:none;">
+          Hiring Sheet ▾
+        </a>
+      </div>
+
+      <div id="results-grid" class="results-grid"></div>
+
+      <div id="missing-roles" class="missing-roles" style="display:none;">
+        <div class="missing-title">Open roles in this division</div>
+        <div id="missing-list" class="missing-list"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+      <div class="footer-links">
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank">💻 Computer Look-up</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank">🎫 Tech Ticket</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank">🌤️ Weather Report</a>
+          </div>
+        </div>
+
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/leadership.js"></script>
+</body>
+</html>
