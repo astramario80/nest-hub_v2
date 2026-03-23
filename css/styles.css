@@ -2596,6 +2596,16 @@ img.tripometer-gif{
   transform: none !important;
 }
 
+/* Bring the cards back (spin-in sets opacity:0 globally) */
+.trip-surround .trip-card.spin-in{
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.trip-surround a.trip-card{
+  display: flex !important;
+}
+
 /* Optional: replace with a safe fade-in */
 @keyframes tripFadeIn {
   from { opacity: 0; }
