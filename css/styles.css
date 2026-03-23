@@ -2536,13 +2536,59 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 22px 0 10px;
 }
 .tripometer-gif-center img,
 img.tripometer-gif{
   display:block;
-  max-width: 640px;
-  width: min(640px, 86vw);
+  max-width: 320px; /* half-size target */
+  width: min(320px, 70vw);
   height: auto;
+}
+
+/* Trip-o-Meter surround layout */
+.trip-surround{
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas:
+    "top1 top2 top2"
+    "left center right"
+    "robotics robotics robotics";
+  gap: 18px;
+  align-items: center;
+}
+
+.trip-surround .trip-card--top:nth-of-type(1){ grid-area: top1; }
+.trip-surround .trip-card--top:nth-of-type(2){ grid-area: top2; }
+.trip-surround .trip-card--side:nth-of-type(3){ grid-area: left; }
+.trip-surround .tripometer-gif-center{ grid-area: center; padding: 6px 0; }
+.trip-surround .trip-card--side:nth-of-type(5){ grid-area: right; }
+.trip-surround .trip-card--robotics{ grid-area: robotics; max-width: 420px; margin: 0 auto; }
+
+@media (max-width: 900px){
+  .trip-surround{
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "top1 top2"
+      "center center"
+      "left right"
+      "robotics robotics";
+  }
+  .tripometer-gif-center img,
+  img.tripometer-gif{ max-width: 280px; width: min(280px, 78vw); }
+}
+@media (max-width: 520px){
+  .trip-surround{
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "top1"
+      "top2"
+      "center"
+      "left"
+      "right"
+      "robotics";
+  }
 }
 
