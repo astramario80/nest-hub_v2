@@ -2557,7 +2557,6 @@ img.tripometer-gif{
   width: min(320px, 70vw);
   height: auto;
 }
-
 /* Trip-o-Meter surround layout */
 .trip-surround{
   width: 100%;
@@ -2572,14 +2571,25 @@ img.tripometer-gif{
   gap: 18px;
   align-items: center;
 }
-
 /* Bulletproof: force children to participate in the grid (prevents stray floats/positioning) */
 .trip-surround > *{
   position: relative;
   inset: auto;
   float: none;
 }
-
+/* Force Trip cards to behave inside the surround grid (prevents stacking/absolute positioning bugs) */
+.trip-surround .trip-card{
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none; /* we'll re-enable animation below */
+}
+/* Keep the spin-in animation but don't let it move cards out of the grid */
+.trip-surround .spin-in{
+  transform-origin: center;
+}
 /* Explicit grid areas (avoid nth-of-type fragility) */
 .trip-area-top1{ grid-area: top1; }
 .trip-area-top2{ grid-area: top2; }
@@ -2587,7 +2597,6 @@ img.tripometer-gif{
 .trip-area-center{ grid-area: center; }
 .trip-area-right{ grid-area: right; }
 .trip-area-robotics{ grid-area: robotics; max-width: 420px; margin: 0 auto; }
-
 /* Prevent cards from stretching on ultrawide screens */
 .trip-surround .trip-card--top,
 .trip-surround .trip-card--side{
@@ -2595,7 +2604,6 @@ img.tripometer-gif{
   width: 100%;
   max-width: 320px;
 }
-
 @media (max-width: 900px){
   .trip-surround{
     grid-template-columns: 1fr 1fr;
@@ -2620,4 +2628,3 @@ img.tripometer-gif{
       "robotics";
   }
 }
-
