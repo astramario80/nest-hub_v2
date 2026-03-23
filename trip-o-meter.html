@@ -43,39 +43,38 @@
             <a href="https://docs.google.com/spreadsheets/d/1o-qktR52TZqbg9eKDlyUGvIGr3bM83luUgnIZTnNepA/edit#gid=1423019107" target="_blank" class="master-link" title="Master Spreadsheet Access">⚙️</a>
         </div>
 
-        <!-- Surround layout: 2 cards top, 2 cards left/right of GIF, Robotics below -->
-        <section class="trip-surround" aria-label="Trip-o-Meter Divisions">
-            <!-- Top row (2) -->
-            <a href="https://docs.google.com/spreadsheets/d/1QDEskd_kKvtjUoLuWnKicsNqhy6ElubA70vaX7OmQzc/edit?gid=1423019107#gid=1423019107" target="_blank" class="trip-card spin-in trip-card--top trip-area-top1" style="animation-delay: 0.1s;">
-                <span class="trip-icon">🏢</span>
-                <h2>Division 1</h2>
-            </a>
-
-            <a href="https://docs.google.com/spreadsheets/d/1bizUxDzZbJyEnu4sCU3Z33U_SdT_Iz3Ln-LeO7hc21Y/edit?gid=1739843479#gid=1739843479" target="_blank" class="trip-card spin-in trip-card--top trip-area-top2" style="animation-delay: 0.2s;">
-                <span class="trip-icon">🏢</span>
-                <h2>Division 2</h2>
-            </a>
-
-            <!-- Middle row (left card, center GIF, right card) -->
-            <a href="https://docs.google.com/spreadsheets/d/1Ycdle_67UhmlyUd0brcbKrYCP2pYjPeiNzsyikxlK70/edit?gid=1731736600#gid=1731736600" target="_blank" class="trip-card spin-in trip-card--side trip-area-left" style="animation-delay: 0.3s;">
-                <span class="trip-icon">🏢</span>
-                <h2>Division 3</h2>
-            </a>
-
-            <div class="tripometer-gif-center trip-area-center" aria-hidden="true">
+        <!-- Simple, stable layout: GIF on top, cards below -->
+        <section class="trip-stack" aria-label="Trip-o-Meter Divisions">
+            <div class="tripometer-gif-center" aria-hidden="true">
                 <img class="tripometer-gif" src="assets/Trip-o-Meter.gif" alt="Trip-o-Meter" />
             </div>
 
-            <a href="https://docs.google.com/spreadsheets/d/1dQUtAsQtmx_srX9JqOaQ6KevW_Id2S0Ywvn33vPbgxE/edit?gid=1541970#gid=1541970" target="_blank" class="trip-card spin-in trip-card--side trip-area-right" style="animation-delay: 0.4s;">
-                <span class="trip-icon">🏢</span>
-                <h2>Division 4</h2>
-            </a>
+            <div class="trip-grid trip-grid--stack">
+                <a href="https://docs.google.com/spreadsheets/d/1QDEskd_kKvtjUoLuWnKicsNqhy6ElubA70vaX7OmQzc/edit?gid=1423019107#gid=1423019107" target="_blank" class="trip-card">
+                    <span class="trip-icon">🏢</span>
+                    <h2>Division 1</h2>
+                </a>
 
-            <!-- Bottom row (Robotics below) -->
-            <a href="https://docs.google.com/spreadsheets/d/1EahcN40fqGdlHCwZi_kZ-PzxuvRx1oAZWwxEHDbdmDU/edit?gid=11805698#gid=11805698" target="_blank" class="trip-card spin-in trip-card--robotics trip-area-robotics" style="animation-delay: 0.5s;">
-                <span class="trip-icon">🤖</span>
-                <h2>NEST™ Robotics</h2>
-            </a>
+                <a href="https://docs.google.com/spreadsheets/d/1bizUxDzZbJyEnu4sCU3Z33U_SdT_Iz3Ln-LeO7hc21Y/edit?gid=1739843479#gid=1739843479" target="_blank" class="trip-card">
+                    <span class="trip-icon">🏢</span>
+                    <h2>Division 2</h2>
+                </a>
+
+                <a href="https://docs.google.com/spreadsheets/d/1Ycdle_67UhmlyUd0brcbKrYCP2pYjPeiNzsyikxlK70/edit?gid=1731736600#gid=1731736600" target="_blank" class="trip-card">
+                    <span class="trip-icon">🏢</span>
+                    <h2>Division 3</h2>
+                </a>
+
+                <a href="https://docs.google.com/spreadsheets/d/1dQUtAsQtmx_srX9JqOaQ6KevW_Id2S0Ywvn33vPbgxE/edit?gid=1541970#gid=1541970" target="_blank" class="trip-card">
+                    <span class="trip-icon">🏢</span>
+                    <h2>Division 4</h2>
+                </a>
+
+                <a href="https://docs.google.com/spreadsheets/d/1EahcN40fqGdlHCwZi_kZ-PzxuvRx1oAZWwxEHDbdmDU/edit?gid=11805698#gid=11805698" target="_blank" class="trip-card trip-card--robotics">
+                    <span class="trip-icon">🤖</span>
+                    <h2>NEST™ Robotics</h2>
+                </a>
+            </div>
         </section>
 
     </main>

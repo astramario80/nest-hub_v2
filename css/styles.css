@@ -2553,7 +2553,7 @@ body {
 .tripometer-gif-center img,
 img.tripometer-gif{
   display:block;
-  max-width: 320px;
+  max-width: 320px; /* half-size target */
   width: min(320px, 70vw);
   height: auto;
 }
@@ -2573,7 +2573,14 @@ img.tripometer-gif{
   align-items: center;
 }
 
-/* Explicit grid areas */
+/* Bulletproof: force children to participate in the grid (prevents stray floats/positioning) */
+.trip-surround > *{
+  position: relative;
+  inset: auto;
+  float: none;
+}
+
+/* Explicit grid areas (avoid nth-of-type fragility) */
 .trip-area-top1{ grid-area: top1; }
 .trip-area-top2{ grid-area: top2; }
 .trip-area-left{ grid-area: left; }
@@ -2589,37 +2596,6 @@ img.tripometer-gif{
   max-width: 320px;
 }
 
-/* Critical fix: disable transform-based spin animation INSIDE the surround grid */
-.trip-surround .spin-in{
-  animation-name: none !important;
-  opacity: 1 !important;
-  transform: none !important;
-}
-
-/* Bring the cards back (spin-in sets opacity:0 globally) */
-.trip-surround .trip-card.spin-in{
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.trip-surround a.trip-card{
-  display: flex !important;
-}
-
-/* Optional: replace with a safe fade-in */
-@keyframes tripFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.trip-surround .trip-card{
-  animation: tripFadeIn 0.35s ease both;
-}
-
-/* Keep the GIF from inheriting any weird animation */
-.trip-surround .tripometer-gif-center{
-  animation: tripFadeIn 0.35s ease both;
-}
-
 @media (max-width: 900px){
   .trip-surround{
     grid-template-columns: 1fr 1fr;
@@ -2629,6 +2605,8 @@ img.tripometer-gif{
       "left right"
       "robotics robotics";
   }
+  .trip-surround .trip-card--top,
+  .trip-surround .trip-card--side{ max-width: 320px; }
 }
 @media (max-width: 520px){
   .trip-surround{
@@ -2643,7 +2621,38 @@ img.tripometer-gif{
   }
 }
 
-/* ========== HARD RESTORE: Trip-o-Meter surround cards ========== */
+
+
+/* =========================================================
+   TRIP-O-METER (STABLE STACKED LAYOUT)
+   GIF on top, cards below (avoids grid/animation conflicts)
+   ========================================================= */
+.trip-stack{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.trip-grid--stack{
+  margin-top: 18px;
+}
+
+.trip-grid--stack .trip-card--robotics{
+  grid-column: 1 / -1;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* Ensure stacked cards are always visible even if spin-in exists elsewhere */
+.trip-grid--stack .trip-card{
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* End Trip-o-Meter stacked layout */
+
+
+/* ========== HARD RESTORE: Trip-o-Meter surround cards (legacy safety) ========== */
 .trip-layout .trip-surround a.trip-card{
   display: flex !important;
   opacity: 1 !important;
@@ -2661,3 +2670,4 @@ img.tripometer-gif{
   visibility: visible !important;
 }
 
+/* End legacy safety */
