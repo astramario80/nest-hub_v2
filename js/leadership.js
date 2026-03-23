@@ -201,20 +201,37 @@
     return div;
   }
 
+  function mapUiDivisionToDataDivision(uiDivision){
+    // Your CSV currently uses "Period 1", "Period 2", etc. for division labels.
+    // The UI shows "Division 1", "Division 2", etc.
+    const m = {
+      'Division 1': 'Period 1',
+      'Division 2': 'Period 2',
+      'Division 3': 'Period 3',
+      'Division 4': 'Period 4',
+      'Division 5': 'Period 5',
+      'Division 7': 'Period 7',
+      'NEST™ Robotics': 'NEST™ Robotics'
+    };
+    return m[uiDivision] || uiDivision;
+  }
+
   function renderDivisionResults(division){
     clearResults();
     if (!division){
       return;
     }
 
+    const dataDivision = mapUiDivisionToDataDivision(division);
+
     const rows = state.leaders
-      .filter(l => l.division === division && !isExec(l.position))
+      .filter(l => l.division === dataDivision && !isExec(l.position))
       .sort((a, b) => a.position.localeCompare(b.position) || a.firstName.localeCompare(b.firstName));
 
     els.resultsTitle.textContent = `Leadership — ${division}`;
 
     // Hiring link once per division
-    const hiringLink = getUniqueHiringLinkForDivision(division);
+    const hiringLink = getUniqueHiringLinkForDivision(dataDivision);
     if (hiringLink){
       els.divisionHiringLink.href = hiringLink;
       els.divisionHiringLink.style.display = 'inline-flex';
@@ -228,7 +245,7 @@
     }
 
     // Missing roles UI
-    const missing = getMissingPositionsForDivision(division);
+    const missing = getMissingPositionsForDivision(dataDivision);
     if (missing.length){
       els.missingRoles.style.display = 'block';
       els.missingList.innerHTML = '';
