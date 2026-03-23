@@ -2424,29 +2424,34 @@ body {
 }
 
 /* =========================================================
-   MOBILE UX FIX (Tap-to-open accordion)
-   - iOS/Android don't have true hover; :hover can get 'stuck'
-   - Use JS to toggle .open on .card
+   MOBILE FOOTER OVERLAP HARD FIX
+   Why: iOS Safari bottom bars + high footer z-index can make
+   the footer visually sit above in-flow content.
+   Fix: give the page real scroll breathing room incl. safe-area,
+   and prevent the footer from stacking above expanded cards.
    ========================================================= */
 @media (hover: none) and (pointer: coarse) {
-  /* Stop relying on hover for expansion */
-  .card:hover .dropdown-content { max-height: 0 !important; opacity: 0 !important; visibility: hidden !important; padding-top: 0 !important; padding-bottom: 0 !important; margin-top: 0 !important; }
-
-  /* Tap-open state */
-  .card.open .dropdown-content {
-    max-height: 1200px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
-    margin-top: 15px !important;
-    padding-top: 15px !important;
-    padding-bottom: 0 !important;
+  :root {
+    --mobile-footer-clearance: 280px; /* adjust if needed */
   }
 
-  /* Make it feel tappable */
-  .card { -webkit-tap-highlight-color: transparent; }
-}
+  /* Ensure the scrollable document has room below content */
+  body {
+    padding-bottom: calc(var(--mobile-footer-clearance) + env(safe-area-inset-bottom, 0px));
+  }
 
-/* Extra breathing room at the bottom on phones */
-@media (max-width: 768px) {
-  .dashboard { padding-bottom: 220px; }
+  /* Keep landing page content comfortably above footer / browser UI */
+  .dashboard {
+    padding-bottom: calc(var(--mobile-footer-clearance) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* On phones, footer doesn't need to be in the top stacking context */
+  .site-footer {
+    z-index: 1 !important;
+  }
+
+  /* Ensure expanded card sits above normal content (but doesn't need to beat modals) */
+  .card.open {
+    z-index: 5;
+  }
 }
