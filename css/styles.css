@@ -2553,20 +2553,30 @@ img.tripometer-gif{
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-areas:
-    "top1 top2 top2"
+    "top1 top2 center"
     "left center right"
     "robotics robotics robotics";
   gap: 18px;
   align-items: center;
 }
-
 .trip-surround .trip-card--top:nth-of-type(1){ grid-area: top1; }
 .trip-surround .trip-card--top:nth-of-type(2){ grid-area: top2; }
 .trip-surround .trip-card--side:nth-of-type(3){ grid-area: left; }
 .trip-surround .tripometer-gif-center{ grid-area: center; padding: 6px 0; }
 .trip-surround .trip-card--side:nth-of-type(5){ grid-area: right; }
 .trip-surround .trip-card--robotics{ grid-area: robotics; max-width: 420px; margin: 0 auto; }
-
+/* Prevent top cards from stretching too wide on big screens */
+.trip-surround .trip-card--top{
+  justify-self: center;
+  width: 100%;
+  max-width: 320px; /* adjust: 280–360 */
+}
+/* Optional: keep side cards consistent too */
+.trip-surround .trip-card--side{
+  justify-self: center;
+  width: 100%;
+  max-width: 320px;
+}
 @media (max-width: 900px){
   .trip-surround{
     grid-template-columns: 1fr 1fr;
