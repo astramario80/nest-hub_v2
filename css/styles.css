@@ -2710,3 +2710,25 @@ img.tripometer-gif{
 
 /* ========================================================= */
 
+
+/* =========================================================
+   CONTROL CENTER LANDING PAGE (simple grid of tab links)
+   ========================================================= */
+.control-stack{
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.control-grid{
+  margin-top: 10px;
+}
+
+/* CTSO centered on its own row */
+.control-grid .trip-card--robotics{
+  grid-column: 1 / -1;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* End Control Center landing page */
