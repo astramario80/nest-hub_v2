@@ -2424,11 +2424,29 @@ body {
 }
 
 /* =========================================================
-   MOBILE FIX: keep footer from covering lowest card dropdown
-   Target: landing page uses .dashboard
+   MOBILE UX FIX (Tap-to-open accordion)
+   - iOS/Android don't have true hover; :hover can get 'stuck'
+   - Use JS to toggle .open on .card
    ========================================================= */
+@media (hover: none) and (pointer: coarse) {
+  /* Stop relying on hover for expansion */
+  .card:hover .dropdown-content { max-height: 0 !important; opacity: 0 !important; visibility: hidden !important; padding-top: 0 !important; padding-bottom: 0 !important; margin-top: 0 !important; }
+
+  /* Tap-open state */
+  .card.open .dropdown-content {
+    max-height: 1200px !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    margin-top: 15px !important;
+    padding-top: 15px !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Make it feel tappable */
+  .card { -webkit-tap-highlight-color: transparent; }
+}
+
+/* Extra breathing room at the bottom on phones */
 @media (max-width: 768px) {
-    .dashboard {
-        padding-bottom: 160px; /* breathing room above footer; adjust 120–200px if needed */
-    }
+  .dashboard { padding-bottom: 220px; }
 }

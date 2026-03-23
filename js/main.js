@@ -858,3 +858,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ================================
+// MOBILE: Tap-to-open card dropdowns
+// ================================
+(function () {
+  document.addEventListener('DOMContentLoaded', function () {
+    const dashboard = document.querySelector('.dashboard');
+    if (!dashboard) return;
+
+    const cards = Array.from(dashboard.querySelectorAll('.card'));
+    if (!cards.length) return;
+
+    // Only activate on touch-like devices
+    const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+    if (!isTouch) return;
+
+    cards.forEach(card => {
+      card.addEventListener('click', (e) => {
+        // If user clicked a link inside an open dropdown, let it navigate
+        if (e.target && e.target.closest('a')) return;
+
+        // toggle this card, close others
+        const willOpen = !card.classList.contains('open');
+        cards.forEach(c => c.classList.remove('open'));
+        if (willOpen) card.classList.add('open');
+      });
+    });
+
+    // Tap outside to close
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.closest('.card')) return;
+      cards.forEach(c => c.classList.remove('open'));
+    });
+  });
+})();
