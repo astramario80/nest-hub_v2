@@ -75,7 +75,9 @@
 
       <div class="leadership-filter" id="leadership-position-wrap" style="display:none;">
         <label class="leadership-label" for="leadership-position">Position</label>
-        <input id="leadership-position" class="leadership-input" type="text" placeholder="Start typing a position…" autocomplete="off" />
+        <select id="leadership-position" class="leadership-select">
+          <option value="">Choose a position…</option>
+        </select>
       </div>
 
       <div class="leadership-actions">
@@ -92,9 +94,14 @@
     <!-- Result panel -->
     <section class="leadership-results" aria-label="Leadership search results">
       <div class="leadership-results-head">
-        <div id="results-title" class="results-title">Select a division or type a position to begin.</div>
-        <a id="division-hiring-link" class="division-hiring" href="#" target="_blank" style="display:none;">
-          Hiring Sheet ▾
+        <div id="results-title" class="results-title">Select a division or position to begin.</div>
+      </div>
+
+      <!-- Manager Tools (only visible for Division searches) -->
+      <div id="manager-tools" class="manager-tools" style="display:none;">
+        <div class="manager-tools-title">Manager Tools</div>
+        <a id="division-hiring-link" class="manager-hiring-btn" href="#" target="_blank">
+          Open Division Hiring Sheet ▾
         </a>
       </div>
 

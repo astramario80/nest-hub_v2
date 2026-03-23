@@ -27,6 +27,12 @@
   // Elements
   const els = {};
 
+  function buildPositionOrderMap(){
+    const map = new Map();
+    state.positions.forEach((p, idx) => map.set(norm(p), idx));
+    return map;
+  }
+
   function q(id){
     return document.getElementById(id);
   }
@@ -163,9 +169,15 @@
     els.resultsGrid.innerHTML = '';
     els.missingRoles.style.display = 'none';
     els.missingList.innerHTML = '';
-    els.divisionHiringLink.style.display = 'none';
-    els.divisionHiringLink.href = '#';
-    els.resultsTitle.textContent = 'Select a division or type a position to begin.';
+
+    // Manager tools panel
+    if (els.managerTools) els.managerTools.style.display = 'none';
+
+    if (els.divisionHiringLink){
+      els.divisionHiringLink.href = '#';
+    }
+
+    els.resultsTitle.textContent = 'Select a division or position to begin.';
   }
 
   function getUniqueHiringLinkForDivision(division){
@@ -223,18 +235,24 @@
     }
 
     const dataDivision = mapUiDivisionToDataDivision(division);
+    const orderMap = buildPositionOrderMap();
 
     const rows = state.leaders
       .filter(l => l.division === dataDivision && !isExec(l.position))
-      .sort((a, b) => a.position.localeCompare(b.position) || a.firstName.localeCompare(b.firstName));
+      .sort((a, b) => {
+        const ai = orderMap.has(norm(a.position)) ? orderMap.get(norm(a.position)) : 9999;
+        const bi = orderMap.has(norm(b.position)) ? orderMap.get(norm(b.position)) : 9999;
+        if (ai !== bi) return ai - bi;
+        return (a.firstName || '').localeCompare(b.firstName || '');
+      });
 
     els.resultsTitle.textContent = `Leadership — ${division}`;
 
-    // Hiring link once per division
+    // Hiring link once per division (Manager Tools section)
     const hiringLink = getUniqueHiringLinkForDivision(dataDivision);
     if (hiringLink){
       els.divisionHiringLink.href = hiringLink;
-      els.divisionHiringLink.style.display = 'inline-flex';
+      if (els.managerTools) els.managerTools.style.display = 'block';
     }
 
     if (!rows.length){
@@ -271,13 +289,29 @@
       return;
     }
 
-    // Match if query is contained in position text
+    const orderMap = buildPositionOrderMap();
+
+    // Exact match on selected position, but also allow partial match if someone pastes text
     const qn = norm(q);
     const rows = state.leaders
-      .filter(l => norm(l.position).includes(qn))
-      .sort(sortExecFirst);
+      .filter(l => norm(l.position) === qn || norm(l.position).includes(qn))
+      .sort((a, b) => {
+        const ae = isExec(a.position) ? 0 : 1;
+        const be = isExec(b.position) ? 0 : 1;
+        if (ae !== be) return ae - be;
 
-    els.resultsTitle.textContent = `Position search: “${q}”`;
+        const ai = orderMap.has(norm(a.position)) ? orderMap.get(norm(a.position)) : 9999;
+        const bi = orderMap.has(norm(b.position)) ? orderMap.get(norm(b.position)) : 9999;
+        if (ai !== bi) return ai - bi;
+
+        // then division (keeps grouped feel)
+        const d = (a.division || '').localeCompare(b.division || '');
+        if (d !== 0) return d;
+
+        return (a.firstName || '').localeCompare(b.firstName || '');
+      });
+
+    els.resultsTitle.textContent = `Position: ${q}`;
 
     if (!rows.length){
       els.resultsGrid.innerHTML = '<div class="results-empty">No matches found.</div>';
@@ -293,13 +327,13 @@
     if (mode === 'division'){
       els.divisionWrap.style.display = 'block';
       els.positionWrap.style.display = 'none';
-      els.positionInput.value = '';
+      els.positionSelect.value = '';
       renderDivisionResults(els.divisionSelect.value);
     } else {
       els.divisionWrap.style.display = 'none';
       els.positionWrap.style.display = 'block';
       els.divisionSelect.value = '';
-      renderPositionResults(els.positionInput.value);
+      renderPositionResults(els.positionSelect.value);
     }
   }
 
@@ -309,7 +343,7 @@
 
     els.mode = q('leadership-mode');
     els.divisionSelect = q('leadership-division');
-    els.positionInput = q('leadership-position');
+    els.positionSelect = q('leadership-position');
     els.clearBtn = q('leadership-clear');
     els.execList = q('exec-list');
     els.resultsGrid = q('results-grid');
@@ -319,6 +353,7 @@
     els.missingList = q('missing-list');
     els.divisionWrap = q('leadership-division-wrap');
     els.positionWrap = q('leadership-position-wrap');
+    els.managerTools = q('manager-tools');
 
     clearResults();
 
@@ -337,13 +372,22 @@
 
       renderExecStrip();
 
+      // Populate positions dropdown (in database order)
+      els.positionSelect.innerHTML = '<option value="">Choose a position…</option>';
+      state.positions.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        els.positionSelect.appendChild(opt);
+      });
+
       // Wire events
       els.mode.addEventListener('change', updateMode);
       els.divisionSelect.addEventListener('change', () => renderDivisionResults(els.divisionSelect.value));
-      els.positionInput.addEventListener('input', () => renderPositionResults(els.positionInput.value));
+      els.positionSelect.addEventListener('change', () => renderPositionResults(els.positionSelect.value));
       els.clearBtn.addEventListener('click', () => {
         els.divisionSelect.value = '';
-        els.positionInput.value = '';
+        els.positionSelect.value = '';
         clearResults();
       });
 
