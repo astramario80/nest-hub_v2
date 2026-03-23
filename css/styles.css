@@ -2642,3 +2642,22 @@ img.tripometer-gif{
       "robotics";
   }
 }
+
+/* ========== HARD RESTORE: Trip-o-Meter surround cards ========== */
+.trip-layout .trip-surround a.trip-card{
+  display: flex !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  position: relative !important;
+  transform: none !important;
+  animation: none !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+.trip-layout .trip-surround a.trip-card *{
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
