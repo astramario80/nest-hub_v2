@@ -34,23 +34,28 @@ function parseCSV(text) {
 
 async function loadBellSchedule() {
     const loadingEl = document.getElementById('bell-loading');
+    const todayOnly = document.querySelector('[data-bell-today-only]') !== null;
+    if (!loadingEl) return;
+    const showProgress = (message) => {
+        loadingEl.innerHTML = todayOnly ? "Loading today's schedule…" : message;
+    };
     
     try {
-        loadingEl.innerHTML = "Step 1: Initiating connection to Google Sheets...<br><span style='font-size:0.8rem;color:#888;'>This might take a second.</span>";
+        showProgress("Step 1: Initiating connection to Google Sheets...<br><span style='font-size:0.8rem;color:#888;'>This might take a second.</span>");
         
         const cacheBuster = "&t=" + new Date().getTime();
         
-        loadingEl.innerHTML = "Step 2: Fetching SlideDisplay data...";
+        showProgress("Step 2: Fetching SlideDisplay data...");
         const slideRes = await fetch(slideDisplayUrl + cacheBuster);
         
-        loadingEl.innerHTML = "Step 3: Fetching CurrentSchedule data...";
+        showProgress("Step 3: Fetching CurrentSchedule data...");
         const currentRes = await fetch(currentScheduleUrl + cacheBuster);
 
         if (!slideRes.ok || !currentRes.ok) {
             throw new Error("Google Sheets returned an error (Status " + slideRes.status + " / " + currentRes.status + ").");
         }
         
-        loadingEl.innerHTML = "Step 4: Downloading text data...";
+        showProgress("Step 4: Downloading text data...");
         const slideText = await slideRes.text();
         const currentText = await currentRes.text();
 
@@ -62,11 +67,11 @@ async function loadBellSchedule() {
             throw new Error("Google Sheets IMPORTRANGE Error: You need to open your new Google Sheet and click 'Allow Access' on the #REF! cell so it can pull the data from the original sheet.");
         }
 
-        loadingEl.innerHTML = "Step 5: Parsing CSV data...";
+        showProgress("Step 5: Parsing CSV data...");
         const slideData = parseCSV(slideText);
         const currentData = parseCSV(currentText);
 
-        loadingEl.innerHTML = "Step 6: Building interface...";
+        showProgress("Step 6: Building interface...");
 
         // 1. Background Color
         // Look specifically for a hex code in the second row (index 1), third column (index 2)
@@ -103,6 +108,13 @@ async function loadBellSchedule() {
                 tr.innerHTML = `<td class="period-name">${slideData[i][0]}</td><td class="period-time">${slideData[i][1]}</td>`;
                 todayTable.appendChild(tr);
             }
+        }
+
+        // The home panel uses the same live rows and color, without upcoming sections.
+        if (todayOnly) {
+            loadingEl.style.display = 'none';
+            document.getElementById('bell-content').style.display = 'block';
+            return;
         }
 
         // 3. Upcoming Schedule
@@ -150,6 +162,10 @@ async function loadBellSchedule() {
 
     } catch (e) {
         console.error(e);
+        if (todayOnly) {
+            loadingEl.textContent = "Today's schedule is temporarily unavailable. Please try again shortly or open the full bell schedule.";
+            return;
+        }
         let errorMsg = "<strong>Failed to load schedule data.</strong><br><br>";
         
         if (window.location.protocol === 'file:') {
