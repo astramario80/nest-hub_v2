@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body id="bell-body">
+<body>
     <div class="bg-watermark"></div>
         <header>
         <div class="logo-container">
@@ -165,7 +165,7 @@
         </div>
 
         <!-- Live schedule, shared with the full bell schedule page. -->
-        <section class="home-schedule" data-bell-today-only aria-label="Today's bell schedule">
+        <section class="home-schedule" id="bell-body" data-bell-today-only aria-label="Today's bell schedule">
             <div class="bell-card today-card">
                 <div id="bell-loading" class="home-schedule-status" role="status">Loading today's schedule…</div>
                 <div id="bell-content" style="display: none;">
