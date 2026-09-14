@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
-<body>
+<body id="bell-body">
     <div class="bg-watermark"></div>
         <header>
         <div class="logo-container">
@@ -35,7 +35,7 @@
         </div>
     </header>
 
-    <main class="dashboard" style="margin-bottom: 60px;">
+    <main class="dashboard home-dashboard" style="margin-bottom: 60px;">
         <!-- SOAR Card -->
         <div class="card fade-in" style="animation-delay: 0.1s;">
             <div class="card-header">
@@ -163,6 +163,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- Live schedule, shared with the full bell schedule page. -->
+        <section class="home-schedule" data-bell-today-only aria-label="Today's bell schedule">
+            <div class="bell-card today-card">
+                <div id="bell-loading" class="home-schedule-status" role="status">Loading today's schedule…</div>
+                <div id="bell-content" style="display: none;">
+                    <h2 id="today-title" class="bell-title">Today's Schedule</h2>
+                    <table class="bell-table" id="today-table" aria-labelledby="today-title">
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <a class="home-schedule-link" href="bell-schedule.html">View full bell schedule →</a>
+            </div>
+        </section>
     </main>
 
 
@@ -199,5 +213,6 @@
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/bell.js"></script>
 </body>
 </html>
