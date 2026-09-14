@@ -3122,3 +3122,76 @@ img.tripometer-gif{
 /* End Leadership Jobs page */
 
 /* ========================================================= */
+
+
+/* Today's live schedule beneath the home menu. */
+.home-dashboard {
+    align-content: start;
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+}
+
+.home-schedule {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: 100%;
+    max-width: 440px;
+    min-width: 0;
+    border-radius: 16px;
+}
+
+.home-schedule .bell-card {
+    width: 100%;
+    padding: 22px 24px;
+}
+
+.home-schedule .bell-title {
+    font-size: 1.15rem;
+    margin-bottom: 14px;
+}
+
+.home-schedule .bell-table td {
+    font-size: 1rem;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.home-schedule .period-name {
+    padding-right: 12px !important;
+}
+
+.home-schedule .period-time {
+    padding-left: 12px !important;
+}
+
+.home-schedule-status {
+    padding: 16px 0;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.home-schedule-link {
+    display: block;
+    margin-top: 16px;
+    color: var(--text-light);
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-underline-offset: 3px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+
+.home-schedule-link:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 5px;
+}
+
+@media (max-width: 480px) {
+    .home-dashboard {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .home-schedule .bell-card {
+        padding: 20px 16px;
+    }
+}
+
