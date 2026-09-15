@@ -3,3 +3,6 @@ tests/
 README-lunch.md
 .env*
 .clasp.json
+
+google-spinner/
+README-spinner.md

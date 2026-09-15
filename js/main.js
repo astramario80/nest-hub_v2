@@ -270,7 +270,8 @@ const sopsData = {
         </a>
       </p>
 
-      <div style="display: flex; gap: 32px; align-items: flex-start;">
+      <section id="spinner-access" class="spinner-access" aria-label="Secure period rosters"></section>
+      <div class="spinner-columns">
 
         <!-- LEFT: Controls -->
         <div style="flex: 1;">
@@ -511,6 +512,16 @@ if (sopsButtons.length > 0) {
 
 let remainingNames = [];
 let spinning = false;
+let spinnerInterval = null;
+window.resetMagicSpinner = function() {
+  clearInterval(spinnerInterval);
+  remainingNames = [];
+  spinning = false;
+  const result = document.getElementById("spinner-result");
+  const selected = document.getElementById("selected-list");
+  if (result) result.textContent = "—";
+  if (selected) selected.replaceChildren();
+};
 
 document.addEventListener("click", (event) => {
   if (event.target.id !== "spin-button" && event.target.id !== "reset-spinner") {
@@ -526,10 +537,7 @@ document.addEventListener("click", (event) => {
 
   // RESET
   if (event.target.id === "reset-spinner") {
-    remainingNames = [];
-    spinning = false;
-    resultEl.textContent = "—";
-    listEl.innerHTML = "";
+    window.resetMagicSpinner();
     statusEl.textContent = "Paste names to begin.";
     return;
   }
@@ -556,13 +564,13 @@ document.addEventListener("click", (event) => {
   const finalName = remainingNames[finalIndex];
 
   let spins = 15;
-  const interval = setInterval(() => {
+  spinnerInterval = setInterval(() => {
     const tempIndex = Math.floor(Math.random() * remainingNames.length);
     resultEl.textContent = remainingNames[tempIndex];
     spins--;
 
     if (spins <= 0) {
-      clearInterval(interval);
+      clearInterval(spinnerInterval);
 
       remainingNames.splice(finalIndex, 1);
       resultEl.textContent = finalName;
