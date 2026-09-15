@@ -9,8 +9,8 @@ const gasSource=fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.
 function service() {
   const state=new Map(),sent=[];let now=1000000000,rows=[['Student A','one@example.org'],['Student B','two@example.org']];
   const store={getProperty:k=>state.get(k)||null,setProperty:(k,v)=>state.set(k,v),deleteProperty:k=>state.delete(k),getProperties:()=>Object.fromEntries(state)};
-  const ctx=vm.createContext({Date:class extends Date {static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[]}),Values:{get:()=>({values:rows.map(row=>[row[0],'',row[1]])})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>s})}});
-  vm.runInContext(gasSource,ctx);
+  const ctx=vm.createContext({Date:class extends Date {static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[]}),Values:{get:(id)=>({values:id==='1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I'?[]:rows.map(row=>[row[0],'',row[1]])})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ContentService:{MimeType:{JSON:'json'},createTextOutput:s=>({setMimeType:()=>s})}});
+  vm.runInContext(gasSource+'\n'+fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8'),ctx);
   return {call:r=>JSON.parse(JSON.stringify(ctx.dispatch_(r))),ctx,sent,state,advance:n=>now+=n,setRows:r=>rows=r};
 }
 const base={period:'1',email:'one@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};

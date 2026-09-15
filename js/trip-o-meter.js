@@ -15,21 +15,31 @@
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
-    const canEdit=['administrator','manager'].includes(data.role);
+    const canEdit=['administrator','manager','editor'].includes(data.role);
     status.textContent=`Period ${period} · ${canEdit?'Editing enabled':'View only'} · Access until ${new Date(data.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
-    expiryTimer=setTimeout(()=>lock('Your six-hour access has ended. Verify again to continue.'),Math.max(0,data.expires-Date.now()));
+    expiryTimer=setTimeout(()=>lock('Your six-hour access has ended. Verify again to continue.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
     const toolbar=node('div');toolbar.className='trip-toolbar';
     const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
     const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;clear();setBusy(true);try{await api('logout');lock('Signed out of NEST.');}catch(e){lock(e.message);}finally{setBusy(false);}});toolbar.append(signout);
     if(data.role==='administrator'){
       const label=node('label','Download '),select=node('select');select.setAttribute('aria-label','Download period CSV');
       const empty=node('option','Choose a period…');empty.value='';select.append(empty);
-      ['1','2','3','4','5','7'].forEach(p=>{const o=node('option','Period '+p+' CSV');o.value=p;select.append(o);});
+      ['1','2','3','4','5','7','CTSO'].forEach(p=>{const o=node('option',(p==='CTSO'?'Robotics':'Period '+p)+' CSV');o.value=p;select.append(o);});
       select.addEventListener('change',()=>download(select.value));label.append(select);toolbar.append(label);
     }
     view.append(toolbar);
+    if(['administrator','manager'].includes(data.role)){
+      const panel=node('details'),heading=node('summary','Temporary editing access');panel.append(heading);
+      panel.append(node('p','Give someone editing access to this period for six hours. They must verify their own email here. They cannot grant access to others.'));
+      const form=node('form'),email=node('input');email.type='email';email.required=true;email.maxLength=254;email.placeholder='Editor’s email';email.setAttribute('aria-label','Temporary editor email');
+      const button=node('button','Grant six-hour access');button.type='submit';form.className='trip-toolbar';form.append(email,button);form.addEventListener('submit',event=>{event.preventDefault();save({type:'grant',email:email.value});});panel.append(form);
+      (data.grants||[]).forEach(grant=>{const row=node('p',grant.email+' — until '+new Date(grant.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' ');const revoke=node('button','Revoke');revoke.type='button';revoke.setAttribute('aria-label','Revoke access for '+grant.email);revoke.addEventListener('click',()=>save({type:'revoke',email:grant.email}));row.append(revoke);panel.append(row);});view.append(panel);
+    }
     const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
     const summary=node('p',`${data.students.length} students · ${data.assignments.length} assignments · Overall completion: ${percentage(all)}`);summary.className='trip-summary';view.append(summary);
+    const breakdown=node('details'),heading=node('summary','Score breakdown');breakdown.append(heading);
+    const list=node('p',['4','3','2','1','NE'].map(score=>score+': '+all.filter(v=>v===score).length).join(' · '));breakdown.append(list);
+    breakdown.append(node('p','Not scored: '+all.filter(v=>!v).length+' · Imported legacy values: '+all.filter(v=>v&&!['4','3','2','1','NE'].includes(v)).length+'. Only a score of 4 counts as completed.'));view.append(breakdown);
     if(canEdit){
       const form=node('form'),input=node('input');input.required=true;input.maxLength=100;input.placeholder='New assignment title';input.setAttribute('aria-label','New assignment title');
       const add=node('button','Add assignment');add.type='submit';form.append(input,add);form.className='trip-toolbar';form.addEventListener('submit',event=>{event.preventDefault();save({type:'assignment',title:input.value});});view.append(form);
@@ -39,7 +49,7 @@
     const head=node('thead'),tr=node('tr');const name=node('th','Student');name.scope='col';tr.append(name);
     data.assignments.forEach(a=>{
       const th=node('th');th.scope='col';const title=node('span',a.title);th.append(title);
-      const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);tr.append(th);
+      const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',['4','3','2','1','NE'].map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);tr.append(th);
     });head.append(tr);table.append(head);const body=node('tbody');
     data.students.forEach(student=>{
       const row=node('tr'),name=node('th');name.scope='row';const link=node('a',student.name);link.href='mailto:'+student.email;link.title=student.email;name.append(link);row.append(name);

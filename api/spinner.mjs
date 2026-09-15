@@ -1,5 +1,5 @@
 import { randomBytes, randomInt, createHmac } from 'node:crypto';
-const periods=new Set(['1','2','3','4','5','7']);
+const periods=new Set(['1','2','3','4','5','7','CTSO']);
 const origins=new Set(['https://gknest.org','https://www.gknest.org']);
 const errors={400:'Please check your entry.',401:'Verify your email to access this period. The code may be incorrect or expired.',403:'You do not have permission for this action.',409:'The tracker changed. Refresh it before saving again.',429:'Too many requests. Please try again later.',503:'Email access is temporarily unavailable. Please try again later.'};
 export default async function handler(req,res) {
@@ -38,7 +38,7 @@ export default async function handler(req,res) {
     if(action==='tracker-update'){if(!Number.isInteger(body.revision) || !body.change || typeof body.change!=='object')return fail(400);payload.revision=body.revision;payload.change=body.change;}
   }
   try {
-    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
+    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(50000)});
     if(!response.ok) return fail(503);
     const data=await response.json();
     if(action==='logout' && [200,401].includes(data.status)) return res.status(200).json({ok:true});
@@ -53,5 +53,5 @@ export default async function handler(req,res) {
     if(!Array.isArray(data.names) || !data.names.every(n=>typeof n==='string') || !Number.isFinite(data.expires) || data.expires<=Date.now() || data.expires>Date.now()+21605000) return fail(503);
     if(action==='verify') res.setHeader('Set-Cookie',[cookie('session',session,Math.max(0,Math.floor((data.expires-Date.now())/1000))),cookie('code','',0)]);
     return res.status(200).json({names:data.names,expires:data.expires,period});
-  } catch {return fail(503);}
+  } catch (error) {console.error('NEST bridge request failed',{action,kind:error?.name||'Error'});return fail(503);}
 }

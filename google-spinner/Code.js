@@ -5,7 +5,8 @@ const PERIODS = {
   '3': '1Ycdle_67UhmlyUd0brcbKrYCP2pYjPeiNzsyikxlK70',
   '4': '1dQUtAsQtmx_srX9JqOaQ6KevW_Id2S0Ywvn33vPbgxE',
   '5': '1ShuqoqtcNNY-o4suHdxn0lbI1aoJ-nTqzq3-VIt3_ik',
-  '7': '1yqniHZOhh8ct7_RF1WB8b8Wv_r2OmGIz029h6yexGRA'
+  '7': '1yqniHZOhh8ct7_RF1WB8b8Wv_r2OmGIz029h6yexGRA',
+  'CTSO': '1EahcN40fqGdlHCwZi_kZ-PzxuvRx1oAZWwxEHDbdmDU'
 };
 const BRIDGE_DIGEST = 'fa73c87e353c83d23f5a447adf018eda6be9a8096a6d84e03318eb8833f984cf';
 function hash_(s) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,s).map(b=>('0'+(b&255).toString(16)).slice(-2)).join(''); }
@@ -26,7 +27,7 @@ const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
 const OWNER_EMAILS = ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net'];
 function email_(value) { return String(value||'').trim().toLowerCase(); }
 function rows_(period) {
-  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'Period "+period+"'!A2:C1000").values||[];
+  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];
   return rows.filter(row=>row[0] && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).map(row=>[String(row[0]).trim(),email_(row[2])]);
 }
 function globalAccess_(email) {
@@ -39,7 +40,7 @@ function globalAccess_(email) {
     return links.some(link=>typeof link==='string' && /^mailto:/i.test(link) && email_(decodeURIComponent(link.slice(7).split('?')[0]))===email);
   }))));
 }
-function authorized_(rows,email) { return globalAccess_(email) || rows.some(row=>email_(row[1])===email_(email)); }
+function authorized_(rows,email,period) { return rows.some(row=>email_(row[1])===email_(email)) || globalAccess_(email) || (period && (manager_(email,period) || Boolean(editorGrant_(email,period)))); }
 function read_(store,key,now) {
   const raw=store.getProperty(key); if(!raw) return null;
   const value=JSON.parse(raw); if(value.expires<=now) {store.deleteProperty(key);return null;} return value;
@@ -54,7 +55,7 @@ function dispatch_(r) {
   // Bound retained state; expired records are swept on use once per hour.
   if(Number(store.getProperty('cleanup')||0)<now-3600000) {
     const all=store.getProperties();
-    Object.keys(all).forEach(key=>{if(/^(challenge:|session:|email:|cooldown:|ip:|global$)/.test(key) && JSON.parse(all[key]).expires<=now) store.deleteProperty(key);});
+    Object.keys(all).forEach(key=>{if(/^(challenge:|session:|grant:|email:|cooldown:|ip:|global$)/.test(key) && JSON.parse(all[key]).expires<=now) store.deleteProperty(key);});
     store.setProperty('cleanup',String(now));
   }
   if(r.action==='health') {
@@ -70,12 +71,12 @@ function dispatch_(r) {
     if(!rate_(store,'cooldown:'+hash_(email),1,60000,now)) return {status:429,retryAfter:60};
     if(!rate_(store,key,5,3600000,now)) return {status:429,retryAfter:Math.max(1,Math.ceil((read_(store,key,now).expires-now)/1000))};
     const rows=rows_(r.period);
-    if(!authorized_(rows,email)) return {status:200};
+    if(!authorized_(rows,email,r.period)) return {status:200};
     if(MailApp.getRemainingDailyQuota()<1) return {status:503};
     const challengeKey='challenge:'+hash_(r.challenge);
     store.setProperty(challengeKey,JSON.stringify({email,period:r.period,digest:hash_(r.challenge+':'+r.code),attempts:0,expires:now+600000}));
     try {
-      MailApp.sendEmail({to:email,name:'gk NEST™',subject:'Your NEST™ Period '+r.period+' access code',
+      MailApp.sendEmail({to:email,name:'gk NEST™',subject:'Your NEST™ '+(r.period==='CTSO'?'Robotics':'Period '+r.period)+' access code',
         body:'Your Period '+r.period+' code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org/sops. Access lasts 6 hours. If you did not request this, ignore this email.',
         htmlBody:emailHtml_(r.period,r.code)});
     } catch (_) {store.deleteProperty(challengeKey);return {status:503};}
@@ -88,7 +89,7 @@ function dispatch_(r) {
     c.attempts++;store.setProperty(key,JSON.stringify(c));
     if(c.digest!==hash_(r.challenge+':'+r.code)) return {status:401};
     const rows=rows_(r.period);
-    if(!authorized_(rows,c.email)) return {status:401};
+    if(!authorized_(rows,c.email,r.period)) return {status:401};
     const session={email:c.email,period:r.period,expires:now+21600000};
     store.setProperty('session:'+hash_(r.session),JSON.stringify(session));
     store.deleteProperty(key); // Single use after successful authorization and session persistence.
@@ -100,7 +101,7 @@ function dispatch_(r) {
     if(!s || (s.period!==r.period && !globalAccess_(s.email))) return {status:401};
     if(r.action==='logout') {store.deleteProperty(key);return {status:200};}
     const rows=rows_(r.period);
-    if(!authorized_(rows,s.email)) {store.deleteProperty(key);return {status:401};}
+    if(!authorized_(rows,s.email,r.period)) {store.deleteProperty(key);return {status:401};}
     if(['tracker','tracker-update','export'].includes(r.action))return trackerDispatch_(r,s,rows,store,now);
     return {status:200,expires:s.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }

@@ -1,6 +1,6 @@
 # Trip-o-meter implementation — local draft, not activated
 
-Production currently includes only the SOP link cleanup. The new tracker, shared cookies and Google service changes are not deployed.
+Production currently includes only the SOP link cleanup. The new tracker and shared cookies are not deployed. Updated combined service source and its manifest are saved in the school-owned Apps Script editor, but the production deployment remains version 4. The new Drive and external-request OAuth permissions are awaiting user confirmation.
 
 ## Access
 
@@ -8,14 +8,14 @@ One host-only Secure/HttpOnly/SameSite=Strict session cookie serves both Magic S
 
 ## Tracker
 
-Private app-created JSON files in the school account hold assignments and scores independently of the old spreadsheets. The Google service keeps file IDs in Script Properties. Writes are serialized under the existing script lock and require matching revisions to prevent lost updates. Student users cannot edit or export. Administrator exports include retained historical students; normal views contain current roster members only. CSV generation neutralizes spreadsheet formula injection.
+Private app-created JSON files in the school account hold assignments and scores independently of the old spreadsheets. The Google service keeps file IDs in Script Properties. Writes are serialized under the existing script lock and require matching revisions to prevent lost updates. Student users cannot edit or export; managers and their active temporary editors can edit within their period. Only administrators export all-period data. Administrator exports include retained historical students; normal views contain current roster members only. CSV generation neutralizes spreadsheet formula injection.
 
-Migration is one-time per period and refuses to overwrite an existing imported tracker. It preserves all legacy score strings, including Yes/No, and snapshots names/emails for historical CSV recovery. Original spreadsheets remain intact. Current completion configuration is intentionally unset pending the user's scoring definition; no Yes-to-grade conversion occurs.
+Migration is one-time per period and refuses to overwrite an existing imported tracker. It preserves all legacy score strings, including Yes/No, and snapshots names/emails for historical CSV recovery. Original spreadsheets remain intact. Only score 4 counts as complete; no Yes-to-grade conversion occurs.
 
-## Required before activation
+## Activation status
 
-1. User identifies the current division-manager source and confirms period/division editing scope. `trackerRole_` currently fails closed to student except for live administrators/owners.
-2. User defines which scores count as completion and whether Robotics is included. Set completionScores explicitly in each migrated tracker using the confirmed rule; add Robotics source mapping only if requested.
+1. Implemented live manager/assistant checks from Division Leaderships `Imported!B2:F`, period normalization, independently verified six-hour editor grants, and non-transitive delegation. Manager removal also invalidates their grants.
+2. Only score 4 counts as completion. Score breakdowns show all five scores. CTSO/Robotics uses the existing CTSO tracker and the central NEST CTSO roster. Legacy Yes/No values remain unchanged and do not count as score 4.
 3. Complete migration consistency checks on all configured periods, including blank rosters and unrecognized score values.
 4. Google authorization for app-created Drive files (`drive.file`) and Google API requests (`script.external_request`). This extends the existing read-only Sheets and send-email scopes. It does not grant public access or modify original sheet sharing.
 5. Copy Code.js and Tracker.js into the school-owned Apps Script project; update its manifest and deploy only after Google consent. Do not use the old Gmail-owned clasp project.

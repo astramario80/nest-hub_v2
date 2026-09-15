@@ -23,24 +23,49 @@ function trackerSave_(data) {
   if(id) Drive.Files.update({},id,blob,{fields:'id'});
   else {const file=Drive.Files.create({name:'Period '+data.period+'.json',parents:[trackerFolder_()],mimeType:'application/json'},blob,{fields:'id'});store.setProperty('tracker-file:'+data.period,file.id);}
 }
+const LEADERSHIP_DATABASE = '1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I';
+function manager_(email,period) {
+  const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period && ['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase()) && email_(row[4])===email_(email));
+}
+function editorGrant_(email,period) {
+  const store=PropertiesService.getScriptProperties(),grant=read_(store,'grant:'+period+':'+hash_(email_(email)),Date.now());
+  if(!grant)return null;
+  // Removing a grantor from leadership also revokes their outstanding delegations.
+  return globalAccess_(grant.issuer)||manager_(grant.issuer,period)?grant:null;
+}
 function trackerRole_(email,period) {
   if(globalAccess_(email))return 'administrator';
-  // A verified live manager source will replace this fail-closed default before manager editing is enabled.
-  return 'student';
+  if(manager_(email,period))return 'manager';
+  return editorGrant_(email,period)?'editor':'student';
+}
+function grantEditor_(r,s,store,now) {
+  if(!globalAccess_(s.email)&&!manager_(s.email,r.period))return {status:403};
+  const email=email_((r.change||{}).email);
+  if(email.length>254 || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email))return {status:400};
+  const key='grant:'+r.period+':'+hash_(email);
+  if(r.change.type==='revoke'){store.deleteProperty(key);return {status:200};}
+  const all=store.getProperties(),count=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')&&JSON.parse(all[k]).expires>now).length;
+  if(count>=50&&!store.getProperty(key))return {status:429};
+  store.setProperty(key,JSON.stringify({email,issuer:email_(s.email),period:r.period,expires:now+21600000}));
+  return {status:200};
 }
 function trackerView_(data,rows,role,expires,includeArchived=false) {
   const current=rows.map(row=>({id:hash_(email_(row[1])),name:row[0],email:row[1],active:true}));
   const students=includeArchived ? [...current,...(data.students||[]).filter(old=>!current.some(s=>s.id===old.id)).map(old=>({...old,active:false}))] : current;
   const scores={};
   students.forEach(s=>{scores[s.id]={};data.assignments.forEach(a=>{scores[s.id][a.id]=(data.scores[s.id]||{})[a.id]||'';});});
-  return {status:200,period:data.period,expires,revision:data.revision,role,students,assignments:data.assignments,scores,completionScores:data.completionScores,updatedAt:data.updatedAt};
+  return {status:200,period:data.period,expires,revision:data.revision,role,students,assignments:data.assignments,scores,completionScores:['4'],updatedAt:data.updatedAt};
 }
 function trackerDispatch_(r,s,rows,store,now) {
   const role=trackerRole_(s.email,r.period),data=trackerRead_(r.period);
   if(!data)return {status:409,message:'This period is waiting for its initial data import.'};
-  if(r.action==='tracker')return trackerView_(data,rows,role,s.expires);
+  function view(){const result=trackerView_(data,rows,role,s.expires);if(role==='editor')result.editExpires=editorGrant_(s.email,r.period).expires;
+    if(['administrator','manager'].includes(role)){const all=store.getProperties();result.grants=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')).map(k=>JSON.parse(all[k])).filter(g=>g.expires>now).map(g=>({email:g.email,expires:g.expires}));}return result;}
+  if(r.action==='tracker')return view();
   if(r.action==='export' && role==='administrator')return trackerView_(data,rows,role,s.expires,true);
-  if(r.action!=='tracker-update' || !['administrator','manager'].includes(role))return {status:403};
+  if(r.action!=='tracker-update' || !['administrator','manager','editor'].includes(role))return {status:403};
+  if(['grant','revoke'].includes((r.change||{}).type)){const result=grantEditor_(r,s,store,now);return result.status===200?view():result;}
   if(r.revision!==data.revision)return {status:409,message:'Another person saved changes. Refresh the tracker before trying again.'};
   const change=r.change||{};
   if(change.type==='score') {
@@ -59,15 +84,26 @@ function trackerDispatch_(r,s,rows,store,now) {
   data.revision++;data.updatedAt=now;
   // Keep a bounded audit trail, without copying student names or email addresses into it.
   data.audit=(data.audit||[]).concat({at:now,actor:hash_(s.email),type:change.type,revision:data.revision}).slice(-500);
-  trackerSave_(data);return trackerView_(data,rows,role,s.expires);
+  trackerSave_(data);return view();
 }
 function importTracker_(period) {
   if(trackerFile_(period))throw new Error('Tracker already imported; refusing to overwrite');
-  const raw=Sheets.Spreadsheets.Values.get(PERIODS[period],"'Period "+period+"'!A5:W1000").values||[];
+  const raw=Sheets.Spreadsheets.Values.get(PERIODS[period],"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A5:W").values||[];
   const headers=raw[0]||[],assignments=[];
   for(let col=2;col<headers.length;col++)if(String(headers[col]||'').trim())assignments.push({id:'legacy-'+col,title:String(headers[col]).trim(),sourceColumn:col});
   const scores={},students=[];
   raw.slice(1).forEach(row=>{const email=email_(row[1]);if(!email)return;const id=hash_(email);if(scores[id])throw new Error('Duplicate student email in legacy tracker');students.push({id,name:String(row[0]||'').trim(),email});scores[id]={};assignments.forEach(a=>{scores[id][a.id]=String(row[a.sourceColumn]||'').trim();});});
-  const data={schema:1,period,revision:1,assignments:assignments.map(({id,title})=>({id,title})),scores,students,completionScores:null,updatedAt:Date.now(),audit:[]};
+  const data={schema:1,period,revision:1,assignments:assignments.map(({id,title})=>({id,title})),scores,students,completionScores:['4'],updatedAt:Date.now(),audit:[]};
   trackerSave_(data);return {period,assignments:data.assignments.length,students:Object.keys(scores).length};
+}
+
+// Run only by the school project owner after authorizing the new Drive scopes.
+function initializeTrackers() {
+  const lock=LockService.getScriptLock();lock.waitLock(30000);
+  try {Object.keys(PERIODS).forEach(period=>{
+    rows_(period);manager_('health-check@example.invalid',period);
+    if(!trackerFile_(period))console.log(JSON.stringify(importTracker_(period)));
+    else console.log('Period '+period+' already imported; left unchanged.');
+    const data=trackerRead_(period);if(!data)throw new Error('Import verification failed');
+  });}finally{lock.releaseLock();}
 }

@@ -29,7 +29,7 @@
     const host=byId('spinner-access');if(!host || host.childElementCount)return;
     generation++;clearNames();
     host.innerHTML=`<h3>Load your period’s student list</h3><p>Verify your email for six-hour access. Sign out when you finish on a shared device.</p>
-      <div class="spinner-periods" role="group" aria-label="Choose your period">${[1,2,3,4,5,7].map(p=>`<button type="button" data-period="${p}" aria-pressed="false">Period ${p}</button>`).join('')}</div>
+      <div class="spinner-periods" role="group" aria-label="Choose your period">${[1,2,3,4,5,7,'CTSO'].map(p=>`<button type="button" data-period="${p}" aria-pressed="false">${p==='CTSO'?'Robotics':'Period '+p}</button>`).join('')}</div>
       <section class="spinner-login" hidden aria-label="Period access"><h4 data-heading></h4>
       <p data-message role="status" aria-live="polite"></p>
       <form><label for="spinner-email">Your email</label><input id="spinner-email" type="email" autocomplete="email" maxlength="254" required>

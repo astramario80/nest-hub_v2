@@ -5,15 +5,15 @@ import vm from 'node:vm';
 import {createHash} from 'node:crypto';
 const source=fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8')+'\n'+fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
 function service(){
-  let now=1000000000,admins=[{hyperlink:'mailto:ADMIN@example.org'}],manager=false,saves=0;
+  let now=1000000000,leaders=[],admins=[{hyperlink:'mailto:ADMIN@example.org'}],manager=false,saves=0;
   const state=new Map(),sent=[],rows=[['Student A','ID','student@example.org']];
   const store={getProperty:k=>state.get(k)||null,setProperty:(k,v)=>state.set(k,v),deleteProperty:k=>state.delete(k),getProperties:()=>Object.fromEntries(state)};
-  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{getUuid:()=>String(now),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[{data:[{rowData:[{values:admins}]}]}]}),Values:{get:()=>({values:rows})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)}});
+  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{getUuid:()=>String(now),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[{data:[{rowData:[{values:admins}]}]}]}),Values:{get:(id)=>({values:id==='1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I'?leaders:rows})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)}});
   vm.runInContext(source,ctx);
   let data={schema:1,period:'1',revision:1,assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:null,updatedAt:now};
   ctx.trackerRead_=period=>({...JSON.parse(JSON.stringify(data)),period});
   ctx.trackerSave_=updated=>{data=JSON.parse(JSON.stringify(updated));saves++;};
-  return {ctx,sent,state,call:r=>JSON.parse(JSON.stringify(ctx.dispatch_(r))),setAdmins:a=>admins=a,advance:n=>now+=n,get saves(){return saves;},get data(){return data;}};
+  return {ctx,sent,state,call:r=>JSON.parse(JSON.stringify(ctx.dispatch_(r))),setAdmins:a=>admins=a,setLeaders:a=>leaders=a,advance:n=>now+=n,get saves(){return saves;},get data(){return data;}};
 }
 const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
 function signIn(s,email=base.email){s.call({...base,email,action:'request'});return s.call({...base,action:'verify'});}
@@ -55,4 +55,26 @@ test('global logout revokes access across tools and periods',()=>{
 test('tracker output exposes only roster names and emails, never student IDs or absent students',()=>{
   const s=service();signIn(s);const result=s.call({...base,action:'tracker'});assert.equal(result.students[0].email,'student@example.org');
   assert.ok(!JSON.stringify(result).includes('"ID"'));assert.deepEqual(Object.keys(result.scores),[result.students[0].id]);
+});
+test('current managers and assistants can grant only period-bound, independently verified editing',()=>{
+  for(const position of ['Division Manager','Assistant Manager']){
+    const s=service();s.setLeaders([['Period 1','',position,'Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
+    const grant=s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});assert.equal(grant.status,200);assert.equal(grant.grants.length,1);
+    assert.equal(s.call({...base,period:'2',action:'tracker-update',revision:1,change:{type:'grant',email:'other@example.org'}}).status,401);
+    assert.equal(s.call({...base,email:'helper@example.org',action:'request'}).status,200);
+    assert.equal(s.call({...base,action:'verify'}).status,200);
+    assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+    assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'assignment',title:'New assignment'}}).status,200);
+    assert.equal(s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@example.org'}}).status,403);
+    assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+    s.advance(21600000);assert.equal(s.call({...base,action:'tracker'}).status,401);
+  }
+});
+test('removing manager authority revokes their active delegated editors',()=>{
+  const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
+  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});signIn(s,'helper@example.org');
+  assert.equal(s.call({...base,action:'tracker'}).role,'editor');s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,401);
+});
+test('only score 4 is reported as completed; lower scores and legacy Yes remain distinct',()=>{
+  const s=service();signIn(s);assert.deepEqual(s.call({...base,action:'tracker'}).completionScores,['4']);
 });
