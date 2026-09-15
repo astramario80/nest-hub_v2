@@ -20,7 +20,8 @@
       const id=host==='youtu.be'?url.pathname.slice(1):url.searchParams.get('v');
       if(id&&/^[a-zA-Z0-9_-]+$/.test(id)){url.hostname='www.youtube-nocookie.com';url.pathname='/embed/'+id;url.search='';url.hash='';}
     }
-    return {original:original.href,embed:url.href,host};
+    const previewOnly=host==='docs.google.com' && url.pathname.includes('/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/');
+    return {original:original.href,embed:url.href,host,previewOnly};
   }
   const dialog=document.createElement('dialog');dialog.className='resource-viewer';dialog.setAttribute('aria-labelledby','resource-title');
   dialog.innerHTML='<header class="resource-toolbar"><div><h2 id="resource-title"></h2><p data-provider></p></div><button type="button" data-refresh>Refresh content</button><a data-original target="_blank" rel="noopener noreferrer" data-external>Open in new tab ↗</a><button type="button" data-close aria-label="Close resource viewer">Close ✕</button></header><p class="resource-help" data-help></p><div class="resource-stage"></div>';
@@ -47,7 +48,7 @@
     dialog.querySelector('h2').textContent=target.host==='padlet.com'&&page?page+' — '+label:label;
     dialog.querySelector('[data-provider]').textContent=target.host;dialog.querySelector('[data-original]').href=target.original;
     refresh.hidden=Boolean(target.blocked);dialog.classList.toggle('resource-external-only',Boolean(target.blocked));
-    help.textContent=target.blocked?'This service requires its own tab. Use “Open in new tab” above; NEST will stay here.':'This is live content from the original source. If it is blank or asks you to sign in, use “Open in new tab”.';
+    help.textContent=target.blocked?'This service requires its own tab. Use “Open in new tab” above; NEST will stay here.':target.previewOnly?'Google provides a preview of this form here. Use “Open in new tab” to complete the form.':'This is live content from the original source. If it is blank or asks you to sign in, use “Open in new tab”.';
     document.body.classList.add('resource-viewer-open');dialog.showModal();frame();dialog.querySelector('[data-close]').focus();
   });
 })();
