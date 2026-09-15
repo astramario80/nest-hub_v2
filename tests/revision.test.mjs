@@ -31,9 +31,14 @@ test('Pacific period highlight handles boundaries, PM rollover, passing time, an
   const highlighted=()=>[...w.document.querySelectorAll('#today-table .is-current')].map(r=>r.textContent);
   assert.match(highlighted()[0],/1st Period/);
   const tick=timers.find(t=>t.ms===15000).fn;
-  current='2026-09-15T15:53:00Z';tick();assert.equal(highlighted().length,0);
+  current='2026-09-15T14:44:00Z';tick();assert.equal(highlighted().length,0);
+  current='2026-09-15T15:52:59Z';tick();assert.match(highlighted()[0],/1st Period/);
+  current='2026-09-15T15:53:00Z';tick();assert.equal(highlighted().length,1);assert.match(highlighted()[0],/2nd Period/);
+  current='2026-09-15T15:57:00Z';tick();assert.match(highlighted()[0],/2nd Period/);
+  current='2026-09-15T15:58:00Z';tick();assert.match(highlighted()[0],/2nd Period/);
   current='2026-09-15T17:06:00Z';tick();assert.match(highlighted()[0],/Lunch/);
   current='2026-09-15T19:30:00Z';tick();assert.match(highlighted()[0],/4th Period/);
+  current='2026-09-15T20:02:00Z';tick();assert.match(highlighted()[0],/5th Period/);
   current='2026-09-15T20:07:00Z';tick();assert.match(highlighted()[0],/5th Period/);
   current='2026-09-15T21:15:00Z';tick();assert.equal(highlighted().length,0);
   current='2026-09-16T15:00:00Z';tick();assert.equal(highlighted().length,0);

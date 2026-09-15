@@ -21,4 +21,4 @@ The owner must authorize the script's read-only scope once in Apps Script. Run `
 
 `npm test` covers disclosures, keyboard dismissal, nested links, Pacific period timing, passing-time boundaries, stale schedule dates, changing PDF staff counts, malformed PDFs, and authenticated newest-file selection. Tests use synthetic staff names. The actual T1 26–27 PDF was separately checked locally against all three staff columns, all four time variants, and planning staff.
 
-The current-period marker uses America/Los_Angeles time, refreshes every 15 seconds, and only highlights a schedule whose date matches the current Pacific date. Schedule feeds refresh every five minutes and when a backgrounded page is revisited.
+Passing time between scheduled rows is included in the next period’s marker; before the first row and after the final row remain unmarked. The current-period marker uses America/Los_Angeles time, refreshes every 15 seconds, and only highlights a schedule whose date matches the current Pacific date. Schedule feeds refresh every five minutes and when a backgrounded page is revisited.

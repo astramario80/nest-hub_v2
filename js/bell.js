@@ -50,9 +50,19 @@
   }
   function highlightCurrentPeriod(now = new Date()) {
     const clock = schoolClock(now);
-    document.querySelectorAll('#today-table tbody tr').forEach(row => {
-      const range = timeRange(row.dataset.time || '');
-      const active = clock.date === scheduleDate && range && clock.minute >= range[0] && clock.minute < range[1];
+    const periods = Array.from(document.querySelectorAll('#today-table tbody tr'), row => ({
+      row, range: timeRange(row.dataset.time || '')
+    }));
+    const timedPeriods = periods.filter(period => period.range);
+    const inProgress = timedPeriods.some(({ range }) => clock.minute >= range[0] && clock.minute < range[1]);
+    // Passing time belongs to the next period, once the school day has started.
+    // An overlapping active row still takes precedence; before/after school stays unmarked.
+    const nextPeriod = !inProgress && timedPeriods.some(({ range }) => clock.minute >= range[1])
+      ? timedPeriods.filter(({ range }) => range[0] > clock.minute).sort((a, b) => a.range[0] - b.range[0])[0]
+      : null;
+    periods.forEach(({ row, range }) => {
+      const active = clock.date === scheduleDate && range &&
+        ((clock.minute >= range[0] && clock.minute < range[1]) || row === nextPeriod?.row);
       row.classList.toggle('is-current', Boolean(active));
       row.querySelector('.now-marker')?.remove();
       row.removeAttribute('aria-current');
