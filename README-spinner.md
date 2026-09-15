@@ -1,33 +1,17 @@
-# Magic Spinner period access
+# Shared NEST email access
 
-Production: https://gknest.org/sops → Magic Spinner.
+Production: https://gknest.org/sops (Magic Spinner) and https://gknest.org/trip-o-meter.
 
-Period buttons cover the existing Trip-o-Meter periods 1, 2, 3, 4, 5 and 7. The fixed sheet mapping is in `google-spinner/Code.js`. Each period reads its matching tab: names from A6:A and allowed emails from B6:B. Only names leave the Google service after email verification; no grades or email list is returned to the browser. Updating the existing sheets updates authorization and rosters without redeployment. Period 3 currently has blank initial roster rows; access is denied unless the email exists in its B column.
+See [README-tracker.md](README-tracker.md) for shared permissions, leadership, private storage and current verification status. Both tools use one six-hour host-only Secure/HttpOnly/SameSite=Strict session cookie. Owners and live NEST administrators have global access; students stay within their verified period. Access follows the verified browser session, so shared devices must sign out. External tools retain their own authentication.
 
-## Google setup
+Rosters come from central NEST Database Period N or CTSO tabs, names A and emails C; student IDs and guardian fields are excluded. The old Trip-o-meter spreadsheets are only initial migration sources.
 
-Project: https://script.google.com/d/1hXsy9t4RqGMLElVzmBNM5VdrYlbJrPmzAGMDgjb1XewyzMxfNhjUOBIb/edit
+Codes are cryptographically generated, valid for ten minutes, limited to five attempts and single-use. Challenge cookies bind codes to the requesting browser. Server sessions store fixed expiry and recheck authorization on every request. Logout revokes the shared server session. No credentials or rosters are stored in localStorage; private responses are no-store.
 
-The project is owned and deployed by `mpenalver@bethelsd.org`. The owner must run `authorizeSpinner` once and grant read-only Google Sheets access and email-send permission. This only checks all configured sheet reads and remaining email quota. It sends no email and prints no student records. The Advanced Sheets service is declared in the manifest.
+Rate limits: one request per minute and five per email per hour; 60 per HMAC-hashed IP per hour; 1,000 total per hour. Unknown emails receive the same generic response. Expired state is cleaned on use. MailApp quotas and receiving-school filters still apply.
 
-The deployed web app executes as its owner and rejects every request without the server-only bridge token. The browser never calls it directly. `SPINNER_BRIDGE_URL` and sensitive `SPINNER_BRIDGE_TOKEN` are configured in Vercel production. Only the token digest is committed. Never expose the token, add arbitrary sheet selectors, or return rosters from an unauthenticated route.
+MailApp sends from mpenalver@bethelsd.org with ASCII sender name gk NEST and subject Your gk NEST Period N access code (Robotics for CTSO), avoiding the observed trademark encoding corruption. The supplied NEST banner links to https://gknest.org; HTML alternative text uses entities. Actual inbox delivery and clean subject were verified September 15, 2026.
 
-Google MailApp sends from `mpenalver@bethelsd.org`, with display name gk NEST™. The HTML email includes the site's existing NEST banner linked to https://gknest.org and a plain-text alternative. Google sending quotas and the receiving school email policy apply. A real eligible account should confirm delivery, including spam/junk filtering; unit tests do not establish inbox delivery.
+Vercel holds SPINNER_BRIDGE_URL and SPINNER_BRIDGE_TOKEN. The Google endpoint rejects requests lacking the token. Only the digest is committed. Never expose the token or add browser-selectable spreadsheet IDs.
 
-## Access model
-
-The three owner addresses `astramario@gmail.com`, `mpenalver@bethelsd.org`, and `mario@memberhq.net` are authorized for all periods independently of B6:B. They must still receive and enter the emailed code, and their sessions still expire after six hours. Magic Spinner is currently the only site-hosted email-locked tool; future locked tools must reuse this owner-access rule. Linked external Google files retain their own sharing permissions.
-
-- Six-digit cryptographically generated code, expires in 10 minutes, at most five attempts, single use.
-- Random challenge identifier in a Secure, HttpOnly, SameSite=Strict, host-only cookie binds verification to the requesting browser.
-- Opaque random session cookie per period expires after six hours. Server state stores only the session hash, period, email and fixed expiry. No sliding renewal.
-- Authorization is checked again during verification and every subsequent roster load. Removing an email revokes later loads; already displayed/copied names cannot be recalled.
-- Sign-out revokes that period's server session and deletes its cookies. Shared devices must sign out; access follows the browser session rather than identifying the person physically at the keyboard.
-- UI clears names and selection history on period change, sign-out and expiry. Credentials and rosters are not stored in localStorage. Existing manual paste remains available.
-- Private API responses are no-store. Code requests return a generic response for unknown addresses. Rate limits are held in durable Google Script Properties under a lock: five per address per hour, one per minute, 60 per IP per hour and 1,000 total requests per hour. IP addresses are HMAC-hashed before Google receives them. These limits also bound stored state. Expired records are swept hourly on use.
-
-## Validation / deployment
-
-`npm test` tests code expiry, replay, wrong attempts, session separation, revocation, authorization rechecks, cookies, cross-origin rejection, email banner content, and UI clearing. Browser checks cover desktop and mobile layout. Google code changes require a new immutable Apps Script version and updating the existing deployment; Git pushes do not deploy Apps Script. The website and API deploy through the existing main → Vercel flow.
-
-School deployment ID: `AKfycbygtJUtH24qVVbEFQG9OI20J7PwGrVW8KSxtomtCFzUTC7pjybBif7ruChly2ogQb7d4g`. Maintain this deployment while signed into the school account; the older Gmail-owned project is not the production source.
+School deployment ID: AKfycbygtJUtH24qVVbEFQG9OI20J7PwGrVW8KSxtomtCFzUTC7pjybBif7ruChly2ogQb7d4g. Google changes require a new version in the school-owned project; Git pushes only deploy website/API changes.

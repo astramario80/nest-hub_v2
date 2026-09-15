@@ -1,6 +1,6 @@
-# Trip-o-meter implementation — local draft, not activated
+# Trip-o-meter — production
 
-Production currently includes only the SOP link cleanup. The new tracker and shared cookies are not deployed. Updated combined service source and its manifest are saved in the school-owned Apps Script editor, but the production deployment remains version 4. The new Drive and external-request OAuth permissions are awaiting user confirmation.
+Live at https://gknest.org/trip-o-meter. Website/API deploy from main through Vercel. School-owned Google service version 6 is deployed as of September 15, 2026. All seven trackers were imported and read back successfully after owner authorization.
 
 ## Access
 
@@ -12,16 +12,18 @@ Private app-created JSON files in the school account hold assignments and scores
 
 Migration is one-time per period and refuses to overwrite an existing imported tracker. It preserves all legacy score strings, including Yes/No, and snapshots names/emails for historical CSV recovery. Original spreadsheets remain intact. Only score 4 counts as complete; no Yes-to-grade conversion occurs.
 
-## Activation status
+## Leadership and delegation
 
-1. Implemented live manager/assistant checks from Division Leaderships `Imported!B2:F`, period normalization, independently verified six-hour editor grants, and non-transitive delegation. Manager removal also invalidates their grants.
-2. Only score 4 counts as completion. Score breakdowns show all five scores. CTSO/Robotics uses the existing CTSO tracker and the central NEST CTSO roster. Legacy Yes/No values remain unchanged and do not count as score 4.
-3. Complete migration consistency checks on all configured periods, including blank rosters and unrecognized score values.
-4. Google authorization for app-created Drive files (`drive.file`) and Google API requests (`script.external_request`). This extends the existing read-only Sheets and send-email scopes. It does not grant public access or modify original sheet sharing.
-5. Copy Code.js and Tracker.js into the school-owned Apps Script project; update its manifest and deploy only after Google consent. Do not use the old Gmail-owned clasp project.
-6. Deploy the website/API together after backend smoke tests. Existing per-period cookies are ignored by the new shared-cookie version; users verify once again.
-7. Verify real email → code → tracker → spinner → another permitted period → logout. Verify manager restrictions and student wrong-period rejection on the actual service. The earlier live code-verification failure remains unconfirmed; unit tests alone are insufficient.
+Division Leaderships spreadsheet `1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I`, `Imported!B2:F`, is checked live. Column B supplies the period, D the position, F the email. Division Manager and Assistant Manager can edit and delegate within their period. Delegates must verify their own email, expire after six hours, and cannot delegate further. Removing a manager invalidates their grants.
 
-## Local review
+## Google deployment
 
-`npm test` runs access, mutation and UI regressions. `/private/tmp/nest-tracker-preview.mjs` serves a clearly labeled fictional sample preview at http://127.0.0.1:4178/trip-o-meter. It is not a production backend and must never be deployed.
+School project: `1hXsy9t4RqGMLElVzmBNM5VdrYlbJrPmzAGMDgjb1XewyzMxfNhjUOBIb`. Combine Code.js and Tracker.js in Code.gs and use the committed manifest. Update the existing school deployment; do not use the older Gmail-owned clasp project. Google code changes require a new version independently of Git/Vercel.
+
+Approved scopes: read-only Sheets, send mail, app-created Drive files, external Google API requests. These do not change sheet sharing. App-created JSON files live in the school account's private NEST Private Trackers folder. File IDs stay in Script Properties. initializeTrackers skips existing data and must never overwrite it.
+
+## Verification
+
+Automated tests cover owner/admin global access, student period restrictions, expiry/replay/logout, live manager removal, non-transitive six-hour grants, revision conflicts, score validation and score-4-only completion. Desktop/mobile sample UI checks passed. Live email delivery with clean subject, code verification, Periods 1, 2 and 4, shared Magic Spinner access and Period 2 CSV download were verified. Saving an unchanged blank score in Period 4 succeeded without changing its value; sign-out then locked both tools. All 22 automated tests passed. CSV has 24 student rows and 7 assignment columns. Original spreadsheet data is preserved, including legacy values.
+
+The prior automatic Google response redirect timed out in production. The API now explicitly reads Google's result using a fresh GET restricted to script.googleusercontent.com, with safe stage timing logs and a bounded timeout. Live sign-in/read/export calls completed in approximately 2–4 seconds after this change. The browser displays separate verification/loading progress and bounds requests at 55 seconds.

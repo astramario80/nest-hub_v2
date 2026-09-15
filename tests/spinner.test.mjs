@@ -38,6 +38,7 @@ test('unknown email has same response but no message; codes expire and allow onl
 test('authorization is rechecked; request throttles are durable and banner links to NEST',()=>{
   const s=service();s.call({...base,action:'request'});s.call({...base,action:'request'});assert.equal(s.sent.length,1);
   assert.match(s.sent[0].htmlBody,/href="https:\/\/gknest.org"/);assert.match(s.sent[0].htmlBody,/nest-email-banner.png/);
+  assert.equal(s.sent[0].subject,'Your gk NEST Period 1 access code');assert.equal(s.sent[0].name,'gk NEST');
   assert.match(s.sent[0].body,/012345/);assert.match(s.sent[0].htmlBody,/6 hours/);
   s.call({...base,action:'verify'});s.setRows([['Student B','two@example.org']]);assert.equal(s.call({...base,action:'roster'}).status,401);
   assert.equal(JSON.parse(s.ctx.doPost({postData:{contents:JSON.stringify({...base,action:'roster',token:'wrong'})}})).status,401);
@@ -93,4 +94,18 @@ test('cooldown is explicit and rapid retries do not consume the hourly send allo
   assert.equal(s.sent.length,5);s.advance(60001);
   const limited=s.call({...base,action:'request'});assert.equal(limited.status,429);assert.ok(limited.retryAfter>60);
   s.advance(3600000);assert.equal(s.call({...base,action:'request'}).status,200);assert.equal(s.sent.length,6);
+});
+
+
+test('Google result redirects use a fresh GET and never forward credentials to another host',async()=>{
+  const oldFetch=global.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+  process.env.SPINNER_BRIDGE_URL='https://script.google.com/exec';process.env.SPINNER_BRIDGE_TOKEN='secret';
+  const req={method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json'},body:{action:'request',period:'1',email:'one@example.org'}};
+  let calls=[],target='https://script.googleusercontent.com/result';
+  global.fetch=async(url,options)=>{calls.push({url:String(url),options});return calls.length===1?{status:302,headers:{get:()=>target}}:{ok:true,status:200,json:async()=>({status:200})};};
+  try {
+    let res=response();await handler(req,res);assert.equal(res.code,200);assert.equal(calls.length,2);
+    assert.equal(calls[0].options.redirect,'manual');assert.equal(calls[1].options.body,undefined);assert.equal(calls[1].options.headers,undefined);assert.equal(calls[1].options.redirect,'error');
+    target='https://untrusted.example/result';calls=[];res=response();await handler(req,res);assert.equal(res.code,503);assert.equal(calls.length,1);
+  }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 });
