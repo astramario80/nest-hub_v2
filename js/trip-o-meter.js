@@ -23,12 +23,14 @@
     const toolbar=node('div');toolbar.className='trip-toolbar';
     const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
     const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;clear();setBusy(true);try{await api('logout');lock('Signed out of NEST.');}catch(e){lock(e.message);}finally{setBusy(false);}});toolbar.append(signout);
+    const exportBar=node('div');exportBar.className='trip-export-bar';
+    const exportTitle=node('strong','Download scores');exportBar.append(exportTitle);
     if(data.role==='administrator'){
-      const label=node('label','Download '),select=node('select');select.setAttribute('aria-label','Download period CSV');
-      const empty=node('option','Choose a period…');empty.value='';select.append(empty);
-      ['1','2','3','4','5','7','CTSO'].forEach(p=>{const o=node('option',(p==='CTSO'?'Robotics':'Period '+p)+' CSV');o.value=p;select.append(o);});
-      select.addEventListener('change',()=>download(select.value));label.append(select);toolbar.append(label);
-    }
+      const select=node('select');select.setAttribute('aria-label','CSV period');
+      ['1','2','3','4','5','7','CTSO'].forEach(p=>{const o=node('option',p==='CTSO'?'Robotics':'Period '+p);o.value=p;o.selected=p===period;select.append(o);});
+      const exportButton=node('button','Download CSV');exportButton.type='button';exportButton.className='trip-export-button';exportButton.addEventListener('click',()=>download(select.value));exportBar.append(select,exportButton);
+    }else exportBar.append(node('span','CSV downloads are available to NEST administrators.'));
+    view.append(exportBar);
     view.append(toolbar);
     if(['administrator','manager'].includes(data.role)){
       const panel=node('details'),heading=node('summary','Temporary editing access');panel.append(heading);
@@ -114,10 +116,10 @@
   async function load(){if(busy||!period)return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{const result=await api('tracker');if(current===version)render(result);}catch(e){if(current===version)lock(e.status===401?undefined:e.message);}finally{if(current===version)setBusy(false);}}
   async function save(change){if(busy||!data||expired())return;setBusy(true);try{render(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {render(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
-  async function download(target){if(!target||busy||expired())return;setBusy(true);try{
+  async function download(target){if(!target||busy||scoreQueue.length||expired())return;setBusy(true);status.textContent='Preparing your CSV download…';try{
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
-    const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
   host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));login.reset();q('[data-code-row]').hidden=true;load();}));
   login.addEventListener('submit',async event=>{event.preventDefault();if(busy||!period)return;setBusy(true);try{const result=await api('request',{email:q('[type=email]').value});q('[data-code-row]').hidden=false;status.textContent=result.message;q('[data-code]').value='';}catch(e){status.textContent=e.message;}finally{setBusy(false);}});

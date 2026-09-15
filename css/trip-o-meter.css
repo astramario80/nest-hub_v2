@@ -2,3 +2,5 @@
 .trip-access{width:100%;box-sizing:border-box;min-width:0}.trip-header{max-width:none}.trip-header a{color:#9dd4ff}.trip-header h1{font-size:clamp(1.8rem,4vw,3.2rem)}
 
 .trip-access select.score-pending{border:2px solid #e87722;background:#fff3df}.trip-access [data-save-notice]{padding:10px 0;line-height:1.5}.trip-access [data-save-notice] button{margin-left:10px}
+
+.trip-export-bar{position:sticky;top:8px;z-index:5;display:flex;align-items:center;flex-wrap:wrap;gap:12px;padding:14px;background:#26344d;border:1px solid #71809c;border-radius:10px;box-shadow:0 4px 12px #0005}.trip-export-bar .trip-export-button{background:#e87722;color:#111827;font-weight:700}.trip-export-bar strong{margin-right:auto}

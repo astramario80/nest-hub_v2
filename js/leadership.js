@@ -104,7 +104,8 @@
     // Expect header: Position
     return rows.slice(1)
       .map(r => ((r && r[0]) ? r[0].trim() : ''))
-      .filter(Boolean);
+      .filter(Boolean)
+      .map(position => /^3d\s+print\s+specialist$/i.test(position) ? 'Fabrication Supervisor' : position);
   }
 
   function isExec(position){

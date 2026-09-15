@@ -11,8 +11,8 @@ test('Imported directory projects only current first names and normalizes divisi
 });
 test('directory displays populated roles and marks only missing roles for hiring',async()=>{
  const dom=new JSDOM(fs.readFileSync('leadership.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/leadership'});const w=dom.window;
- w.AbortSignal=AbortSignal;w.fetch=async url=>({ok:true,text:async()=>url==='/api/leadership'?JSON.stringify({leaders:[{division:'Period 1',position:'Division Manager',firstName:'Alex'},{division:'NEST Robotics',position:'Chief Executive Officer',firstName:'Sam'}]}):'Position\nDivision Manager\nAssistant Manager'});
+ w.AbortSignal=AbortSignal;w.fetch=async url=>({ok:true,text:async()=>url==='/api/leadership'?JSON.stringify({leaders:[{division:'Period 1',position:'Division Manager',firstName:'Alex'},{division:'NEST Robotics',position:'Chief Executive Officer',firstName:'Sam'}]}):'Position\nDivision Manager\nAssistant Manager\n3d Print Specialist'});
  w.eval(fs.readFileSync('js/leadership.js','utf8'));await new Promise(r=>setTimeout(r,30));
  const select=w.document.querySelector('#leadership-division');select.value='Division 1';select.dispatchEvent(new w.Event('change'));
- assert.match(w.document.querySelector('#results-grid').textContent,/Alex/);assert.doesNotMatch(w.document.querySelector('#missing-list').textContent,/Division Manager/);assert.match(w.document.querySelector('#missing-list').textContent,/Assistant Manager/);assert.match(w.document.querySelector('#exec-list').textContent,/Sam/);dom.window.close();
+ assert.match(w.document.querySelector('#results-grid').textContent,/Alex/);assert.doesNotMatch(w.document.querySelector('#missing-list').textContent,/Division Manager/);assert.match(w.document.querySelector('#missing-list').textContent,/Assistant Manager/);assert.match(w.document.querySelector('#exec-list').textContent,/Sam/);assert.doesNotMatch(w.document.querySelector('#leadership-position').textContent,/3d Print Specialist/);assert.match(w.document.querySelector('#leadership-position').textContent,/Fabrication Supervisor/);dom.window.close();
 });
