@@ -1,183 +1,115 @@
-(function() {
-
-const slideDisplayUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS48SaNAi_BcEsa09RJINK8kX5Su6eJ6g2YvL4dAMqBBNo_09qilAG1tTBXAgSwFoRY1kCLHwR-VBG1/pub?gid=0&single=true&output=csv";
-const currentScheduleUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS48SaNAi_BcEsa09RJINK8kX5Su6eJ6g2YvL4dAMqBBNo_09qilAG1tTBXAgSwFoRY1kCLHwR-VBG1/pub?gid=927955961&single=true&output=csv";
-
-function parseCSV(text) {
-    const rows = [];
-    let currentRow = [];
-    let currentCell = '';
-    let inQuotes = false;
-    
+(function () {
+  const base = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS48SaNAi_BcEsa09RJINK8kX5Su6eJ6g2YvL4dAMqBBNo_09qilAG1tTBXAgSwFoRY1kCLHwR-VBG1/pub';
+  let scheduleDate = '';
+  function parseCSV(text) {
+    const rows = []; let row = [], cell = '', quoted = false;
     for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === '"') {
-            inQuotes = !inQuotes;
-        } else if (char === ',' && !inQuotes) {
-            currentRow.push(currentCell.trim());
-            currentCell = '';
-        } else if (char === '\n' && !inQuotes) {
-            currentRow.push(currentCell.trim());
-            rows.push(currentRow);
-            currentRow = [];
-            currentCell = '';
-        } else if (char !== '\r') {
-            currentCell += char;
-        }
+      const c = text[i];
+      if (c === '"') { if (quoted && text[i + 1] === '"') { cell += '"'; i++; } else quoted = !quoted; }
+      else if (c === ',' && !quoted) { row.push(cell.trim()); cell = ''; }
+      else if (c === '\n' && !quoted) { row.push(cell.trim()); rows.push(row); row = []; cell = ''; }
+      else if (c !== '\r') cell += c;
     }
-    if (currentCell || currentRow.length > 0) {
-        currentRow.push(currentCell.trim());
-        rows.push(currentRow);
-    }
+    if (cell || row.length) { row.push(cell.trim()); rows.push(row); }
     return rows;
-}
-
-async function loadBellSchedule() {
-    const loadingEl = document.getElementById('bell-loading');
-    const todayOnly = document.querySelector('[data-bell-today-only]') !== null;
-    if (!loadingEl) return;
-    const showProgress = (message) => {
-        loadingEl.innerHTML = todayOnly ? "Loading today's schedule…" : message;
-    };
-    
-    try {
-        showProgress("Step 1: Initiating connection to Google Sheets...<br><span style='font-size:0.8rem;color:#888;'>This might take a second.</span>");
-        
-        const cacheBuster = "&t=" + new Date().getTime();
-        
-        showProgress("Step 2: Fetching SlideDisplay data...");
-        const slideRes = await fetch(slideDisplayUrl + cacheBuster);
-        
-        showProgress("Step 3: Fetching CurrentSchedule data...");
-        const currentRes = await fetch(currentScheduleUrl + cacheBuster);
-
-        if (!slideRes.ok || !currentRes.ok) {
-            throw new Error("Google Sheets returned an error (Status " + slideRes.status + " / " + currentRes.status + ").");
-        }
-        
-        showProgress("Step 4: Downloading text data...");
-        const slideText = await slideRes.text();
-        const currentText = await currentRes.text();
-
-        if (slideText.includes("<html") || currentText.includes("<html") || slideText.includes("<!DOCTYPE") || currentText.includes("<!DOCTYPE")) {
-            throw new Error("Google Sheets returned a webpage instead of a CSV file. This means the Bethel School District security wall is blocking the request and redirecting to a login page. You must use Option 3 (Google Apps Script Web App) or ensure the sheet is published completely publicly.");
-        }
-
-        if (slideText.includes("#REF!") || currentText.includes("#REF!")) {
-            throw new Error("Google Sheets IMPORTRANGE Error: You need to open your new Google Sheet and click 'Allow Access' on the #REF! cell so it can pull the data from the original sheet.");
-        }
-
-        showProgress("Step 5: Parsing CSV data...");
-        const slideData = parseCSV(slideText);
-        const currentData = parseCSV(currentText);
-
-        showProgress("Step 6: Building interface...");
-
-        // 1. Background Color
-        // Look specifically for a hex code in the second row (index 1), third column (index 2)
-        let bgColor = '#E87722'; // Default NEST Orange
-        
-        if (currentData.length > 1 && currentData[1].length > 2) {
-            let potentialColor = currentData[1][2].trim();
-            // Verify it actually looks like a hex code (#FFF or #FFFFFF)
-            if (/^#([0-9A-F]{3}){1,2}$/i.test(potentialColor)) {
-                bgColor = potentialColor;
-            }
-        }
-        
-        // Also check if the body exists before applying
-        const bellBody = document.getElementById('bell-body');
-        if (bellBody) {
-            bellBody.style.backgroundColor = bgColor;
-            // Add a smooth transition
-            bellBody.style.transition = "background-color 1s ease";
-        }
-
-        // 2. Today's Schedule
-        const todayTitle = slideData[7] && slideData[7][0] ? slideData[7][0] : 'No School Today';
-        document.getElementById('today-title').textContent = todayTitle;
-
-        const todayTable = document.getElementById('today-table').querySelector('tbody');
-        todayTable.innerHTML = '';
-        for(let i = 8; i <= 25; i++) {
-            if(slideData[i] && slideData[i][0] && slideData[i][1]) {
-                const tr = document.createElement('tr');
-                const isLunch = slideData[i][0].toLowerCase().includes('lunch');
-                if (isLunch) tr.classList.add('lunch-row');
-                
-                tr.innerHTML = `<td class="period-name">${slideData[i][0]}</td><td class="period-time">${slideData[i][1]}</td>`;
-                todayTable.appendChild(tr);
-            }
-        }
-
-        // The home panel uses the same live rows and color, without upcoming sections.
-        if (todayOnly) {
-            loadingEl.style.display = 'none';
-            document.getElementById('bell-content').style.display = 'block';
-            return;
-        }
-
-        // 3. Upcoming Schedule
-        const upcomingTitle = slideData[7] && slideData[7].length > 3 ? slideData[7][3] : '';
-        document.getElementById('upcoming-title').textContent = upcomingTitle;
-        
-        const upcomingTable = document.getElementById('upcoming-table').querySelector('tbody');
-        upcomingTable.innerHTML = '';
-        if(upcomingTitle) {
-            for(let i = 8; i <= 25; i++) {
-                if(slideData[i] && slideData[i].length > 4 && slideData[i][3] && slideData[i][4]) {
-                    const tr = document.createElement('tr');
-                    const isLunch = slideData[i][3].toLowerCase().includes('lunch');
-                    if (isLunch) tr.classList.add('lunch-row');
-                    
-                    tr.innerHTML = `<td class="period-name">${slideData[i][3]}</td><td class="period-time">${slideData[i][4]}</td>`;
-                    upcomingTable.appendChild(tr);
-                }
-            }
-        } else {
-            document.querySelector('.upcoming-card').style.display = 'none';
-        }
-
-        // 4. Ticker
-        let tickerItems = [];
-        for(let i = 2; i <= 5; i++) {
-            if(currentData[i] && currentData[i][0] && currentData[i][1]) {
-                let dateStr = currentData[i][0];
-                if(dateStr.includes('/')) {
-                    const parts = dateStr.split('/');
-                    if(parts.length >= 2) dateStr = `${parts[0]}/${parts[1]}`;
-                }
-                tickerItems.push(`${dateStr} – ${currentData[i][1]}`);
-            }
-        }
-        if(tickerItems.length > 0) {
-            document.getElementById('ticker-text').innerHTML = `<strong>Upcoming:</strong> &nbsp;&nbsp; ${tickerItems.join(' &nbsp;❧&nbsp; ')}`;
-        } else {
-            document.querySelector('.bell-ticker').style.display = 'none';
-        }
-
-        // Show content
-        loadingEl.style.display = 'none';
-        document.getElementById('bell-content').style.display = 'block';
-
-    } catch (e) {
-        console.error(e);
-        if (todayOnly) {
-            loadingEl.textContent = "Today's schedule is temporarily unavailable. Please try again shortly or open the full bell schedule.";
-            return;
-        }
-        let errorMsg = "<strong>Failed to load schedule data.</strong><br><br>";
-        
-        if (window.location.protocol === 'file:') {
-            errorMsg += "<span style='font-size: 1.1rem; color: #ff9999;'>Note: Browsers block fetching live data when opening HTML files directly from your computer (file://).<br>This will work perfectly once you upload it to Netlify!</span>";
-        } else {
-            errorMsg += "<span style='font-size: 1.1rem; color: #ff9999;'>" + e.message + "</span>";
-        }
-        
-        loadingEl.innerHTML = errorMsg;
+  }
+  function renderRows(tableId, data, column) {
+    const body = document.querySelector(`#${tableId} tbody`);
+    body.replaceChildren();
+    for (let i = 8; i <= 25; i++) {
+      const name = data[i]?.[column], time = data[i]?.[column + 1];
+      if (!name || !time) continue;
+      const row = document.createElement('tr');
+      if (/lunch/i.test(name)) row.classList.add('lunch-row');
+      const label = document.createElement('td'); label.className = 'period-name'; label.textContent = name;
+      const value = document.createElement('td'); value.className = 'period-time'; value.textContent = time;
+      row.dataset.time = time;
+      row.append(label, value); body.append(row);
     }
-}
-
-document.addEventListener('DOMContentLoaded', loadBellSchedule);
-
+  }
+  // School clock is Pacific even when the visitor is in another time zone.
+  function schoolClock(now) {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Los_Angeles', year:'numeric', month:'numeric', day:'numeric',
+      hour:'numeric', minute:'numeric', hourCycle:'h23'
+    }).formatToParts(now).map(p => [p.type, p.value]));
+    return { date:`${Number(parts.month)}/${Number(parts.day)}/${parts.year}`, minute:Number(parts.hour) * 60 + Number(parts.minute) };
+  }
+  function timeRange(value) {
+    const match = value.replace(/[–—]/g, '-').match(/^\s*(\d{1,2}):(\d{2})\s*(am|pm)?\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm)?\s*$/i);
+    if (!match) return null;
+    const minutes = (h, m, suffix) => {
+      h = Number(h); m = Number(m);
+      if (h < 1 || h > 12 || m > 59) return NaN;
+      if (suffix) h = h % 12 + (suffix.toLowerCase() === 'pm' ? 12 : 0);
+      else if (h < 6) h += 12; // The published school-day feed uses 1:00 for 1 PM.
+      return h * 60 + m;
+    };
+    const start = minutes(match[1],match[2],match[3]), end = minutes(match[4],match[5],match[6]);
+    return Number.isFinite(start) && Number.isFinite(end) && end > start ? [start,end] : null;
+  }
+  function highlightCurrentPeriod(now = new Date()) {
+    const clock = schoolClock(now);
+    document.querySelectorAll('#today-table tbody tr').forEach(row => {
+      const range = timeRange(row.dataset.time || '');
+      const active = clock.date === scheduleDate && range && clock.minute >= range[0] && clock.minute < range[1];
+      row.classList.toggle('is-current', Boolean(active));
+      row.querySelector('.now-marker')?.remove();
+      row.removeAttribute('aria-current');
+      if (active) {
+        row.setAttribute('aria-current','time');
+        const marker = document.createElement('span'); marker.className = 'now-marker'; marker.textContent = '▸ NOW';
+        row.firstElementChild.prepend(marker);
+      }
+    });
+  }
+  async function loadBellSchedule() {
+    const loading = document.getElementById('bell-loading'); if (!loading) return;
+    const todayOnly = Boolean(document.querySelector('[data-bell-today-only]'));
+    loading.textContent = "Loading today's schedule…";
+    try {
+      const [slide, current] = await Promise.all([0,927955961].map(async gid => {
+        const response = await fetch(`${base}?gid=${gid}&single=true&output=csv`, { signal:AbortSignal.timeout(20000) });
+        if (!response.ok) throw new Error('Schedule unavailable');
+        const text = await response.text();
+        if (/<html|<!DOCTYPE|#REF!/i.test(text)) throw new Error('Schedule unavailable');
+        return parseCSV(text);
+      }));
+      const color = current[1]?.[2];
+      if (/^#([a-f\d]{3}){1,2}$/i.test(color)) document.getElementById('bell-body').style.backgroundColor = color;
+      const rawDate = current[1]?.[0]?.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      scheduleDate = rawDate ? `${Number(rawDate[1])}/${Number(rawDate[2])}/${rawDate[3]}` : '';
+      document.getElementById('today-title').textContent = slide[7]?.[0] || 'No School Today';
+      renderRows('today-table',slide,0);
+      highlightCurrentPeriod();
+      if (!todayOnly) {
+        const upcomingTitle = slide[7]?.[3];
+        document.querySelector('.upcoming-card').hidden = !upcomingTitle;
+        if (upcomingTitle) {
+          document.getElementById('upcoming-title').textContent = upcomingTitle;
+          renderRows('upcoming-table',slide,3);
+          const upcomingColor = current[2]?.[2];
+          if (/^#([a-f\d]{3}){1,2}$/i.test(upcomingColor)) {
+            const panel = document.querySelector('.upcoming-card');
+            panel.style.setProperty('--upcoming-color',upcomingColor);
+            const hex = upcomingColor.slice(1); const full = hex.length === 3 ? [...hex].map(c=>c+c).join('') : hex;
+            const channels = [0,2,4].map(i => parseInt(full.slice(i,i+2),16)/255).map(c => c <= .04045 ? c/12.92 : ((c+.055)/1.055)**2.4);
+            panel.style.color = channels[0]*.2126+channels[1]*.7152+channels[2]*.0722 > .179 ? '#15191d' : '#fff';
+          }
+        }
+        const upcoming = current.slice(2,6).filter(row=>row[0]&&row[1]).map(row=>`${row[0]} – ${row[1]}`);
+        document.getElementById('ticker-text').textContent = upcoming.length ? `Upcoming: ${upcoming.join('  ❧  ')}` : 'No upcoming schedules published.';
+      }
+      loading.hidden = true; document.getElementById('bell-content').style.display = 'block';
+    } catch (error) {
+      loading.hidden = false;
+      loading.textContent = "Today's live schedule is temporarily unavailable. Please try again shortly.";
+      document.getElementById('bell-content').style.display = 'none';
+      console.warn('Unable to refresh bell schedule');
+    }
+  }
+  document.addEventListener('DOMContentLoaded',loadBellSchedule);
+  setInterval(highlightCurrentPeriod,15000);
+  setInterval(loadBellSchedule,300000);
+  document.addEventListener('visibilitychange',()=>{ if (!document.hidden) loadBellSchedule(); });
 })();

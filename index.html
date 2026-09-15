@@ -5,13 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEST™ Menu</title>
     <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/revision.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="bg-watermark"></div>
         <header>
         <div class="logo-container">
-            <a href="index.html">
+            <a href="/">
                 <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
             </a>
         </div>
@@ -37,100 +38,100 @@
 
     <main class="dashboard home-dashboard" style="margin-bottom: 60px;">
         <!-- SOAR Card -->
-        <div class="card fade-in" style="animation-delay: 0.1s;">
-            <div class="card-header">
-                <h2>SOAR</h2>
-                <p class="subtitle">Safety, Ownership, Attending, Respecting</p>
-            </div>
-            <div class="dropdown-content">
+        <section class="gear-panel disclosure" style="animation-delay: 0.1s;">
+            <button class="gear-trigger" aria-expanded="false" aria-controls="gear-0">
+                <span class="gear-label">SOAR</span>
+                <span class="subtitle">Safety, Ownership, Attending, Respecting</span>
+            <span class="gear-hint">Explore <span aria-hidden="true">＋</span></span></button>
+            <div class="gear-links" id="gear-0">
                 <a href="https://docs.google.com/document/d/1fqpTUJ639ZibkT3r0Ka7iPTwvnfxjnjt2mIpqkJylEg/edit?tab=t.0" target="_blank">✈️ PreFlight</a>
-                <a href="soar.html">🦅 SOAR Matrix</a>
-                <a href="sops.html">📘 SOPs Tool</a>
+                <a href="/soar">🦅 SOAR Matrix</a>
+                <a href="/sops">📘 SOPs Tool</a>
             </div>
-        </div>
+        </section>
 
         <!-- TOOLS Card -->
-        <div class="card fade-in" style="animation-delay: 0.2s;">
-            <div class="card-header">
-                <h2>Tools</h2>
-                <p class="subtitle">Equipment Lookup, Printer Queue, NEST™ Request...</p>
-            </div>
-            <div class="dropdown-content">
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🏫 Daily <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
-                        <a href="bell-schedule.html">🔔 Bell Schedule</a>
+        <section class="gear-panel disclosure" style="animation-delay: 0.2s;">
+            <button class="gear-trigger" aria-expanded="false" aria-controls="gear-1">
+                <span class="gear-label">Tools</span>
+                <span class="subtitle">Equipment Lookup, Printer Queue, NEST™ Request...</span>
+            <span class="gear-hint">Explore <span aria-hidden="true">＋</span></span></button>
+            <div class="gear-links" id="gear-1">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🏫 Daily <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
+                        <a href="/bell-schedule">🔔 Bell Schedule</a>
                         <a href="https://app.smartpass.app/main/passes" target="_blank">🎟️ SmartPass</a>
                         <a href="https://portal.bethelsd.org" target="_blank">🎓 StudentVue Portal</a>
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🤝 Leadership <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
-                        <a href="billboards.html">🎬 Billboard Tool</a>
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🤝 Leadership <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
+                        <a href="/billboards">🎬 Billboard Tool</a>
                         <a href="https://docs.google.com/document/d/1LfwoArm2BdDfVSrn9MynfIT9YrtcaBVkMIrC6pfBny0/edit?tab=t.0" target="_blank">✅ Finished List</a>
-                        <a href="parking-lot.html">🚦 Parking Lot</a>
+                        <a href="/parking-lot">🚦 Parking Lot</a>
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">⚙️ Equipment & Services <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
-                        <a href="inventory.html">📦 Inventory Lookup</a>
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">⚙️ Equipment & Services <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
+                        <a href="/inventory">📦 Inventory Lookup</a>
                         <a href="https://script.google.com/macros/s/AKfycbwyuQy5O6Flzf2yGH7wCmj3JYPVMysvDKCqEJhttXuBRSpyGIGHAKNNlEJiVlswduNfcw/exec" target="_blank">📝 NEST Request</a>
                         <a href="https://docs.google.com/presentation/d/1s01dI6Arva3IjZcMtLN3Fx7UGfa4Zy9FtNAKFIG5Z-E/present?slide=id.p" target="_blank">🖨️ Printer Queue</a>
                         <a href="https://docs.google.com/spreadsheets/d/1hSTOG16yGajUsrlywCHThvbMx9JHXQzmpAN43yzAXb0/edit?gid=1238881676#gid=1238881676" target="_blank">🛠️ Service Request</a>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- RESOURCES Card -->
-        <div class="card fade-in" style="animation-delay: 0.3s;">
-            <div class="card-header">
-                <h2>Resources</h2>
-                <p class="subtitle">SolidProfessor, Chief Delphi, PLTW, TinkerCad...</p>
-            </div>
-            <div class="dropdown-content">
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">📐 CAD & Coding <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
+        <section class="gear-panel disclosure" style="animation-delay: 0.3s;">
+            <button class="gear-trigger" aria-expanded="false" aria-controls="gear-2">
+                <span class="gear-label">Resources</span>
+                <span class="subtitle">SolidProfessor, Chief Delphi, PLTW, TinkerCad...</span>
+            <span class="gear-hint">Explore <span aria-hidden="true">＋</span></span></button>
+            <div class="gear-links" id="gear-2">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">📐 CAD & Coding <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
                         <a href="https://cad.onshape.com/signin?_gl=1*wgsypp*_gcl_au*MTE3NTI2ODguMTY5NzAzODMyMg..#_ga=2.102274438.647686922.1700062849-1321021940.1697038322" target="_blank">📐 OnShape</a>
                         <a href="https://www.tinkercad.com/login" target="_blank">🖥️ TinkerCad</a>
                         <a href="https://makecode.microbit.org/" target="_blank">📟 micro:bit</a>
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">📚 Curriculum <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">📚 Curriculum <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
                         <a href="https://portal.bethelsd.org/ui/" target="_blank">🔬 PLTW</a>
                         <a href="https://www.solidprofessor.com/account/login" target="_blank">🎓 SolidProfessor</a>
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🌐 Community & Assets <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🌐 Community & Assets <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
                         <a href="https://www.chiefdelphi.com/" target="_blank">⚙️ Chief Delphi</a>
                         <a href="https://www.thingiverse.com/education" target="_blank">🌐 Thingaverse</a>
                         <a href="https://spanawayhs.maps.arcgis.com/sharing/oauth2/authorize?client_id=arcgisonline&response_type=code&state=%7B%22portalUrl%22%3A%22https%3A%2F%2Fspanawayhs.maps.arcgis.com%22%2C%22uid%22%3A%22sG1EVzhdYdnx_fWfRhN3DqcvVnEg-cRs-tyQ7TTP7DM%22%2C%22returnUrl%22%3A%22https%3A%2F%2Fspanawayhs.maps.arcgis.com%2Fhome%2Findex.html%22%2C%22useLandingPage%22%3Afalse%2C%22clientId%22%3A%22arcgisonline%22%7D&expiration=20160&locale=en-us&redirect_uri=https%3A%2F%2Fspanawayhs.maps.arcgis.com%2Fhome%2Faccountswitcher-callback.html&redirectToUserOrgUrl=true&code_challenge=zfykoenXumcurkNh6fNCwabdidczKsr5HQu3LbwK-Sw&code_challenge_method=S256&display=default&force_login=false&hideCancel=true&showSignupOption=true&canHandleCrossOrgSignIn=true&signuptype=esri&allow_verification=true" target="_blank">🗺️ ESRI</a>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- COMMAND Card -->
-        <div class="card fade-in" style="animation-delay: 0.4s;">
-            <div class="card-header">
-                <h2>Command</h2>
-                <p class="subtitle">Division Leadership, Management, and NEST™ Robotics</p>
-            </div>
-            <div class="dropdown-content">
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🏢 Division Folders <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
+        <section class="gear-panel disclosure" style="animation-delay: 0.4s;">
+            <button class="gear-trigger" aria-expanded="false" aria-controls="gear-3">
+                <span class="gear-label">Command</span>
+                <span class="subtitle">Division Leadership, Management, and NEST™ Robotics</span>
+            <span class="gear-hint">Explore <span aria-hidden="true">＋</span></span></button>
+            <div class="gear-links" id="gear-3">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🏢 Division Folders <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
                         <a href="https://drive.google.com/drive/folders/1X7faoEUTi0dCNSOVi8EwFo4Z0fY6gEfG" target="_blank">📂 Division 1</a>
                         <a href="https://drive.google.com/drive/folders/1SWRfcL8hT5C3CRu366rpoRCWXk6ObL7B" target="_blank">📂 Division 2</a>
                         <a href="https://drive.google.com/drive/folders/16UJx1F6lStbayCUI41NOHGm5W0hKNFWX" target="_blank">📂 Division 3</a>
@@ -141,20 +142,20 @@
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🤝 Leadership & Management <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
-                        <a href="leadership.html"><img class="menu-ico" src="assets/leadership_landing_page.gif" alt="Leadership" /> Division Leadership</a>
-                        <a href="control-center.html">📊 Manager's Control Center</a>
-                        <a href="trip-o-meter.html">✈️ Trip-o-Meter</a>
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🤝 Leadership & Management <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
+                        <a href="/leadership"><img class="menu-ico" src="assets/leadership_landing_page.gif" alt="Leadership" /> Division Leadership</a>
+                        <a href="/control-center">📊 Manager's Control Center</a>
+                        <a href="/trip-o-meter">✈️ Trip-o-Meter</a>
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLScss8jQvhV4HrKcaPNY3bmnK-2mTViTJxXFbSgTVcQSecwbEA/viewform" target="_blank">✍️ Sign-In Sheet</a>
-                        <a href="dj.html">🎵 DJ Playlist</a>
+                        <a href="/dj">🎵 DJ Playlist</a>
                     </div>
                 </div>
                 
-                <div class="nested-dropdown">
-                    <div class="nested-dropdown-toggle">🤖 NEST™ Robotics <span class="caret">▶</span></div>
-                    <div class="nested-dropdown-content">
+                <div class="gear-group disclosure">
+                    <button class="gear-group-trigger" aria-expanded="false">🤖 NEST™ Robotics <span class="caret">▶</span></button>
+                    <div class="gear-group-links">
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLScsUtR2Gg-dq8xUl-7urF65T4ffiTefeGQlevGGyW8gNOjBXg/viewform" target="_blank">📋 POW Form</a>
                         <a href="https://my.firstinspires.org/Dashboard/" target="_blank">🏎️ FRC Dashboard</a>
                         <a href="https://auth.band.us/login_page?next_url=https%3A%2F%2Fwww.band.us%2Fhome%3Freferrer%3Dhttps%253A%252F%252Fwww.band.us%252F" target="_blank">💬 NEST Robotics Band</a>
@@ -162,7 +163,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <!-- Live schedule, shared with the full bell schedule page. -->
         <section class="home-schedule" id="bell-body" data-bell-today-only aria-label="Today's bell schedule">
@@ -174,7 +175,7 @@
                         <tbody></tbody>
                     </table>
                 </div>
-                <a class="home-schedule-link" href="bell-schedule.html">View full bell schedule →</a>
+                <a class="home-schedule-link" href="/bell-schedule">View full bell schedule →</a>
             </div>
         </section>
     </main>
@@ -213,6 +214,7 @@
     </footer>
 
     <script src="js/main.js"></script>
+    <script src="js/disclosures.js"></script>
     <script src="js/bell.js"></script>
 </body>
 </html>

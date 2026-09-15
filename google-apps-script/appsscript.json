@@ -1,0 +1,1 @@
+{"timeZone":"America/Los_Angeles","runtimeVersion":"V8","exceptionLogging":"STACKDRIVER","oauthScopes":["https://www.googleapis.com/auth/drive.readonly"],"webapp":{"access":"ANYONE_ANONYMOUS","executeAs":"USER_DEPLOYING"}}

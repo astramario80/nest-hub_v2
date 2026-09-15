@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/revision.css" />
 </head>
 
 <body id="bell-body">
@@ -13,7 +14,7 @@
   <!-- HEADER -->
       <header>
         <div class="logo-container">
-            <a href="index.html">
+            <a href="/">
                 <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
             </a>
         </div>
@@ -49,22 +50,22 @@
               <!-- Today -->
               <div class="bell-card today-card">
                   <h2 id="today-title" class="bell-title">Today's Schedule</h2>
-                  <table class="bell-table" id="today-table">
+                  <table class="bell-table" id="today-table" aria-labelledby="today-title">
                       <tbody>
                           <!-- Populated by JS -->
                       </tbody>
                   </table>
               </div>
 
-              <!-- Upcoming -->
-              <div class="bell-card upcoming-card">
-                  <h2 id="upcoming-title" class="bell-title">Upcoming</h2>
-                  <table class="bell-table" id="upcoming-table">
-                      <tbody>
-                          <!-- Populated by JS -->
-                      </tbody>
-                  </table>
-              </div>
+              <section class="upcoming-card disclosure" style="--upcoming-color: #b8c2cc">
+                  <button class="schedule-trigger" aria-expanded="false" aria-controls="upcoming-panel">
+                      <span class="eyebrow">Next schedule <span aria-hidden="true">＋</span></span>
+                      <span id="upcoming-title">Upcoming</span>
+                  </button>
+                  <div id="upcoming-panel" class="disclosure-content">
+                      <table class="bell-table" id="upcoming-table" aria-labelledby="upcoming-title"><tbody></tbody></table>
+                  </div>
+              </section>
           </div>
 
           <!-- Ticker / Footer -->
@@ -72,9 +73,17 @@
               <span id="ticker-text">Upcoming: ...</span>
           </div>
       </div>
+      <section class="lunch-disclosure disclosure">
+          <button class="lunch-trigger" aria-expanded="false" aria-controls="lunch-panel">🍽️ Current Lunch Assignments <span aria-hidden="true">＋</span></button>
+          <div id="lunch-panel" class="disclosure-content">
+              <p id="lunch-status" role="status">Open to load current lunch assignments.</p>
+              <div id="lunch-table-container"></div>
+              <a href="https://drive.google.com/drive/folders/1uZMZ1kgGk0TiZZuut4voigcWT0-APO_0" target="_blank" rel="noopener">Open lunch assignments folder ↗</a>
+          </div>
+      </section>
   </main>
 
-      <footer class="site-footer" style="background: rgba(0,0,0,0.3); border-top: none; position: fixed; bottom: 0; width: 100%;">
+      <footer class="site-footer" style="background: rgba(0,0,0,0.3); border-top: none; width: 100%;">
         <div class="footer-content">
             <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
             <div class="footer-links">
@@ -103,7 +112,9 @@
     </footer>
 
   <script src="js/main.js"></script>
+  <script src="js/disclosures.js"></script>
   <script src="js/bell.js"></script>
+  <script src="js/lunch.js"></script>
 
   
 </body>

@@ -1,0 +1,1 @@
+{"name":"nest-hub","version":"1.0.0","private":true,"engines":{"node":">=22"},"scripts":{"test":"node --test tests/*.test.mjs"},"dependencies":{"pdfjs-dist":"5.4.624"},"devDependencies":{"jsdom":"^26.1.0","pdf-lib":"^1.17.1"}}

@@ -1,0 +1,5 @@
+google-apps-script/
+tests/
+README-lunch.md
+.env*
+.clasp.json
