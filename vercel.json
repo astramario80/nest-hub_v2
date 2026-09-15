@@ -11,6 +11,9 @@
   "functions": {
     "api/spinner.mjs": {
       "maxDuration": 60
+    },
+    "api/leadership.mjs": {
+      "maxDuration": 30
     }
   }
 }

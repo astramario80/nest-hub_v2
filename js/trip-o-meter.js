@@ -2,6 +2,8 @@
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
   const status=q('[data-status]'),login=q('form'),view=q('[data-view]');
+  let scoreQueue=[],savingScores=false,saveError=false,queueTimer;
+  const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
   function clear(){data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
@@ -10,7 +12,7 @@
     let result;try{result=await response.json();}catch{throw new Error('Access is temporarily unavailable. Please try again.');}
     if(!response.ok)throw Object.assign(new Error(result.error||'Unable to complete this request.'),{status:response.status});return result;
   }
-  function lock(message){clear();login.hidden=false;status.textContent=message||'Verify your email to open this period. Your NEST sign-in also works in Magic Spinner.';}
+  function lock(message){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=false;status.textContent=message||'Verify your email to open this period. Your NEST sign-in also works in Magic Spinner.';}
   function expired(){if(data&&Date.now()>=data.expires){lock('Your six-hour access has ended. Verify again to continue.');return true;}return false;}
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
   function render(result){
@@ -55,15 +57,60 @@
       const row=node('tr'),name=node('th');name.scope='row';const link=node('a',student.name);link.href='mailto:'+student.email;link.title=student.email;name.append(link);row.append(name);
       data.assignments.forEach(a=>{
         const cell=node('td'),value=data.scores[student.id]?.[a.id]||'';
-        if(canEdit){const select=node('select');select.setAttribute('aria-label',student.name+' — '+a.title);const options=['','4','3','2','1','NE'];if(value&&!options.includes(value))options.push(value);
+        if(canEdit){const select=node('select');select.dataset.student=student.id;select.dataset.assignment=a.id;select.setAttribute('aria-label',student.name+' — '+a.title);const options=['','4','3','2','1','NE'];if(value&&!options.includes(value))options.push(value);
           options.forEach(score=>{const option=node('option',score||'Not scored');option.value=score;if(score===value)option.selected=true;if(score&&!['4','3','2','1','NE'].includes(score))option.disabled=true;select.append(option);});
-          select.addEventListener('change',()=>save({type:'score',student:student.id,assignment:a.id,score:select.value}));cell.append(select);
+          select.addEventListener('change',()=>queueScore({student:student.id,assignment:a.id,score:select.value}));cell.append(select);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
     });table.append(body);scroll.append(table);view.append(scroll);
     if(!data.assignments.length)view.append(node('p','No assignments have been added yet.'));
     if(!Array.isArray(data.completionScores))view.append(node('p','Completion percentages will appear once the scoring rule is configured. Imported Yes/No values are preserved.'));
   }
+  function scoreControls(){
+    const pending=scoreQueue.length>0;
+    host.querySelectorAll('button,input,select').forEach(el=>{if(!el.matches('tbody select'))el.disabled=pending;});
+    view.querySelectorAll('tbody select').forEach(el=>{
+      const edit=[...scoreQueue].reverse().find(e=>e.student===el.dataset.student&&e.assignment===el.dataset.assignment);
+      el.value=edit?edit.score:(data.scores[el.dataset.student]?.[el.dataset.assignment]||'');
+      el.classList.toggle('score-pending',Boolean(edit));
+      el.setAttribute('aria-description',edit?'Not saved yet':'Saved');
+    });
+    let notice=q('[data-save-notice]');if(!notice){notice=node('div');notice.dataset.saveNotice='';notice.setAttribute('role','status');view.prepend(notice);}
+    notice.replaceChildren(node('span',saveError?'Some scores are not saved. Review the latest data before retrying. ':pending?`Saving ${scoreQueue.length} score change(s)… You can keep entering scores.`:'All scores saved.'));
+    if(saveError){
+      const retry=node('button','Retry unsaved scores');retry.type='button';retry.addEventListener('click',async()=>{
+        if(savingScores)return;retry.disabled=true;
+        try{data=await api('tracker');if(!['administrator','manager','editor'].includes(data.role)){lock('Editing access has ended.');return;}saveError=false;flushScores();}
+        catch(e){if(e.status===401)lock();else{notice.firstChild.textContent=e.message+' ';retry.disabled=false;}}
+      });notice.append(retry);
+    }
+  }
+  function queueScore(edit){
+    if(!data||expired())return;
+    scoreQueue.push(edit);scoreControls();clearTimeout(queueTimer);queueTimer=setTimeout(flushScores,250);
+  }
+  async function flushScores(){
+    if(savingScores||saveError||!scoreQueue.length||!data)return;
+    if(expired())return;
+    savingScores=true;const current=version,batch=scoreQueue.slice(0,8);
+    try{
+      const result=await api('tracker-update',{revision:data.revision,change:{type:'scores',edits:batch}});
+      if(current!==version||!data)return;
+      data=result;scoreQueue.splice(0,batch.length);scoreControls();
+      // Update completion totals without replacing controls or moving keyboard focus.
+      const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
+      q('.trip-summary').textContent=`${data.students.length} students · ${data.assignments.length} assignments · Overall completion: ${percentage(all)}`;
+      view.querySelectorAll('thead th:not(:first-child)').forEach((th,index)=>{
+        const a=data.assignments[index],values=data.students.map(s=>data.scores[s.id]?.[a.id]||'');
+        th.querySelector('small').textContent=percentage(values)+' complete';
+        th.querySelector('details small').textContent=['4','3','2','1','NE'].map(score=>score+': '+values.filter(v=>v===score).length).join(' · ');
+      });
+      const breakdown=[...view.querySelectorAll('details')].find(el=>el.querySelector('summary')?.textContent==='Score breakdown');
+      if(breakdown){const ps=breakdown.querySelectorAll('p');ps[0].textContent=['4','3','2','1','NE'].map(score=>score+': '+all.filter(v=>v===score).length).join(' · ');ps[1].textContent='Not scored: '+all.filter(v=>!v).length+' · Imported legacy values: '+all.filter(v=>v&&!['4','3','2','1','NE'].includes(v)).length+'. Only a score of 4 counts as completed.';}
+    }catch(e){if(current===version&&data){if(e.status===401||e.status===403)lock('Editing access has ended. Verify again to continue.');else{saveError=true;scoreControls();status.textContent=e.message;}}}
+    finally{savingScores=false;if(scoreQueue.length&&!saveError&&data)flushScores();}
+  }
+  window.addEventListener('beforeunload',event=>{if(scoreQueue.length){event.preventDefault();event.returnValue='';}});
   async function load(){if(busy||!period)return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{const result=await api('tracker');if(current===version)render(result);}catch(e){if(current===version)lock(e.status===401?undefined:e.message);}finally{if(current===version)setBusy(false);}}
   async function save(change){if(busy||!data||expired())return;setBusy(true);try{render(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {render(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}

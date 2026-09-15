@@ -16,6 +16,7 @@ function doPost(e) {
   let r;
   try { r=JSON.parse(e.postData.contents); } catch (_) { return json_({status:400}); }
   if(typeof r.token!=='string' || hash_(r.token)!==BRIDGE_DIGEST) return json_({status:401});
+  if(r.action==='leadership') {try{return json_(leadershipDirectory_());}catch(_){return json_({status:503});}}
   if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(15000)) return json_({status:503});
@@ -123,4 +124,15 @@ function emailHtml_(period,code) {
 function authorizeSpinner() {
   Object.keys(PERIODS).forEach(period=>rows_(period));
   console.log('All period sheets readable. Email quota: '+MailApp.getRemainingDailyQuota());
+}
+
+// Public directory exposes only first names, divisions and roles.
+function leadershipDirectory_() {
+  const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:E").values||[];
+  const leaders=rows.map(row=>{
+    const period=String(row[0]||'').replace(/period/ig,'').trim().toUpperCase();
+    const name=String(row[3]||'').trim();
+    return {division:period==='CTSO'?'NEST Robotics':'Period '+period,position:String(row[2]||'').trim(),firstName:name.includes(',')?name.split(',').slice(1).join(',').trim():name.split(/\s+/)[0]};
+  }).filter(row=>row.position&&row.firstName&&!/^(vacant|open|we.?re hiring|hiring|tbd|n\/a)$/i.test(row.firstName));
+  return {status:200,leaders};
 }

@@ -68,10 +68,14 @@ function trackerDispatch_(r,s,rows,store,now) {
   if(['grant','revoke'].includes((r.change||{}).type)){const result=grantEditor_(r,s,store,now);return result.status===200?view():result;}
   if(r.revision!==data.revision)return {status:409,message:'Another person saved changes. Refresh the tracker before trying again.'};
   const change=r.change||{};
-  if(change.type==='score') {
-    if(!SCORE_OPTIONS.includes(change.score) && change.score!=='')return {status:400};
-    if(!data.assignments.some(a=>a.id===change.assignment) || !rows.some(row=>hash_(email_(row[1]))===change.student))return {status:400};
-    data.scores[change.student]=data.scores[change.student]||{};data.scores[change.student][change.assignment]=change.score;
+  if(change.type==='score' || change.type==='scores') {
+    const edits=change.type==='score'?[change]:change.edits;
+    if(!Array.isArray(edits)||!edits.length||edits.length>8)return {status:400};
+    for(const edit of edits){
+      if(!SCORE_OPTIONS.includes(edit.score) && edit.score!=='')return {status:400};
+      if(!data.assignments.some(a=>a.id===edit.assignment) || !rows.some(row=>hash_(email_(row[1]))===edit.student))return {status:400};
+    }
+    edits.forEach(edit=>{data.scores[edit.student]=data.scores[edit.student]||{};data.scores[edit.student][edit.assignment]=edit.score;});
   } else if(change.type==='assignment') {
     const title=String(change.title||'').trim();if(!title || title.length>100 || data.assignments.length>=100)return {status:400};
     data.assignments.push({id:Utilities.getUuid(),title});

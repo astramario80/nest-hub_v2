@@ -78,3 +78,11 @@ test('removing manager authority revokes their active delegated editors',()=>{
 test('only score 4 is reported as completed; lower scores and legacy Yes remain distinct',()=>{
   const s=service();signIn(s);assert.deepEqual(s.call({...base,action:'tracker'}).completionScores,['4']);
 });
+
+test('score batches validate every edit before writing and advance one revision',()=>{
+ const s=service();signIn(s,'astramario@gmail.com');const student=s.ctx.hash_('student@example.org');
+ const update={...base,action:'tracker-update',revision:1,change:{type:'scores',edits:[{student,assignment:'a',score:'4'},{student,assignment:'invalid',score:'3'}]}};
+ assert.equal(s.call(update).status,400);assert.equal(s.saves,0);
+ update.change.edits[1].assignment='a';const result=s.call(update);assert.equal(result.status,200);assert.equal(result.revision,2);assert.equal(result.scores[student].a,'3');assert.equal(s.saves,1);
+ assert.equal(s.call(update).status,409);
+});

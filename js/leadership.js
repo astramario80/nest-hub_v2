@@ -1,15 +1,15 @@
 /* NEST™ Leadership Lookup
-   - Fetches public CSVs for leaders + required positions
+   - Fetches the current Imported directory through the limited server endpoint
    - Search by Division or Position
    - Pins CTSO exec (CEO/CFO/COO) always on top
    - Division search: shows one hiring sheet link + missing roles (hiring.gif -> leadership-jobs.html)
 */
 
 (() => {
-  const LEADERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSY1bNOarIMZn_xl2Qf8xY8zHVJJfgTyNiK0FzNtlYP7Hg0uGqISVnlBAhFw6JZGf6J9KDt3k8frUT9/pub?gid=0&single=true&output=csv';
+  const LEADERS_URL = '/api/leadership';
   const POSITIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSY1bNOarIMZn_xl2Qf8xY8zHVJJfgTyNiK0FzNtlYP7Hg0uGqISVnlBAhFw6JZGf6J9KDt3k8frUT9/pub?gid=1215972243&single=true&output=csv';
 
-  const JOBS_PAGE = 'leadership-jobs.html';
+  const JOBS_PAGE = '/leadership-jobs';
   const HIRING_GIF_SRC = 'assets/hiring.gif';
 
   const EXEC_TITLES = new Set([
@@ -19,7 +19,7 @@
   ]);
 
   const state = {
-    leaders: [], // {division, position, firstName, hiringLink}
+    leaders: [], // {division, position, firstName}
     positions: [], // [position]
     ready: false,
   };
@@ -46,7 +46,7 @@
   }
 
   async function fetchText(url){
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
     if (!res.ok) throw new Error(`Fetch failed (${res.status}) for ${url}`);
     return await res.text();
   }
@@ -99,28 +99,8 @@
     return rows;
   }
 
-  function toLeaders(rows){
-    // Expect header: Division, Position, LeaderFirstName, HiringLink
-    const header = rows[0].map(norm);
-    const idx = {
-      division: header.indexOf('division'),
-      position: header.indexOf('position'),
-      firstName: header.indexOf('leaderfirstname'),
-      hiringLink: header.indexOf('hiringlink'),
-    };
-
-    return rows.slice(1)
-      .filter(r => r && r.length)
-      .map(r => ({
-        division: (r[idx.division] || '').trim(),
-        position: (r[idx.position] || '').trim(),
-        firstName: (r[idx.firstName] || '').trim(),
-        hiringLink: (r[idx.hiringLink] || '').trim(),
-      }))
-      .filter(x => x.division || x.position || x.firstName);
-  }
-
   function toPositions(rows){
+    if (!rows.length || norm(rows[0][0]) !== 'position') throw new Error('Position list unavailable.');
     // Expect header: Position
     return rows.slice(1)
       .map(r => ((r && r[0]) ? r[0].trim() : ''))
@@ -223,7 +203,7 @@
       'Division 4': 'Period 4',
       'Division 5': 'Period 5',
       'Division 7': 'Period 7',
-      'NEST™ Robotics': 'NEST™ Robotics'
+      'NEST™ Robotics': 'NEST Robotics'
     };
     return m[uiDivision] || uiDivision;
   }
@@ -358,16 +338,17 @@
     clearResults();
 
     try {
-      const [leadersCsv, positionsCsv] = await Promise.all([
-        fetchText(LEADERS_CSV_URL),
+      const [leadersJson, positionsCsv] = await Promise.all([
+        fetchText(LEADERS_URL),
         fetchText(POSITIONS_CSV_URL)
       ]);
 
-      const leaderRows = parseCSV(leadersCsv);
+      const directory = JSON.parse(leadersJson);
+      if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
       const posRows = parseCSV(positionsCsv);
 
-      state.leaders = toLeaders(leaderRows);
-      state.positions = toPositions(posRows);
+      state.leaders = directory.leaders;
+      state.positions = [...new Set([...toPositions(posRows), ...state.leaders.map(l => l.position)])];
       state.ready = true;
 
       renderExecStrip();
