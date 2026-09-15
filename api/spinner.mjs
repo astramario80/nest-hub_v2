@@ -41,6 +41,7 @@ export default async function handler(req,res) {
     if(!response.ok) return fail(503);
     const data=await response.json();
     if(action==='logout' && [200,401].includes(data.status)) return res.status(200).json({ok:true});
+    if(data.status===429 && action==='request' && Number.isFinite(data.retryAfter)) { const seconds=Math.min(3600,Math.max(1,Math.ceil(data.retryAfter)));res.setHeader('Retry-After',String(seconds));return res.status(429).json({error:`Please wait ${Math.ceil(seconds/60)} minute(s) before requesting another code. If you already received one, use that code.`,retryAfter:seconds}); }
     if(data.status!==200) return fail([400,401,429].includes(data.status)?data.status:503);
     if(action==='request') {res.setHeader('Set-Cookie',cookie('code',challenge,600));return res.status(200).json({message:'If this email is authorized for this period, a code is on its way. Check your inbox and spam folder.'});}
     if(action==='logout') return res.status(200).json({ok:true});

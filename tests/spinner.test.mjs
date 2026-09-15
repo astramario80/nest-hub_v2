@@ -84,3 +84,13 @@ test('all three owner emails can verify every period without roster membership; 
   }
   const s=service();s.setRows([]);s.call({...base,email:'outsider@example.org',action:'request'});assert.equal(s.sent.length,0);
 });
+
+test('cooldown is explicit and rapid retries do not consume the hourly send allowance',()=>{
+  const s=service();s.call({...base,action:'request'});
+  for(let i=0;i<6;i++)assert.equal(s.call({...base,action:'request'}).status,429);
+  assert.equal(s.sent.length,1);
+  for(let i=0;i<4;i++){s.advance(60001);assert.equal(s.call({...base,action:'request'}).status,200);}
+  assert.equal(s.sent.length,5);s.advance(60001);
+  const limited=s.call({...base,action:'request'});assert.equal(limited.status,429);assert.ok(limited.retryAfter>60);
+  s.advance(3600000);assert.equal(s.call({...base,action:'request'}).status,200);assert.equal(s.sent.length,6);
+});

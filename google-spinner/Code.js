@@ -53,7 +53,8 @@ function dispatch_(r) {
     // Fixed global limit bounds state growth from arbitrary addresses/IPs.
     if(!rate_(store,'global',1000,3600000,now) || !rate_(store,'ip:'+r.ip,60,3600000,now)) return {status:429};
     const key='email:'+hash_(email);
-    if(!rate_(store,key,5,3600000,now) || !rate_(store,'cooldown:'+hash_(email),1,60000,now)) return {status:200};
+    if(!rate_(store,'cooldown:'+hash_(email),1,60000,now)) return {status:429,retryAfter:60};
+    if(!rate_(store,key,5,3600000,now)) return {status:429,retryAfter:Math.max(1,Math.ceil((read_(store,key,now).expires-now)/1000))};
     const rows=rows_(r.period);
     if(!authorized_(rows,email)) return {status:200};
     if(MailApp.getRemainingDailyQuota()<1) return {status:503};
