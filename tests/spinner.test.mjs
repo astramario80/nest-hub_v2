@@ -37,7 +37,7 @@ test('unknown email has same response but no message; codes expire and allow onl
 });
 test('authorization is rechecked; request throttles are durable and banner links to NEST',()=>{
   const s=service();s.call({...base,action:'request'});s.call({...base,action:'request'});assert.equal(s.sent.length,1);
-  assert.match(s.sent[0].htmlBody,/href="https:\/\/gknest.org"/);assert.match(s.sent[0].htmlBody,/nest_logo_dark_background.png/);
+  assert.match(s.sent[0].htmlBody,/href="https:\/\/gknest.org"/);assert.match(s.sent[0].htmlBody,/nest-email-banner.png/);
   assert.match(s.sent[0].body,/012345/);assert.match(s.sent[0].htmlBody,/6 hours/);
   s.call({...base,action:'verify'});s.setRows([['Student B','two@example.org']]);assert.equal(s.call({...base,action:'roster'}).status,401);
   assert.equal(JSON.parse(s.ctx.doPost({postData:{contents:JSON.stringify({...base,action:'roster',token:'wrong'})}})).status,401);

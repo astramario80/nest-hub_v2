@@ -92,9 +92,9 @@ function dispatch_(r) {
 }
 function emailHtml_(period,code) {
   return '<div style="max-width:560px;margin:auto;font-family:Arial,sans-serif;color:#18233b">'+
-    '<a href="https://gknest.org" style="display:block;background:#121827;padding:24px;text-align:center;color:white;text-decoration:none">'+
-    '<img src="https://gknest.org/assets/nest_logo_dark_background.png" width="480" alt="gk NEST™ — Never leave an Eagle behind" style="display:block;width:100%;max-width:480px;height:auto;margin:auto;border:0">'+
-    '<strong style="display:block;margin-top:12px">gk NEST™</strong></a>'+
+    '<a href="https://gknest.org" style="display:block;text-decoration:none">'+
+    '<img src="https://gknest.org/assets/nest-email-banner.png" width="560" alt="NEST™ — New Economy Skills Training" style="display:block;width:100%;max-width:560px;height:auto;margin:auto;border:0">'+
+    '</a>'+
     '<div style="padding:28px"><h1 style="font-size:24px">Period '+period+' access</h1><p>Enter this code in the Magic Spinner:</p>'+
     '<p style="font-size:36px;letter-spacing:8px;font-weight:bold">'+code+'</p>'+
     '<p>This code expires in 10 minutes. Once verified, your access lasts <strong>6 hours</strong> on this browser.</p>'+
