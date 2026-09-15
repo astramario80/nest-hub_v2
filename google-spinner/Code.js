@@ -43,6 +43,10 @@ function dispatch_(r) {
     Object.keys(all).forEach(key=>{if(key!=='cleanup' && JSON.parse(all[key]).expires<=now) store.deleteProperty(key);});
     store.setProperty('cleanup',String(now));
   }
+  if(r.action==='health') {
+    try {rows_(r.period);return {status:200,sheets:true,emailQuota:MailApp.getRemainingDailyQuota()};}
+    catch(error) {return {status:503,diagnostic:String(error.message).slice(0,500)};}
+  }
   if(r.action==='request') {
     const email=String(r.email||'').trim().toLowerCase();
     if(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) || email.length>254 || !/^[a-f0-9]{64}$/.test(r.challenge||'') || !/^\d{6}$/.test(r.code||'') || !/^[a-f0-9]{64}$/.test(r.ip||'')) return {status:400};
