@@ -37,8 +37,19 @@ export default async function handler(req,res) {
     payload.session=session;
     if(action==='tracker-update'){if(!Number.isInteger(body.revision) || !body.change || typeof body.change!=='object')return fail(400);payload.revision=body.revision;payload.change=body.change;}
   }
+  let stage='google-request';const started=Date.now();
   try {
-    const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(50000)});
+    const signal=AbortSignal.timeout(45000);
+    let response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),redirect:'manual',signal});
+    console.info('NEST bridge stage',{action,stage,status:response.status,ms:Date.now()-started});
+    if([301,302,303].includes(response.status)){
+      const target=new URL(response.headers.get('location'));
+      if(target.protocol!=='https:' || target.hostname!=='script.googleusercontent.com')return fail(503);
+      stage='google-result';
+      response=await fetch(target,{redirect:'error',signal});
+      console.info('NEST bridge stage',{action,stage,status:response.status,ms:Date.now()-started});
+    }
+    stage='result-body';
     if(!response.ok) return fail(503);
     const data=await response.json();
     if(action==='logout' && [200,401].includes(data.status)) return res.status(200).json({ok:true});
@@ -53,5 +64,5 @@ export default async function handler(req,res) {
     if(!Array.isArray(data.names) || !data.names.every(n=>typeof n==='string') || !Number.isFinite(data.expires) || data.expires<=Date.now() || data.expires>Date.now()+21605000) return fail(503);
     if(action==='verify') res.setHeader('Set-Cookie',[cookie('session',session,Math.max(0,Math.floor((data.expires-Date.now())/1000))),cookie('code','',0)]);
     return res.status(200).json({names:data.names,expires:data.expires,period});
-  } catch (error) {console.error('NEST bridge request failed',{action,kind:error?.name||'Error'});return fail(503);}
+  } catch (error) {console.error('NEST bridge request failed',{action,stage,ms:Date.now()-started,kind:error?.name||'Error'});return fail(503);}
 }

@@ -6,7 +6,7 @@
   function clear(){data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
-    const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,period,...extra})});
+    const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
     let result;try{result=await response.json();}catch{throw new Error('Access is temporarily unavailable. Please try again.');}
     if(!response.ok)throw Object.assign(new Error(result.error||'Unable to complete this request.'),{status:response.status});return result;
   }
@@ -68,13 +68,13 @@
   async function save(change){if(busy||!data||expired())return;setBusy(true);try{render(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {render(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
   async function download(target){if(!target||busy||expired())return;setBusy(true);try{
-    const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);
+    const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
   host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));login.reset();q('[data-code-row]').hidden=true;load();}));
   login.addEventListener('submit',async event=>{event.preventDefault();if(busy||!period)return;setBusy(true);try{const result=await api('request',{email:q('[type=email]').value});q('[data-code-row]').hidden=false;status.textContent=result.message;q('[data-code]').value='';}catch(e){status.textContent=e.message;}finally{setBusy(false);}});
-  q('[data-verify]').addEventListener('click',async()=>{const code=q('[data-code]').value.trim();if(busy||!/^\d{6}$/.test(code)){status.textContent='Enter the six-digit code from your email.';return;}setBusy(true);try{await api('verify',{code});render(await api('tracker'));}catch(e){status.textContent=e.message;}finally{setBusy(false);}});
+  q('[data-verify]').addEventListener('click',async()=>{const code=q('[data-code]').value.trim();if(busy||!/^\d{6}$/.test(code)){status.textContent='Enter the six-digit code from your email.';return;}setBusy(true);status.textContent='Verifying your code…';try{await api('verify',{code});status.textContent='Verified. Loading your period’s tracker…';render(await api('tracker'));}catch(e){status.textContent=e.name==='TimeoutError'?'The connection took too long. Select your period again to check whether your sign-in completed.':e.message;}finally{setBusy(false);}});
   q('[data-code]').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();q('[data-verify]').click();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);
   document.addEventListener('click',event=>{if(expired()){event.preventDefault();event.stopImmediatePropagation();}},true);

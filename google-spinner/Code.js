@@ -76,8 +76,8 @@ function dispatch_(r) {
     const challengeKey='challenge:'+hash_(r.challenge);
     store.setProperty(challengeKey,JSON.stringify({email,period:r.period,digest:hash_(r.challenge+':'+r.code),attempts:0,expires:now+600000}));
     try {
-      MailApp.sendEmail({to:email,name:'gk NEST™',subject:'Your NEST™ '+(r.period==='CTSO'?'Robotics':'Period '+r.period)+' access code',
-        body:'Your Period '+r.period+' code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org/sops. Access lasts 6 hours. If you did not request this, ignore this email.',
+      MailApp.sendEmail({to:email,name:'gk NEST',subject:'Your gk NEST '+(r.period==='CTSO'?'Robotics':'Period '+r.period)+' access code',
+        body:'Your Period '+r.period+' code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org. Access lasts 6 hours. If you did not request this, ignore this email.',
         htmlBody:emailHtml_(r.period,r.code)});
     } catch (_) {store.deleteProperty(challengeKey);return {status:503};}
     return {status:200};
@@ -110,9 +110,9 @@ function dispatch_(r) {
 function emailHtml_(period,code) {
   return '<div style="max-width:560px;margin:auto;font-family:Arial,sans-serif;color:#18233b">'+
     '<a href="https://gknest.org" style="display:block;text-decoration:none">'+
-    '<img src="https://gknest.org/assets/nest-email-banner.png" width="560" alt="NEST™ — New Economy Skills Training" style="display:block;width:100%;max-width:560px;height:auto;margin:auto;border:0">'+
+    '<img src="https://gknest.org/assets/nest-email-banner.png" width="560" alt="NEST&trade; &mdash; New Economy Skills Training" style="display:block;width:100%;max-width:560px;height:auto;margin:auto;border:0">'+
     '</a>'+
-    '<div style="padding:28px"><h1 style="font-size:24px">Period '+period+' access</h1><p>Enter this code in the Magic Spinner:</p>'+
+    '<div style="padding:28px"><h1 style="font-size:24px">Period '+period+' access</h1><p>Enter this code in the NEST tool you are unlocking:</p>'+
     '<p style="font-size:36px;letter-spacing:8px;font-weight:bold">'+code+'</p>'+
     '<p>This code expires in 10 minutes. Once verified, your access lasts <strong>6 hours</strong> on this browser.</p>'+
     '<p>Enter the code only at <a href="https://gknest.org/sops">gknest.org</a>. Do not share it.</p>'+
