@@ -6,13 +6,13 @@ Period buttons cover the existing Trip-o-Meter periods 1, 2, 3, 4, 5 and 7. The 
 
 ## Google setup
 
-Project: https://script.google.com/d/1Q1x_pq3FfLc2PtbfMLyyGyPg6pJE1e7waqGZJ1UPKea4jFDictMz5KGJ/edit
+Project: https://script.google.com/d/1hXsy9t4RqGMLElVzmBNM5VdrYlbJrPmzAGMDgjb1XewyzMxfNhjUOBIb/edit
 
-Owner must run `authorizeSpinner` once and grant read-only Google Sheets access and email-send permission. This only checks all configured sheet reads and remaining email quota. It sends no email and prints no student records. The Advanced Sheets service is declared in the manifest.
+The project is owned and deployed by `mpenalver@bethelsd.org`. The owner must run `authorizeSpinner` once and grant read-only Google Sheets access and email-send permission. This only checks all configured sheet reads and remaining email quota. It sends no email and prints no student records. The Advanced Sheets service is declared in the manifest.
 
 The deployed web app executes as its owner and rejects every request without the server-only bridge token. The browser never calls it directly. `SPINNER_BRIDGE_URL` and sensitive `SPINNER_BRIDGE_TOKEN` are configured in Vercel production. Only the token digest is committed. Never expose the token, add arbitrary sheet selectors, or return rosters from an unauthenticated route.
 
-Google MailApp sends from the project owner's Google account, with display name gk NEST™. The HTML email includes the site's existing NEST banner linked to https://gknest.org and a plain-text alternative. Google sending quotas and the receiving school email policy apply. A real eligible account should confirm delivery, including spam/junk filtering; unit tests do not establish inbox delivery.
+Google MailApp sends from `mpenalver@bethelsd.org`, with display name gk NEST™. The HTML email includes the site's existing NEST banner linked to https://gknest.org and a plain-text alternative. Google sending quotas and the receiving school email policy apply. A real eligible account should confirm delivery, including spam/junk filtering; unit tests do not establish inbox delivery.
 
 ## Access model
 
@@ -27,3 +27,5 @@ Google MailApp sends from the project owner's Google account, with display name 
 ## Validation / deployment
 
 `npm test` tests code expiry, replay, wrong attempts, session separation, revocation, authorization rechecks, cookies, cross-origin rejection, email banner content, and UI clearing. Browser checks cover desktop and mobile layout. Google code changes require a new immutable Apps Script version and updating the existing deployment; Git pushes do not deploy Apps Script. The website and API deploy through the existing main → Vercel flow.
+
+School deployment ID: `AKfycbygtJUtH24qVVbEFQG9OI20J7PwGrVW8KSxtomtCFzUTC7pjybBif7ruChly2ogQb7d4g`. Maintain this deployment while signed into the school account; the older Gmail-owned project is not the production source.
