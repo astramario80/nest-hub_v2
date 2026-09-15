@@ -13,7 +13,7 @@
     try {data=await response.json();} catch {throw new Error('Email access is temporarily unavailable. Please try again later.');}
     if(!response.ok) throw Object.assign(new Error(data.error||'Please try again.'),{status:response.status});return data;
   }
-  function locked(panel,message='Enter the email listed in this period’s Trip-o-Meter.') {
+  function locked(panel,message='Enter your authorized NEST email.') {
     clearNames();panel.querySelector('form').hidden=false;
     panel.querySelector('[data-session]').hidden=true;
     panel.querySelector('[data-message]').textContent=message;
@@ -36,7 +36,7 @@
       <button type="submit" data-send>Send code</button>
       <div data-code-row hidden><label for="spinner-code">Six-digit code</label><input id="spinner-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
       <button type="button" data-verify>Verify & load names</button></div></form>
-      <div data-session hidden><button type="button" data-logout>Sign out of this period</button></div></section>`;
+      <div data-session hidden><button type="button" data-logout>Sign out of NEST</button></div></section>`;
     let period='',busy=false;
     const panel=host.querySelector('.spinner-login'),form=panel.querySelector('form'),message=panel.querySelector('[data-message]');
     function busyState(value) {busy=value;panel.setAttribute('aria-busy',String(value));panel.querySelectorAll('button').forEach(button=>button.disabled=value);host.querySelectorAll('[data-period]').forEach(button=>button.disabled=value);}
@@ -68,7 +68,7 @@
     byId('spinner-code').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();panel.querySelector('[data-verify]').click();}});
     panel.querySelector('[data-logout]').addEventListener('click',async()=>{
       const version=generation;busyState(true);clearNames();
-      try {await api('logout',period);if(current(panel,version))locked(panel,'Signed out. Verify your email to load this period again.');}
+      try {await api('logout',period);if(current(panel,version))locked(panel,'Signed out of NEST. Verify your email to continue.');}
       catch(error){if(current(panel,version))message.textContent='Names cleared. Sign-out could not be confirmed; please retry.';}
       finally{if(current(panel,version))busyState(false);}
     });

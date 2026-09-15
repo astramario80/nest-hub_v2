@@ -1,0 +1,58 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {createHash} from 'node:crypto';
+const source=fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8')+'\n'+fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
+function service(){
+  let now=1000000000,admins=[{hyperlink:'mailto:ADMIN@example.org'}],manager=false,saves=0;
+  const state=new Map(),sent=[],rows=[['Student A','ID','student@example.org']];
+  const store={getProperty:k=>state.get(k)||null,setProperty:(k,v)=>state.set(k,v),deleteProperty:k=>state.delete(k),getProperties:()=>Object.fromEntries(state)};
+  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{getUuid:()=>String(now),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[{data:[{rowData:[{values:admins}]}]}]}),Values:{get:()=>({values:rows})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)}});
+  vm.runInContext(source,ctx);
+  let data={schema:1,period:'1',revision:1,assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:null,updatedAt:now};
+  ctx.trackerRead_=period=>({...JSON.parse(JSON.stringify(data)),period});
+  ctx.trackerSave_=updated=>{data=JSON.parse(JSON.stringify(updated));saves++;};
+  return {ctx,sent,state,call:r=>JSON.parse(JSON.stringify(ctx.dispatch_(r))),setAdmins:a=>admins=a,advance:n=>now+=n,get saves(){return saves;},get data(){return data;}};
+}
+const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
+function signIn(s,email=base.email){s.call({...base,email,action:'request'});return s.call({...base,action:'verify'});}
+test('one owner or administrator session opens other periods; student sessions remain period-bound',()=>{
+  for(const email of ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net','admin@example.org']){
+    const s=service();assert.equal(signIn(s,email).status,200);
+    assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);
+    assert.equal(s.call({...base,period:'2',action:'roster'}).status,200);
+    s.advance(21600000);assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+  }
+  const s=service();signIn(s);assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+  assert.equal(s.call({...base,action:'tracker'}).status,200);
+  assert.equal(s.call({...base,action:'export'}).status,403);
+});
+test('administrator emails are read from live rich links and removal revokes later access',()=>{
+  const s=service();s.setAdmins([{textFormatRuns:[{format:{link:{uri:'mailto:ADMIN@example.org'}}}]}]);signIn(s,'admin@example.org');
+  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);s.setAdmins([]);
+  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+  assert.equal(s.call({...base,action:'tracker'}).status,401);
+});
+test('student cannot write or claim administrator permission in request payload',()=>{
+  const s=service();signIn(s);
+  assert.equal(s.call({...base,action:'tracker-update',role:'administrator',revision:1,change:{type:'assignment',title:'Malicious'}}).status,403);
+  assert.equal(s.saves,0);
+});
+test('administrator updates validate score, student and revision; stale edits cannot overwrite',()=>{
+  const s=service();signIn(s,'astramario@gmail.com');const id=s.ctx.hash_('student@example.org');
+  const update={...base,action:'tracker-update',revision:1,change:{type:'score',student:id,assignment:'a',score:'4'}};
+  assert.equal(s.call({...update,change:{...update.change,score:'5'}}).status,400);
+  assert.equal(s.call({...update,change:{...update.change,student:'unknown'}}).status,400);
+  const saved=s.call(update);assert.equal(saved.status,200);assert.equal(saved.scores[id].a,'4');assert.equal(saved.revision,2);
+  assert.equal(s.call(update).status,409);assert.equal(s.saves,1);
+  assert.equal(s.call({...base,action:'export'}).status,200);
+});
+test('global logout revokes access across tools and periods',()=>{
+  const s=service();signIn(s,'astramario@gmail.com');assert.equal(s.call({...base,action:'logout',period:'3'}).status,200);
+  assert.equal(s.call({...base,action:'roster'}).status,401);assert.equal(s.call({...base,action:'tracker',period:'2'}).status,401);
+});
+test('tracker output exposes only roster names and emails, never student IDs or absent students',()=>{
+  const s=service();signIn(s);const result=s.call({...base,action:'tracker'});assert.equal(result.students[0].email,'student@example.org');
+  assert.ok(!JSON.stringify(result).includes('"ID"'));assert.deepEqual(Object.keys(result.scores),[result.students[0].id]);
+});

@@ -22,10 +22,24 @@ function doPost(e) {
   catch (_) { return json_({status:503}); }
   finally { lock.releaseLock(); }
 }
+const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
+const OWNER_EMAILS = ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net'];
+function email_(value) { return String(value||'').trim().toLowerCase(); }
 function rows_(period) {
-  return Sheets.Spreadsheets.Values.get(PERIODS[period],"'Period "+period+"'!A6:B").values || [];
+  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'Period "+period+"'!A2:C1000").values||[];
+  return rows.filter(row=>row[0] && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).map(row=>[String(row[0]).trim(),email_(row[2])]);
 }
-function authorized_(rows,email) { email=String(email||'').trim().toLowerCase(); return ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net'].includes(email) || rows.some(row=>String(row[1]||'').trim().toLowerCase()===email); }
+function globalAccess_(email) {
+  email=email_(email);if(OWNER_EMAILS.includes(email))return true;
+  const result=Sheets.Spreadsheets.get(NEST_DATABASE,{ranges:["'Location_Lists_Inventory_OSPI_21stCenturySkills'!T2:T20"],fields:'sheets(data(rowData(values(hyperlink,textFormatRuns,userEnteredValue))))'});
+  return (result.sheets||[]).some(sheet=>(sheet.data||[]).some(grid=>(grid.rowData||[]).some(row=>(row.values||[]).some(cell=>{
+    const links=[cell.hyperlink,...(cell.textFormatRuns||[]).map(run=>run.format&&run.format.link&&run.format.link.uri)];
+    const formula=cell.userEnteredValue&&cell.userEnteredValue.formulaValue;
+    if(formula){const m=formula.match(/^=HYPERLINK\(\s*"(mailto:[^"]+)"/i);if(m)links.push(m[1]);}
+    return links.some(link=>typeof link==='string' && /^mailto:/i.test(link) && email_(decodeURIComponent(link.slice(7).split('?')[0]))===email);
+  }))));
+}
+function authorized_(rows,email) { return globalAccess_(email) || rows.some(row=>email_(row[1])===email_(email)); }
 function read_(store,key,now) {
   const raw=store.getProperty(key); if(!raw) return null;
   const value=JSON.parse(raw); if(value.expires<=now) {store.deleteProperty(key);return null;} return value;
@@ -40,7 +54,7 @@ function dispatch_(r) {
   // Bound retained state; expired records are swept on use once per hour.
   if(Number(store.getProperty('cleanup')||0)<now-3600000) {
     const all=store.getProperties();
-    Object.keys(all).forEach(key=>{if(key!=='cleanup' && JSON.parse(all[key]).expires<=now) store.deleteProperty(key);});
+    Object.keys(all).forEach(key=>{if(/^(challenge:|session:|email:|cooldown:|ip:|global$)/.test(key) && JSON.parse(all[key]).expires<=now) store.deleteProperty(key);});
     store.setProperty('cleanup',String(now));
   }
   if(r.action==='health') {
@@ -73,20 +87,21 @@ function dispatch_(r) {
     if(!c || c.period!==r.period || c.attempts>=5) return {status:401};
     c.attempts++;store.setProperty(key,JSON.stringify(c));
     if(c.digest!==hash_(r.challenge+':'+r.code)) return {status:401};
-    store.deleteProperty(key); // Single use, also across concurrent requests.
     const rows=rows_(r.period);
     if(!authorized_(rows,c.email)) return {status:401};
     const session={email:c.email,period:r.period,expires:now+21600000};
     store.setProperty('session:'+hash_(r.session),JSON.stringify(session));
+    store.deleteProperty(key); // Single use after successful authorization and session persistence.
     return {status:200,expires:session.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }
-  if(r.action==='roster' || r.action==='logout') {
+  if(['roster','logout','tracker','tracker-update','export'].includes(r.action)) {
     if(!/^[a-f0-9]{64}$/.test(r.session||'')) return {status:401};
     const key='session:'+hash_(r.session),s=read_(store,key,now);
-    if(!s || s.period!==r.period) return {status:401};
+    if(!s || (s.period!==r.period && !globalAccess_(s.email))) return {status:401};
     if(r.action==='logout') {store.deleteProperty(key);return {status:200};}
     const rows=rows_(r.period);
     if(!authorized_(rows,s.email)) {store.deleteProperty(key);return {status:401};}
+    if(['tracker','tracker-update','export'].includes(r.action))return trackerDispatch_(r,s,rows,store,now);
     return {status:200,expires:s.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }
   return {status:400};
