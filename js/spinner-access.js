@@ -34,7 +34,7 @@
       <p data-message role="status" aria-live="polite"></p>
       <form><label for="spinner-email">Your email</label><input id="spinner-email" type="email" autocomplete="email" maxlength="254" required>
       <button type="submit" data-send>Send code</button>
-      <div data-code-row hidden><label for="spinner-code">Six-digit code</label><input id="spinner-code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6">
+      <div data-code-row hidden><label for="spinner-code">Six-digit code</label><input id="spinner-code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
       <button type="button" data-verify>Verify & load names</button></div></form>
       <div data-session hidden><button type="button" data-logout>Sign out of NEST</button></div></section>`;
     let period='',busy=false;
@@ -51,12 +51,17 @@
       catch(error) {if(current(panel,version)){locked(panel,error.status===401?undefined:error.message);byId('spinner-email').focus();}}
       finally {if(current(panel,version))busyState(false);}
     });
+    byId('spinner-email').addEventListener('input',()=>{
+      byId('spinner-code').value='';
+      if(byId('spinner-email').validity.valid)panel.querySelector('[data-code-row]').hidden=false;
+    });
     form.addEventListener('submit',async event=>{
-      event.preventDefault();if(busy || !period || !form.reportValidity())return;
-      const version=generation;busyState(true);message.textContent='Requesting your code…';
-      try {const data=await api('request',period,{email:byId('spinner-email').value});if(current(panel,version)){message.textContent=data.message+' Wait one minute before requesting another code.';panel.querySelector('[data-code-row]').hidden=false;byId('spinner-code').value='';byId('spinner-code').focus();}}
+      event.preventDefault();if(busy || !period || !byId('spinner-email').reportValidity())return;
+      const version=generation;busyState(true);message.textContent='Requesting your code… Enter it below when it arrives.';
+      panel.querySelector('[data-code-row]').hidden=false;byId('spinner-email').disabled=true;byId('spinner-code').focus();
+      try {const data=await api('request',period,{email:byId('spinner-email').value});if(current(panel,version)){message.textContent=data.message+' Wait one minute before requesting another code.';}}
       catch(error){if(current(panel,version))message.textContent=error.message;}
-      finally{if(current(panel,version))busyState(false);}
+      finally{if(current(panel,version)){byId('spinner-email').disabled=false;busyState(false);}}
     });
     panel.querySelector('[data-verify]').addEventListener('click',async()=>{
       const code=byId('spinner-code').value.trim();if(busy || !/^\d{6}$/.test(code)){message.textContent='Enter the six-digit code from your email.';return;}

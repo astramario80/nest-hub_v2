@@ -122,7 +122,18 @@
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
   host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));login.reset();q('[data-code-row]').hidden=true;load();}));
-  login.addEventListener('submit',async event=>{event.preventDefault();if(busy||!period)return;setBusy(true);try{const result=await api('request',{email:q('[type=email]').value});q('[data-code-row]').hidden=false;status.textContent=result.message;q('[data-code]').value='';}catch(e){status.textContent=e.message;}finally{setBusy(false);}});
+  q('[type=email]').addEventListener('input',()=>{
+    q('[data-code]').value='';
+    if(q('[type=email]').validity.valid)q('[data-code-row]').hidden=false;
+  });
+  login.addEventListener('submit',async event=>{
+    event.preventDefault();if(busy||!period||!q('[type=email]').reportValidity())return;
+    setBusy(true);q('[data-code-row]').hidden=false;q('[data-code]').disabled=false;q('[data-code]').focus();
+    status.textContent='Requesting your code… Enter it below when it arrives.';
+    try{const result=await api('request',{email:q('[type=email]').value});status.textContent=result.message;}
+    catch(e){status.textContent=e.message;}
+    finally{setBusy(false);}
+  });
   q('[data-verify]').addEventListener('click',async()=>{const code=q('[data-code]').value.trim();if(busy||!/^\d{6}$/.test(code)){status.textContent='Enter the six-digit code from your email.';return;}setBusy(true);status.textContent='Verifying your code…';try{await api('verify',{code});status.textContent='Verified. Loading your period’s tracker…';render(await api('tracker'));}catch(e){status.textContent=e.name==='TimeoutError'?'The connection took too long. Select your period again to check whether your sign-in completed.':e.message;}finally{setBusy(false);}});
   q('[data-code]').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();q('[data-verify]').click();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);
