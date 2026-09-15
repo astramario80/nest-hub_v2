@@ -25,7 +25,7 @@ export default async function handler(req,res) {
   if(action==='request') {
     const email=String(body.email||'').trim().toLowerCase();
     if(email.length>254 || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email)) return fail(400);
-    challenge=randomBytes(32).toString('hex');
+    challenge=challenge || randomBytes(32).toString('hex');
     Object.assign(payload,{email,challenge,code:String(randomInt(1000000)).padStart(6,'0'),
       ip:createHmac('sha256',token).update(String(req.headers['x-vercel-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim()).digest('hex')});
   } else if(action==='verify') {
@@ -40,6 +40,7 @@ export default async function handler(req,res) {
     const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)});
     if(!response.ok) return fail(503);
     const data=await response.json();
+    if(action==='logout' && [200,401].includes(data.status)) return res.status(200).json({ok:true});
     if(data.status!==200) return fail([400,401,429].includes(data.status)?data.status:503);
     if(action==='request') {res.setHeader('Set-Cookie',cookie('code',challenge,600));return res.status(200).json({message:'If this email is authorized for this period, a code is on its way. Check your inbox and spam folder.'});}
     if(action==='logout') return res.status(200).json({ok:true});

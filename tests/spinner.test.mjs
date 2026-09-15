@@ -53,6 +53,8 @@ test('API rejects cross-site requests and keeps credentials in secure cookies on
     let res=response();await handler({...req,headers:{...req.headers,origin:'https://evil.example'}},res);assert.equal(res.code,403);
     res=response();await handler(req,res);assert.equal(res.code,200);assert.match(res.headers['Cache-Control'],/no-store/);assert.match(res.headers['Set-Cookie'],/HttpOnly; Secure; SameSite=Strict/);assert.ok(!JSON.stringify(res.data).includes(payload.code));
     const challengeCookie=res.headers['Set-Cookie'].split(';')[0];
+    const firstChallenge=payload.challenge;
+    res=response();await handler({...req,headers:{...req.headers,cookie:challengeCookie}},res);assert.equal(payload.challenge,firstChallenge,'resend during cooldown preserves the code already received');
     res=response();await handler({...req,headers:{...req.headers,cookie:challengeCookie},body:{action:'verify',period:'1',code:'123456'}},res);
     assert.equal(res.code,200);assert.equal(res.headers['Set-Cookie'].length,2);assert.match(res.headers['Set-Cookie'][0],/Max-Age=21[56]\d{2}/);assert.ok(!JSON.stringify(res.data).includes(payload.session));
     res=response();await handler({...req,body:{action:'roster',period:'1'}},res);assert.equal(res.code,401);
