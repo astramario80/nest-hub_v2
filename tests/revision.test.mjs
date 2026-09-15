@@ -3,12 +3,13 @@ import {JSDOM} from 'jsdom';import {PDFDocument,StandardFonts} from 'pdf-lib';im
 const read=name=>fs.readFileSync(new URL('../'+name,import.meta.url),'utf8');
 test('all homepage links and nested groups remain accessible; touch toggles and Escape closes',()=>{
  const dom=new JSDOM(read('index.html'),{runScripts:'outside-only'});const w=dom.window;
+ const pending=new Map();let timerId=0;w.setTimeout=fn=>{pending.set(++timerId,fn);return timerId;};w.clearTimeout=id=>pending.delete(id);const finishClose=()=>{const callbacks=[...pending.values()];pending.clear();callbacks.forEach(fn=>fn());};
  w.eval(read('js/disclosures.js'));
  const panels=[...w.document.querySelectorAll('.gear-panel')];assert.equal(panels.length,4);
  for(const panel of panels){const button=panel.querySelector('button'),content=button.nextElementSibling;
  assert.equal(content.hidden,true);
  const enter=new w.Event('pointerenter');Object.defineProperty(enter,'pointerType',{value:'mouse'});panel.dispatchEvent(enter);assert.equal(content.hidden,false);
- const leave=new w.Event('pointerleave');Object.defineProperty(leave,'pointerType',{value:'mouse'});panel.dispatchEvent(leave);assert.equal(content.hidden,true);
+ const leave=new w.Event('pointerleave');Object.defineProperty(leave,'pointerType',{value:'mouse'});panel.dispatchEvent(leave);assert.equal(content.hidden,false);panel.dispatchEvent(enter);finishClose();assert.equal(content.hidden,false);panel.dispatchEvent(leave);finishClose();assert.equal(content.hidden,true);
  button.click();assert.equal(content.hidden,false);button.click();assert.equal(content.hidden,true);
  button.focus();assert.equal(content.hidden,false);button.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(content.hidden,true);
  }
@@ -16,6 +17,8 @@ test('all homepage links and nested groups remain accessible; touch toggles and 
  const nested=tools.querySelector('.gear-group-trigger');nested.click();
  assert.equal(nested.nextElementSibling.hidden,false);assert.equal(button.getAttribute('aria-expanded'),'true');
  assert.equal(nested.nextElementSibling.querySelector('a').getAttribute('href'),'/bell-schedule');
+ w.document.activeElement.blur();
+ const group=panels[3].querySelector('.gear-group');const hover=new w.Event('pointerenter');Object.defineProperty(hover,'pointerType',{value:'mouse'});panels[3].dispatchEvent(hover);group.dispatchEvent(hover);const out=new w.Event('pointerleave');Object.defineProperty(out,'pointerType',{value:'mouse'});group.dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),true);panels[3].dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),false);
  dom.window.close();
 });
 test('Pacific period highlight handles boundaries, PM rollover, passing time, and stale dates on both pages',async()=>{
