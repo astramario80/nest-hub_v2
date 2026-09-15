@@ -24,7 +24,7 @@ const SOP_LINKS = [
   },
   {
     terms: ["Trip-o-Meter", "Trip‑o‑Meter"],
-    url: "https://docs.google.com/presentation/d/1yb2DFhj_sG1zRsjYjGH703A1xwIKPcmGsR7cl0Zm2Wk/present?slide=id.p1"
+    url: "/trip-o-meter"
   },
   {
     terms: ["Weather Reports"],
@@ -263,9 +263,8 @@ const sopsData = {
       <p><strong>Transparency is everything.</strong></p>
 
       <p>
-        Trip‑o‑Meter (legacy tool):
-        <a href="https://docs.google.com/presentation/d/1yb2DFhj_sG1zRsjYjGH703A1xwIKPcmGsR7cl0Zm2Wk/present?slide=id.p1"
-          target="_blank">
+        Track class progress:
+        <a href="/trip-o-meter">
           Open Trip‑o‑Meter
         </a>
       </p>
