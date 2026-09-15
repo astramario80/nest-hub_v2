@@ -70,3 +70,17 @@ test('spinner UI loads only after verification and clears names on period change
   q('[data-period="2"]').click();await tick();assert.equal(q('#spinner-names').value,'');
   q('#spinner-code').value='123456';q('[data-verify]').click();await tick();q('[data-logout]').click();await tick();assert.equal(q('#spinner-names').value,'');dom.window.close();
 });
+
+test('all three owner emails can verify every period without roster membership; outsiders cannot',()=>{
+  for(const email of ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net']) {
+    for(const period of ['1','2','3','4','5','7']) {
+      const s=service();s.setRows([]);
+      assert.equal(s.call({...base,email:email.toUpperCase(),period,action:'request'}).status,200);
+      assert.equal(s.sent.length,1);
+      assert.equal(s.call({...base,period,action:'roster'}).status,401);
+      assert.equal(s.call({...base,period,action:'verify'}).status,200);
+      assert.equal(s.call({...base,period,action:'roster'}).status,200);
+    }
+  }
+  const s=service();s.setRows([]);s.call({...base,email:'outsider@example.org',action:'request'});assert.equal(s.sent.length,0);
+});

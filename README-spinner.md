@@ -16,6 +16,8 @@ Google MailApp sends from `mpenalver@bethelsd.org`, with display name gk NEST™
 
 ## Access model
 
+The three owner addresses `astramario@gmail.com`, `mpenalver@bethelsd.org`, and `mario@memberhq.net` are authorized for all periods independently of B6:B. They must still receive and enter the emailed code, and their sessions still expire after six hours. Magic Spinner is currently the only site-hosted email-locked tool; future locked tools must reuse this owner-access rule. Linked external Google files retain their own sharing permissions.
+
 - Six-digit cryptographically generated code, expires in 10 minutes, at most five attempts, single use.
 - Random challenge identifier in a Secure, HttpOnly, SameSite=Strict, host-only cookie binds verification to the requesting browser.
 - Opaque random session cookie per period expires after six hours. Server state stores only the session hash, period, email and fixed expiry. No sliding renewal.
