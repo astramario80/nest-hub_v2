@@ -109,3 +109,26 @@ test('Google result redirects use a fresh GET and never forward credentials to a
     target='https://untrusted.example/result';calls=[];res=response();await handler(req,res);assert.equal(res.code,503);assert.equal(calls.length,1);
   }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 });
+
+test('lost Google verification response retries GET only and never issues a session on failure',async()=>{
+  const oldFetch=global.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+  process.env.SPINNER_BRIDGE_URL='https://script.google.com/exec';process.env.SPINNER_BRIDGE_TOKEN='secret';
+  const req={method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json',cookie:'__Host-nest-code='+'a'.repeat(64)},body:{action:'verify',period:'1',code:'123456'}};
+  try{
+    for(const recover of [true,false]){
+      const calls=[];
+      global.fetch=async(url,options)=>{
+        calls.push(options);
+        if(options.method==='POST')return {status:302,headers:{get:()=> 'https://script.googleusercontent.com/result'}};
+        if(calls.length===2||!recover)return {ok:false,status:404};
+        return {ok:true,status:200,json:async()=>({status:200,names:['Example'],expires:Date.now()+21600000})};
+      };
+      const res=response();await handler(req,res);
+      assert.equal(calls.length,3);assert.equal(calls.filter(c=>c.method==='POST').length,1);
+      assert.ok(calls.slice(1).every(c=>!c.body&&!c.headers&&c.redirect==='error'));
+      assert.equal(res.code,recover?200:503);
+      if(recover)assert.match(res.headers['Set-Cookie'][0],/__Host-nest-session=/);
+      else assert.equal(res.headers['Set-Cookie'],undefined,'Failure must never grant a session');
+    }
+  }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});

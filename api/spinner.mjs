@@ -46,7 +46,13 @@ export default async function handler(req,res) {
       const target=new URL(response.headers.get('location'));
       if(target.protocol!=='https:' || target.hostname!=='script.googleusercontent.com')return fail(503);
       stage='google-result';
-      response=await fetch(target,{redirect:'error',signal});
+      // Retry only the response GET; never repeat the email or verification POST.
+      for(let attempt=0;attempt<2;attempt++){
+        try{
+          response=await fetch(target,{redirect:'error',signal:AbortSignal.any([signal,AbortSignal.timeout(8000)])});
+          if(response.ok || ![404,429,500,502,503,504].includes(response.status))break;
+        }catch(error){if(attempt===1 || signal.aborted)throw error;}
+      }
       console.info('NEST bridge stage',{action,stage,status:response.status,ms:Date.now()-started});
     }
     stage='result-body';
