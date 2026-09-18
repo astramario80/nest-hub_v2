@@ -44,7 +44,18 @@ test('Pacific period highlight handles boundaries, PM rollover, passing time, an
   current='2026-09-15T20:02:00Z';tick();assert.match(highlighted()[0],/5th Period/);
   current='2026-09-15T20:07:00Z';tick();assert.match(highlighted()[0],/5th Period/);
   current='2026-09-15T21:15:00Z';tick();assert.equal(highlighted().length,0);
+  const state=()=>w.document.querySelector('#today-table .is-current');
+  for(const [time,expected] of [['14:45:00','passes-locked'],['14:54:59','passes-locked'],['14:55:00','passes-open'],['15:42:59','passes-open'],['15:43:00','passes-locked'],['15:52:59','passes-locked']]){
+    current='2026-09-15T'+time+'Z';tick();assert.ok(state().classList.contains(expected),time+' '+expected);
+    assert.match(state().querySelector('.pass-status').textContent,expected==='passes-open'?/Passes available/:/10\/10 · Passes locked/);
+  }
+  current='2026-09-15T15:53:00Z';tick();assert.match(state().textContent,/Passing time/);assert.ok(!state().classList.contains('passes-locked'));assert.ok(!state().classList.contains('passes-open'));
+  current='2026-09-15T17:06:00Z';tick();assert.ok(!state().classList.contains('passes-locked'));assert.ok(!state().classList.contains('passes-open'));
+  // A period shorter than 20 minutes remains locked throughout its actual duration.
+  w.document.querySelector('#today-table tbody tr').dataset.time='7:45-8:00';
+  current='2026-09-15T14:55:00Z';tick();assert.ok(state().classList.contains('passes-locked'));
   current='2026-09-16T15:00:00Z';tick();assert.equal(highlighted().length,0);
+  assert.equal(w.document.querySelectorAll('#today-table .pass-status,#today-table .passes-open,#today-table .passes-locked').length,0);
   dom.window.close();
  }
 });

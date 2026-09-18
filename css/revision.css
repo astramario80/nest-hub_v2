@@ -62,3 +62,10 @@ button:focus-visible,.gear-links a:focus-visible { outline:3px solid #fff; outli
 @media(prefers-reduced-motion:reduce) {
   .gear-panel,.gear-panel::before,.gear-panel::after,.gear-trigger,.gear-group-trigger .caret,#bell-body { animation:none!important; transition:none!important; }
 }
+
+/* Explicit labels accompany the 10/10 colors, including for color-blind readers. */
+.bell-table tr.is-current.passes-open { background:#d8f3df; box-shadow:inset 4px 0 #176437; }
+.bell-table tr.is-current.passes-open td,.bell-table tr.passes-open .now-marker { color:#124c29; }
+.bell-table tr.is-current.passes-locked { background:#fce3e3; box-shadow:inset 4px 0 #a32323; }
+.bell-table tr.is-current.passes-locked td,.bell-table tr.passes-locked .now-marker { color:#842020; }
+.pass-status { display:block; font-size:.7em; line-height:1.4; margin-top:4px; font-weight:700; }

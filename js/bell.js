@@ -65,11 +65,20 @@
         ((clock.minute >= range[0] && clock.minute < range[1]) || row === nextPeriod?.row);
       row.classList.toggle('is-current', Boolean(active));
       row.querySelector('.now-marker')?.remove();
+      row.querySelector('.pass-status')?.remove();
+      row.classList.remove('passes-open','passes-locked');
       row.removeAttribute('aria-current');
       if (active) {
         row.setAttribute('aria-current','time');
         const marker = document.createElement('span'); marker.className = 'now-marker'; marker.textContent = '▸ NOW';
         row.firstElementChild.prepend(marker);
+        const passing = clock.minute < range[0];
+        const lunch = row.classList.contains('lunch-row');
+        const restricted = !passing && !lunch && (clock.minute < range[0]+10 || clock.minute >= range[1]-10);
+        if (!passing && !lunch) row.classList.add(restricted ? 'passes-locked' : 'passes-open');
+        const status = document.createElement('span'); status.className = 'pass-status';
+        status.textContent = passing ? 'Passing time' : lunch ? 'Lunch' : restricted ? '10/10 · Passes locked' : 'Passes available';
+        row.firstElementChild.append(status);
       }
     });
   }
