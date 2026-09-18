@@ -21,6 +21,7 @@
       if (!name || !time) continue;
       const row = document.createElement('tr');
       if (/lunch/i.test(name)) row.classList.add('lunch-row');
+      if (/halls? open|dismissal|passing|break/i.test(name)) row.classList.add('non-class-row');
       const label = document.createElement('td'); label.className = 'period-name'; label.textContent = name;
       const value = document.createElement('td'); value.className = 'period-time'; value.textContent = time;
       row.dataset.time = time;
@@ -74,10 +75,11 @@
         row.firstElementChild.prepend(marker);
         const passing = clock.minute < range[0];
         const lunch = row.classList.contains('lunch-row');
-        const restricted = !passing && !lunch && (clock.minute < range[0]+10 || clock.minute >= range[1]-10);
-        if (!passing && !lunch) row.classList.add(restricted ? 'passes-locked' : 'passes-open');
+        const nonClass = row.classList.contains('non-class-row');
+        const restricted = !passing && !lunch && !nonClass && (clock.minute < range[0]+10 || clock.minute >= range[1]-10);
+        if (!passing && !lunch && !nonClass) row.classList.add(restricted ? 'passes-locked' : 'passes-open');
         const status = document.createElement('span'); status.className = 'pass-status';
-        status.textContent = passing ? 'Passing time' : lunch ? 'Lunch' : restricted ? '10/10 · Passes locked' : 'Passes available';
+        status.textContent = passing ? 'Passing time' : lunch ? 'Lunch' : nonClass ? 'Outside class time' : restricted ? '10/10 · Passes locked' : 'Passes available';
         row.firstElementChild.append(status);
       }
     });
