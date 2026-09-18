@@ -130,7 +130,7 @@
     event.preventDefault();if(busy||!period||!q('[type=email]').reportValidity())return;
     setBusy(true);q('[data-code-row]').hidden=false;q('[data-code]').disabled=false;q('[data-code]').focus();
     status.textContent='Requesting your code… Enter it below when it arrives.';
-    try{const result=await api('request',{email:q('[type=email]').value});status.textContent=result.message;}
+    try{await api('prepare');const result=await api('request',{email:q('[type=email]').value});status.textContent=result.message;}
     catch(e){status.textContent=e.message;}
     finally{setBusy(false);}
   });

@@ -10,6 +10,7 @@ for(const tool of ['spinner','trip-o-meter'])for(const fails of [false,true]){
     w.AbortSignal=AbortSignal;
     let finish,requests=0;
     w.fetch=async(_,options)=>{
+      if(JSON.parse(options.body).action==='prepare')return {ok:true,json:async()=>({ok:true})};
       if(JSON.parse(options.body).action==='request'){
         requests++;
         return new Promise(resolve=>{finish=()=>resolve({ok:!fails,status:fails?429:200,json:async()=>fails?{error:'Wait one minute before retrying.'}:{message:'Check your email.'}});});
@@ -26,13 +27,13 @@ for(const tool of ['spinner','trip-o-meter'])for(const fails of [false,true]){
       assert.equal(requests,0,'Typing does not send email');
       // Also cover autofill/submission without an input event.
       row.hidden=true;form.requestSubmit();
-      assert.equal(requests,1);assert.equal(row.hidden,false);
+      assert.equal(row.hidden,false);await tick();assert.equal(requests,1);
       assert.equal(code.disabled,false);assert.equal(w.document.activeElement,code);
       assert.equal(q('[data-verify]').disabled,true);
       code.value='123456';finish();await tick();
       assert.equal(row.hidden,false);assert.equal(code.value,'123456','A late response must not erase the entered code');
       assert.equal(q('[data-verify]').disabled,false);
-      code.value='123';form.requestSubmit();
+      code.value='123';form.requestSubmit();await tick();
       assert.equal(requests,2,'Partial code must not block resending');finish();await tick();
       email.value='another@example.org';email.dispatchEvent(new w.Event('input'));
       assert.equal(code.value,'','Changing email clears a code for the previous address');

@@ -12,7 +12,7 @@ export default async function handler(req,res) {
   if(!String(req.headers['content-type']||'').startsWith('application/json')) return fail(400);
   let body=req.body;
   try {if(typeof body==='string') body=JSON.parse(body);} catch {return fail(400);}
-  if(!body || JSON.stringify(body).length>2048 || !periods.has(body.period) || !['request','verify','roster','logout','tracker','tracker-update','export'].includes(body.action)) return fail(400);
+  if(!body || JSON.stringify(body).length>2048 || !periods.has(body.period) || !['prepare','request','verify','roster','logout','tracker','tracker-update','export'].includes(body.action)) return fail(400);
   const endpoint=process.env.SPINNER_BRIDGE_URL,token=process.env.SPINNER_BRIDGE_TOKEN;
   if(!endpoint || !token) return fail(503);
   const {period,action}=body;
@@ -22,6 +22,11 @@ export default async function handler(req,res) {
   const cookie=(kind,value,seconds)=>`${cookieName(kind)}=${value}; Path=/; Max-Age=${seconds}; HttpOnly; Secure; SameSite=Strict`;
   let challenge=readCookie('code'),session=readCookie('session');
   const payload={token,period,action};
+  // Establish a code-request binding before sending email; this grants no access.
+  if(action==='prepare') {
+    res.setHeader('Set-Cookie',cookie('code',challenge||randomBytes(32).toString('hex'),600));
+    return res.status(200).json({ok:true});
+  }
   if(action==='request') {
     const email=String(body.email||'').trim().toLowerCase();
     if(email.length>254 || !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email)) return fail(400);
@@ -38,26 +43,39 @@ export default async function handler(req,res) {
     if(action==='tracker-update'){if(!Number.isInteger(body.revision) || !body.change || typeof body.change!=='object')return fail(400);payload.revision=body.revision;payload.change=body.change;}
   }
   let stage='google-request';const started=Date.now();
-  try {
-    const signal=AbortSignal.timeout(45000);
-    let response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),redirect:'manual',signal});
-    console.info('NEST bridge stage',{action,stage,status:response.status,ms:Date.now()-started});
+  async function bridge(request,timeout){
+    stage='google-request';
+    const signal=AbortSignal.timeout(timeout);
+    let response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request),redirect:'manual',signal});
+    console.info('NEST bridge stage',{action:request.action,stage,status:response.status,ms:Date.now()-started});
     if([301,302,303].includes(response.status)){
       const target=new URL(response.headers.get('location'));
-      if(target.protocol!=='https:' || target.hostname!=='script.googleusercontent.com')return fail(503);
+      if(target.protocol!=='https:' || target.hostname!=='script.googleusercontent.com')throw new Error('Unexpected result host');
       stage='google-result';
-      // Retry only the response GET; never repeat the email or verification POST.
       for(let attempt=0;attempt<2;attempt++){
         try{
           response=await fetch(target,{redirect:'error',signal:AbortSignal.any([signal,AbortSignal.timeout(8000)])});
           if(response.ok || ![404,429,500,502,503,504].includes(response.status))break;
         }catch(error){if(attempt===1 || signal.aborted)throw error;}
       }
-      console.info('NEST bridge stage',{action,stage,status:response.status,ms:Date.now()-started});
+      console.info('NEST bridge stage',{action:request.action,stage,status:response.status,ms:Date.now()-started});
     }
     stage='result-body';
-    if(!response.ok) return fail(503);
-    const data=await response.json();
+    if(!response.ok)throw new Error('Google result unavailable');
+    return await response.json();
+  }
+  try {
+    let data;
+    try{data=await bridge(payload,action==='verify'?27000:45000);}
+    catch(error){
+      if(action!=='verify')throw error;
+      // Read back this exact session from Google after an ambiguous transport failure.
+      // Never replay the code, issue a session on error, or bypass authorization.
+      const recovered=await bridge({token,period,action:'roster',session},18000);
+      if(recovered.status!==200)throw error;
+      data=recovered;
+      console.info('NEST verification recovered',{period,ms:Date.now()-started});
+    }
     if(action==='logout' && [200,401].includes(data.status)) return res.status(200).json({ok:true});
     if(data.status===429 && action==='request' && Number.isFinite(data.retryAfter)) { const seconds=Math.min(3600,Math.max(1,Math.ceil(data.retryAfter)));res.setHeader('Retry-After',String(seconds));return res.status(429).json({error:`Please wait ${Math.ceil(seconds/60)} minute(s) before requesting another code. If you already received one, use that code.`,retryAfter:seconds}); }
     if(data.status!==200) return fail([400,401,403,409,429].includes(data.status)?data.status:503);

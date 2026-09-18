@@ -124,11 +124,55 @@ test('lost Google verification response retries GET only and never issues a sess
         return {ok:true,status:200,json:async()=>({status:200,names:['Example'],expires:Date.now()+21600000})};
       };
       const res=response();await handler(req,res);
-      assert.equal(calls.length,3);assert.equal(calls.filter(c=>c.method==='POST').length,1);
-      assert.ok(calls.slice(1).every(c=>!c.body&&!c.headers&&c.redirect==='error'));
+      assert.equal(calls.length,recover?3:6);assert.equal(calls.filter(c=>c.method==='POST').length,recover?1:2);
+      assert.ok(calls.filter(c=>c.method!=='POST').every(c=>!c.body&&!c.headers&&c.redirect==='error'));
       assert.equal(res.code,recover?200:503);
       if(recover)assert.match(res.headers['Set-Cookie'][0],/__Host-nest-session=/);
       else assert.equal(res.headers['Set-Cookie'],undefined,'Failure must never grant a session');
     }
   }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
+
+test('prepare establishes the browser binding before mail, including when the mail response is lost',async()=>{
+ const oldFetch=global.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+ process.env.SPINNER_BRIDGE_URL='https://bridge.example';process.env.SPINNER_BRIDGE_TOKEN='secret';
+ const headers={origin:'https://gknest.org','content-type':'application/json'};let calls=0,binding;
+ global.fetch=async(_,options)=>{calls++;binding=JSON.parse(options.body).challenge;throw new TypeError('Lost response');};
+ try{
+  let res=response();await handler({method:'POST',headers,body:{action:'prepare',period:'1'}},res);
+  assert.equal(res.code,200);assert.equal(calls,0);assert.match(res.headers['Set-Cookie'],/^__Host-nest-code=[a-f0-9]{64};.*HttpOnly; Secure; SameSite=Strict/);
+  const cookie=res.headers['Set-Cookie'].split(';')[0];
+  res=response();await handler({method:'POST',headers:{...headers,cookie},body:{action:'request',period:'1',email:'student@example.org'}},res);
+  assert.equal(res.code,503);assert.equal(binding,cookie.split('=')[1]);
+  assert.equal(res.headers['Set-Cookie'],undefined,'A failed mail response does not clear the binding established by prepare');
+  res=response();await handler({method:'POST',headers:{...headers,cookie},body:{action:'prepare',period:'1'}},res);
+  assert.equal(res.headers['Set-Cookie'].split(';')[0],cookie,'Retries retain the existing challenge');
+ }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
+
+test('verification recovery requires Google to authorize the exact session and period',async()=>{
+ const oldFetch=global.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+ process.env.SPINNER_BRIDGE_URL='https://bridge.example';process.env.SPINNER_BRIDGE_TOKEN='secret';
+ const req={method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json',cookie:'__Host-nest-code='+'a'.repeat(64)},body:{action:'verify',period:'2',code:'012345'}};
+ try{
+  for(const outcome of ['verified','unauthorized','expired','malformed','wrong-code','unavailable']){
+   const calls=[];const expires=Date.now()+(outcome==='expired'?-1000:21600000);
+   global.fetch=async(_,options)=>{
+    const body=JSON.parse(options.body);calls.push(body);
+    if(body.action==='verify'){
+     if(outcome==='wrong-code')return {ok:true,json:async()=>({status:401})};
+     throw new TypeError('Lost verification response');
+    }
+    if(outcome==='unavailable')throw new TypeError('Recovery unavailable');
+    return {ok:true,json:async()=>outcome==='unauthorized'?{status:401}:{status:200,names:outcome==='malformed'?null:['Example Student'],expires}};
+   };
+   const res=response();await handler(req,res);
+   assert.equal(calls.filter(c=>c.action==='verify').length,1,'Never replay the one-time code');
+   if(outcome==='wrong-code'){assert.equal(calls.length,1);assert.equal(res.code,401);}
+   else{assert.equal(calls[1].action,'roster');assert.equal(calls[1].period,'2');assert.equal(calls[1].session,calls[0].session);assert.equal(calls[1].code,undefined);}
+   if(outcome==='verified'){
+    assert.equal(res.code,200);assert.match(res.headers['Set-Cookie'][0],new RegExp(calls[0].session));assert.deepEqual(res.data.names,['Example Student']);
+   }else{assert.equal(res.headers['Set-Cookie'],undefined,'No session on rejection, expiry, malformed data, or transport failure');if(outcome!=='wrong-code')assert.equal(res.code,503);}
+  }
+ }finally{global.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 });

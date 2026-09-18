@@ -59,7 +59,7 @@
       event.preventDefault();if(busy || !period || !byId('spinner-email').reportValidity())return;
       const version=generation;busyState(true);message.textContent='Requesting your code… Enter it below when it arrives.';
       panel.querySelector('[data-code-row]').hidden=false;byId('spinner-email').disabled=true;byId('spinner-code').focus();
-      try {const data=await api('request',period,{email:byId('spinner-email').value});if(current(panel,version)){message.textContent=data.message+' Wait one minute before requesting another code.';}}
+      try {await api('prepare',period);const data=await api('request',period,{email:byId('spinner-email').value});if(current(panel,version)){message.textContent=data.message+' Wait one minute before requesting another code.';}}
       catch(error){if(current(panel,version))message.textContent=error.message;}
       finally{if(current(panel,version)){byId('spinner-email').disabled=false;busyState(false);}}
     });
