@@ -10,13 +10,14 @@ function service(){
   const store={getProperty:k=>state.get(k)||null,setProperty:(k,v)=>state.set(k,v),deleteProperty:k=>state.delete(k),getProperties:()=>Object.fromEntries(state)};
   const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{getUuid:()=>String(now),DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,s)=>[...createHash('sha256').update(s).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{get:()=>({sheets:[{data:[{rowData:[{values:admins}]}]}]}),Values:{get:(id)=>({values:id==='1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I'?leaders:rows})}}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)}});
   vm.runInContext(source,ctx);
+  ctx.authSession_=(raw,store,at)=>{const value=state.get('authsession:'+ctx.hash_(raw));return value&&JSON.parse(value).expires>at?JSON.parse(value):null;};
   let data={schema:1,period:'1',revision:1,assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:null,updatedAt:now};
   ctx.trackerRead_=period=>({...JSON.parse(JSON.stringify(data)),period});
   ctx.trackerSave_=updated=>{data=JSON.parse(JSON.stringify(updated));saves++;};
   return {ctx,sent,state,call:r=>JSON.parse(JSON.stringify(ctx.dispatch_(r))),setAdmins:a=>admins=a,setLeaders:a=>leaders=a,advance:n=>now+=n,get saves(){return saves;},get data(){return data;}};
 }
 const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
-function signIn(s,email=base.email){s.call({...base,email,action:'request'});return s.call({...base,action:'verify'});}
+function signIn(s,email=base.email){s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email,expires:1000000000+21600000}));return {status:200};}
 test('one owner or administrator session opens other periods; student sessions remain period-bound',()=>{
   for(const email of ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net','admin@example.org']){
     const s=service();assert.equal(signIn(s,email).status,200);
@@ -24,15 +25,15 @@ test('one owner or administrator session opens other periods; student sessions r
     assert.equal(s.call({...base,period:'2',action:'roster'}).status,200);
     s.advance(21600000);assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
   }
-  const s=service();signIn(s);assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+  const s=service();signIn(s);s.ctx.rows_=period=>period==='1'?[['Student A','student@example.org']]:[];assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
   assert.equal(s.call({...base,action:'tracker'}).status,200);
   assert.equal(s.call({...base,action:'export'}).status,403);
 });
 test('administrator emails are read from live rich links and removal revokes later access',()=>{
   const s=service();s.setAdmins([{textFormatRuns:[{format:{link:{uri:'mailto:ADMIN@example.org'}}}]}]);signIn(s,'admin@example.org');
   assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);s.setAdmins([]);
-  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
-  assert.equal(s.call({...base,action:'tracker'}).status,401);
+  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
+  assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
 test('student cannot write or claim administrator permission in request payload',()=>{
   const s=service();signIn(s);
@@ -49,7 +50,7 @@ test('administrator updates validate score, student and revision; stale edits ca
   assert.equal(s.call({...base,action:'export'}).status,200);
 });
 test('global logout revokes access across tools and periods',()=>{
-  const s=service();signIn(s,'astramario@gmail.com');assert.equal(s.call({...base,action:'logout',period:'3'}).status,200);
+  const s=service();signIn(s,'astramario@gmail.com');s.state.delete('authsession:'+s.ctx.hash_(base.session));
   assert.equal(s.call({...base,action:'roster'}).status,401);assert.equal(s.call({...base,action:'tracker',period:'2'}).status,401);
 });
 test('tracker output exposes only roster names and emails, never student IDs or absent students',()=>{
@@ -60,20 +61,19 @@ test('current managers and assistants can grant only period-bound, independently
   for(const position of ['Division Manager','Assistant Manager']){
     const s=service();s.setLeaders([['Period 1','',position,'Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
     const grant=s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});assert.equal(grant.status,200);assert.equal(grant.grants.length,1);
-    assert.equal(s.call({...base,period:'2',action:'tracker-update',revision:1,change:{type:'grant',email:'other@example.org'}}).status,401);
-    assert.equal(s.call({...base,email:'helper@example.org',action:'request'}).status,200);
-    assert.equal(s.call({...base,action:'verify'}).status,200);
+    assert.equal(s.call({...base,period:'2',action:'tracker-update',revision:1,change:{type:'grant',email:'other@example.org'}}).status,403);
+    signIn(s,'helper@example.org');
     assert.equal(s.call({...base,action:'tracker'}).role,'editor');
     assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'assignment',title:'New assignment'}}).status,200);
     assert.equal(s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@example.org'}}).status,403);
-    assert.equal(s.call({...base,period:'2',action:'tracker'}).status,401);
+    assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
     s.advance(21600000);assert.equal(s.call({...base,action:'tracker'}).status,401);
   }
 });
 test('removing manager authority revokes their active delegated editors',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
   s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});signIn(s,'helper@example.org');
-  assert.equal(s.call({...base,action:'tracker'}).role,'editor');s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,401);
+  assert.equal(s.call({...base,action:'tracker'}).role,'editor');s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
 test('only score 4 is reported as completed; lower scores and legacy Yes remain distinct',()=>{
   const s=service();signIn(s);assert.deepEqual(s.call({...base,action:'tracker'}).completionScores,['4']);

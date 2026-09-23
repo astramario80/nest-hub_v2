@@ -9,6 +9,9 @@
     }
   ],
   "functions": {
+    "api/auth.mjs": {
+      "maxDuration": 60
+    },
     "api/spinner.mjs": {
       "maxDuration": 60
     },

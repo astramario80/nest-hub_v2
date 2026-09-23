@@ -17,10 +17,10 @@ function doPost(e) {
   try { r=JSON.parse(e.postData.contents); } catch (_) { return json_({status:400}); }
   if(typeof r.token!=='string' || hash_(r.token)!==BRIDGE_DIGEST) return json_({status:401});
   if(r.action==='leadership') {try{return json_(leadershipDirectory_());}catch(_){return json_({status:503});}}
-  if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
+  if(!/^auth-/.test(r.action||'') && !Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(15000)) return json_({status:503});
-  try { return json_(dispatch_(r)); }
+  try { return json_(/^auth-/.test(r.action||'') ? authDispatch_(r) : dispatch_(r)); }
   catch (_) { return json_({status:503}); }
   finally { lock.releaseLock(); }
 }
@@ -63,61 +63,15 @@ function dispatch_(r) {
     try {rows_(r.period);return {status:200,sheets:true,emailQuota:MailApp.getRemainingDailyQuota()};}
     catch(error) {return {status:503,diagnostic:String(error.message).slice(0,500)};}
   }
-  if(r.action==='request') {
-    const email=String(r.email||'').trim().toLowerCase();
-    if(!/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email) || email.length>254 || !/^[a-f0-9]{64}$/.test(r.challenge||'') || !/^\d{6}$/.test(r.code||'') || !/^[a-f0-9]{64}$/.test(r.ip||'')) return {status:400};
-    // Fixed global limit bounds state growth from arbitrary addresses/IPs.
-    if(!rate_(store,'global',1000,3600000,now) || !rate_(store,'ip:'+r.ip,60,3600000,now)) return {status:429};
-    const key='email:'+hash_(email);
-    if(!rate_(store,'cooldown:'+hash_(email),1,60000,now)) return {status:429,retryAfter:60};
-    if(!rate_(store,key,5,3600000,now)) return {status:429,retryAfter:Math.max(1,Math.ceil((read_(store,key,now).expires-now)/1000))};
+  if(['roster','tracker','tracker-update','export'].includes(r.action)) {
+    const s=authSession_(r.session,store,now);
+    if(!s) return {status:401};
     const rows=rows_(r.period);
-    if(!authorized_(rows,email,r.period)) return {status:200};
-    if(MailApp.getRemainingDailyQuota()<1) return {status:503};
-    const challengeKey='challenge:'+hash_(r.challenge);
-    store.setProperty(challengeKey,JSON.stringify({email,period:r.period,digest:hash_(r.challenge+':'+r.code),attempts:0,expires:now+600000}));
-    try {
-      MailApp.sendEmail({to:email,name:'gk NEST',subject:'Your gk NEST '+(r.period==='CTSO'?'Robotics':'Period '+r.period)+' access code',
-        body:'Your Period '+r.period+' code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org. Access lasts 6 hours. If you did not request this, ignore this email.',
-        htmlBody:emailHtml_(r.period,r.code)});
-    } catch (_) {store.deleteProperty(challengeKey);return {status:503};}
-    return {status:200};
-  }
-  if(r.action==='verify') {
-    if(!/^[a-f0-9]{64}$/.test(r.challenge||'') || !/^[a-f0-9]{64}$/.test(r.session||'') || !/^\d{6}$/.test(r.code||'')) return {status:401};
-    const key='challenge:'+hash_(r.challenge),c=read_(store,key,now);
-    if(!c || c.period!==r.period || c.attempts>=5) return {status:401};
-    c.attempts++;store.setProperty(key,JSON.stringify(c));
-    if(c.digest!==hash_(r.challenge+':'+r.code)) return {status:401};
-    const rows=rows_(r.period);
-    if(!authorized_(rows,c.email,r.period)) return {status:401};
-    const session={email:c.email,period:r.period,expires:now+21600000};
-    store.setProperty('session:'+hash_(r.session),JSON.stringify(session));
-    store.deleteProperty(key); // Single use after successful authorization and session persistence.
-    return {status:200,expires:session.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
-  }
-  if(['roster','logout','tracker','tracker-update','export'].includes(r.action)) {
-    if(!/^[a-f0-9]{64}$/.test(r.session||'')) return {status:401};
-    const key='session:'+hash_(r.session),s=read_(store,key,now);
-    if(!s || (s.period!==r.period && !globalAccess_(s.email))) return {status:401};
-    if(r.action==='logout') {store.deleteProperty(key);return {status:200};}
-    const rows=rows_(r.period);
-    if(!authorized_(rows,s.email,r.period)) {store.deleteProperty(key);return {status:401};}
+    if(!authorized_(rows,s.email,r.period)) return {status:403};
     if(['tracker','tracker-update','export'].includes(r.action))return trackerDispatch_(r,s,rows,store,now);
     return {status:200,expires:s.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }
   return {status:400};
-}
-function emailHtml_(period,code) {
-  return '<div style="max-width:560px;margin:auto;font-family:Arial,sans-serif;color:#18233b">'+
-    '<a href="https://gknest.org" style="display:block;text-decoration:none">'+
-    '<img src="https://gknest.org/assets/nest-email-banner.png" width="560" alt="NEST&trade; &mdash; New Economy Skills Training" style="display:block;width:100%;max-width:560px;height:auto;margin:auto;border:0">'+
-    '</a>'+
-    '<div style="padding:28px"><h1 style="font-size:24px">Period '+period+' access</h1><p>Enter this code in the NEST tool you are unlocking:</p>'+
-    '<p style="font-size:36px;letter-spacing:8px;font-weight:bold">'+code+'</p>'+
-    '<p>This code expires in 10 minutes. Once verified, your access lasts <strong>6 hours</strong> on this browser.</p>'+
-    '<p>Enter the code only at <a href="https://gknest.org/sops">gknest.org</a>. Do not share it.</p>'+
-    '<p style="color:#626a79;font-size:13px">If you did not request this email, you can ignore it.</p></div></div>';
 }
 // Owner runs this once to grant read-only Sheets and send-email permissions.
 // This checks access and quota; it does not send a message or print student data.
