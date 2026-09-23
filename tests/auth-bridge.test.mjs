@@ -56,3 +56,12 @@ test('session is available across tools, expires, and logout revokes it',()=>{
   app.advance(86400000);
   assert.equal(app.call({action:'auth-me',session}).status,401);
 });
+test('existing email-code sessions remain usable during the website rollout',()=>{
+  const app=service();
+  assert.equal(app.tool({action:'request',period:'1',email,challenge,code:'123456',ip}).status,200);
+  assert.equal(app.tool({action:'verify',period:'1',challenge,code:'123456',session}).status,200);
+  assert.equal(app.tool({action:'roster',period:'1',session}).status,200);
+  assert.equal(app.tool({action:'roster',period:'2',session}).status,401);
+  assert.equal(app.tool({action:'logout',period:'1',session}).status,200);
+  assert.equal(app.tool({action:'roster',period:'1',session}).status,401);
+});

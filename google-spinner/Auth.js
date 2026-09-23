@@ -1,6 +1,14 @@
 // NEST account records live in StudentNESTAccess. Only salted hashes are stored.
 const AUTH_SHEET = "'StudentNESTAccess'!A2:H";
 const AUTH_DURATIONS = {session:43200000,'1d':86400000,'7d':604800000,'30d':2592000000};
+// Run once in the school-owned editor after changing the manifest's Sheets scope.
+function authorizeNestAuth() {
+  const expected=['Username','District Email','Password Hash','Password Salt','Active','Session Version','Created At','Last Login At'];
+  const header=(Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'StudentNESTAccess'!A1:H1").values||[])[0]||[];
+  if(expected.some((name,index)=>String(header[index]||'').trim()!==name))throw new Error('StudentNESTAccess headers do not match the NEST authentication schema.');
+  if(MailApp.getRemainingDailyQuota()<1)throw new Error('No email quota remains for account verification.');
+  console.log('NEST account sheet and verification email quota are ready.');
+}
 function districtEmail_(value) {
   const email=email_(value);
   return email.length<=254 && /^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(email)?email:'';
