@@ -47,4 +47,12 @@ test('session is available across tools, expires, and logout revokes it',()=>{
   app.call({action:'auth-session',email,session,duration:'1d'});
   app.accounts[0][4]=false;
   assert.equal(app.call({action:'auth-me',session}).status,401);
+  app.accounts[0][4]=true;
+  app.call({action:'auth-session',email,session,duration:'1d'});
+  app.accounts[0][5]=2;
+  assert.equal(app.call({action:'auth-me',session}).status,401);
+  app.accounts[0][5]=1;
+  app.call({action:'auth-session',email,session,duration:'1d'});
+  app.advance(86400000);
+  assert.equal(app.call({action:'auth-me',session}).status,401);
 });

@@ -1,5 +1,7 @@
 # Shared NEST email access
 
+This page describes the previous email-code release. For the new central username/password deployment, see [README-auth.md](README-auth.md).
+
 Production: https://gknest.org/sops (Magic Spinner) and https://gknest.org/trip-o-meter.
 
 See [README-tracker.md](README-tracker.md) for shared permissions, leadership, private storage and current verification status. Both tools use one six-hour host-only Secure/HttpOnly/SameSite=Strict session cookie. Owners and live NEST administrators have global access; students stay within their verified period. Access follows the verified browser session, so shared devices must sign out. External tools retain their own authentication.
