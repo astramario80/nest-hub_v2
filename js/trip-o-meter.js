@@ -12,14 +12,14 @@
     let result;try{result=await response.json();}catch{throw new Error('Access is temporarily unavailable. Please try again.');}
     if(!response.ok)throw Object.assign(new Error(result.error||'Unable to complete this request.'),{status:response.status});return result;
   }
-  function lock(message){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=false;status.textContent=message||'Sign in to NEST to open this period.';}
-  function expired(){if(data&&Date.now()>=data.expires){lock('Your NEST sign-in has ended. Sign in again to continue.');return true;}return false;}
+  function lock(message,needsLogin=!window.NestAuth?.identity){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=!needsLogin;status.textContent=message||(needsLogin?'Sign in to NEST to open this period.':'Choose a period. NEST will check your access.');}
+  function expired(){if(data&&Date.now()>=Math.min(data.expires,data.editExpires||data.expires)){lock('Your access to this period has ended. Choose the period to refresh.');return true;}return false;}
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
     status.textContent=`Period ${period} · ${canEdit?'Editing enabled':'View only'} · Access until ${new Date(data.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
-    expiryTimer=setTimeout(()=>lock('Your NEST sign-in has ended. Sign in again to continue.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
+    expiryTimer=setTimeout(()=>lock('Your access to this period has ended. Choose the period to refresh.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
     const toolbar=node('div');toolbar.className='trip-toolbar';
     const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
     const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;await window.NestAuth.logout();if(!window.NestAuth.identity)lock('Signed out of NEST.');});toolbar.append(signout);
@@ -113,7 +113,16 @@
     finally{savingScores=false;if(scoreQueue.length&&!saveError&&data)flushScores();}
   }
   window.addEventListener('beforeunload',event=>{if(scoreQueue.length){event.preventDefault();event.returnValue='';}});
-  async function load(){if(busy||!period)return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{const result=await api('tracker');if(current===version)render(result);}catch(e){if(current===version)lock(e.status===401?undefined:e.message);}finally{if(current===version)setBusy(false);}}
+  async function load(){if(busy||!period)return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{
+    await window.NestAuth.ready;
+    if(!window.NestAuth.identity){lock();return;}
+    const result=await api('tracker');if(current===version)render(result);
+  }catch(e){if(current!==version)return;
+    if(e.status===401){
+      try{await window.NestAuth.refresh();}catch{lock('NEST could not check your sign-in right now. Please try again.',false);return;}
+      lock(window.NestAuth.identity?'NEST could not open this period. Choose it again to retry.':'Your NEST sign-in has ended. Sign in again to continue.');
+    }else lock(e.status===403?'Your NEST account does not have access to this period.':e.message,false);
+  }finally{if(current===version)setBusy(false);}}
   async function save(change){if(busy||!data||expired())return;setBusy(true);try{render(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {render(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
   async function download(target){if(!target||busy||scoreQueue.length||expired())return;setBusy(true);status.textContent='Preparing your CSV download…';try{
@@ -123,7 +132,6 @@
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
   host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));load();}));
   q('[data-open-login]').addEventListener('click',()=>window.NestAuth?.open());
-  document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period){load();}});
+  document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period&&!busy){load();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);
-  document.addEventListener('click',event=>{if(expired()){event.preventDefault();event.stopImmediatePropagation();}},true);
 })();
