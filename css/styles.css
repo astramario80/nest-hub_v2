@@ -2864,6 +2864,9 @@ img.tripometer-gif{
   font-weight: 700;
   margin-top: 2px;
 }
+.leadership-page [hidden]{display:none!important}
+.leader-email{display:block;margin-top:4px;color:#9dd4ff;font-weight:600;font-size:.88rem;overflow-wrap:anywhere}
+.leader-email:hover{text-decoration:underline}
 
 .leadership-results{
   width: 100%;
@@ -2931,6 +2934,7 @@ img.tripometer-gif{
   color: #ffffff;
   text-align: right;
 }
+.leader-person{text-align:right}
 .leader-div{
   font-weight: 800;
   color: var(--text-muted);
@@ -2989,6 +2993,7 @@ img.tripometer-gif{
   .leadership-controls{ grid-template-columns: 1fr; }
   .leader-row{ grid-template-columns: 1fr; }
   .leader-name, .leader-div{ text-align: left; }
+  .leader-person{text-align:left}
   .leadership-hero{ grid-template-columns: 1fr; }
   .leadership-hero-right{ justify-self: start; }
 }
@@ -3194,4 +3199,3 @@ img.tripometer-gif{
         padding: 20px 16px;
     }
 }
-
