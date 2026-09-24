@@ -112,6 +112,13 @@ function authDispatch_(r) {
     const session=authSession_(r.session,store,now);
     return session?{status:200,email:session.email,username:session.username,expires:session.expires}:{status:401};
   }
+  if(r.action==='auth-tech-ticket-access') {
+    const session=authSession_(r.session,store,now);
+    if(!session)return {status:401};
+    const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+    const technician=leaders.some(row=>email_(row[4])===session.email&&/^software technician$/i.test(String(row[2]||'').trim()));
+    return {status:technician?200:403};
+  }
   if(r.action==='auth-logout') {
     if(/^[a-f0-9]{64}$/.test(r.session||''))store.deleteProperty('authsession:'+hash_(r.session));
     return {status:200};

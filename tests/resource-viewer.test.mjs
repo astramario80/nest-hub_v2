@@ -5,3 +5,18 @@ test('Padlet opens in a contained viewer; close removes the frame and returns fo
 test('Google views use live originals, forms embed mode, and provider permissions',()=>{for(const [url,expected] of [['https://docs.google.com/document/d/example/edit?tab=t.0','https://docs.google.com/document/d/example/preview'],['https://docs.google.com/forms/d/e/example/viewform','https://docs.google.com/forms/d/e/example/viewform?embedded=true']]){const d=page(url);d.window.document.querySelector('#source').click();assert.equal(d.window.document.querySelector('iframe').src,expected);assert.equal(d.window.document.querySelector('[data-original]').href,new URL(url).href);d.window.close();}});
 test('providers blocking frames show a direct launch option without a broken iframe',()=>{for(const url of ['https://app.smartpass.app/main/passes','https://portal.bethelsd.org']){const d=page(url);d.window.document.querySelector('#source').click();assert.equal(d.window.document.querySelector('iframe'),null);assert.equal(d.window.document.querySelector('[data-original]').href,new URL(url).href);assert.match(d.window.document.querySelector('[data-help]').textContent,/requires its own tab/);d.window.close();}});
 test('internal and modified clicks retain their normal navigation',()=>{const d=page('https://padlet.com/astramario/test-h5lmpj4m7g51sy0v'),w=d.window;w.document.querySelector('#source').dispatchEvent(new w.MouseEvent('click',{bubbles:true,ctrlKey:true,cancelable:true}));assert.equal(w.document.querySelector('iframe'),null);w.document.querySelector('#source').href='/leadership';const e=new w.MouseEvent('click',{bubbles:true,cancelable:true});w.document.querySelector('#source').dispatchEvent(e);assert.equal(e.defaultPrevented,false);w.close();});
+test('Tech Ticket gear opens the backend only after a technician access check',async()=>{
+ const form='https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform';
+ const backend='https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
+ const d=page(form),w=d.window;w.AbortSignal=AbortSignal;let calls=0;
+ w.fetch=async()=>{calls++;return {ok:true,json:async()=>({url:backend})};};
+ try{
+  w.document.querySelector('#source').click();await new Promise(resolve=>setImmediate(resolve));
+  const gear=w.document.querySelector('[data-tech-backend]');assert.equal(calls,1);assert.equal(gear.hidden,false);assert.equal(gear.href,backend);assert.equal(gear.target,'_blank');
+  w.document.querySelector('[data-close]').click();assert.equal(gear.hidden,true);assert.equal(gear.hasAttribute('href'),false);
+ }finally{w.close();}
+ const denied=page(form),wd=denied.window;wd.AbortSignal=AbortSignal;wd.fetch=async()=>({ok:false,status:403});
+ try{wd.document.querySelector('#source').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(wd.document.querySelector('[data-tech-backend]').hidden,true);}finally{wd.close();}
+ const other=page('https://docs.google.com/forms/d/e/another/viewform'),wo=other.window;wo.AbortSignal=AbortSignal;wo.fetch=()=>{throw new Error('Other forms must not check tech access');};
+ try{wo.document.querySelector('#source').click();assert.equal(wo.document.querySelector('[data-tech-backend]').hidden,true);}finally{wo.close();}
+});
