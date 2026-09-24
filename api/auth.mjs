@@ -6,6 +6,7 @@ const fail = (res, status, message) => res.status(status).json({ error: message 
 const passwordValid = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 && !/[\u0000-\u001f\u007f]/.test(value);
 const hashPassword = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 'hex'), 210000, 32, 'sha256').toString('hex');
 const TECH_TICKET_BACKEND = 'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
+const NEST_OWNERS = new Set(['astramario@gmail.com', 'mpenalver@bethelsd.org', 'mario@memberhq.net']);
 const ipHash = req => createHmac('sha256', process.env.SPINNER_BRIDGE_TOKEN || '').update(String(req.headers['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()).digest('hex');
 async function retryableAuthBridge(payload) {
   let lastError;
@@ -32,7 +33,13 @@ export default async function handler(req, res) {
     if (!session) return action==='me'?res.status(200).json({ signedIn: false }):fail(res,401);
     try {
       const data = await (action==='me'?retryableAuthBridge({ action:'auth-me',session }):bridge({ action:'auth-tech-ticket-access',session },25000));
-      if (action==='tech-ticket')return data.status===200?res.status(200).json({url:TECH_TICKET_BACKEND}):fail(res,data.status===401?401:403);
+      if (action==='tech-ticket') {
+        if (data.status===200) return res.status(200).json({url:TECH_TICKET_BACKEND});
+        if (data.status===401) return fail(res,401);
+        const identity=await retryableAuthBridge({action:'auth-me',session});
+        if (identity.status===200 && NEST_OWNERS.has(String(identity.email||'').toLowerCase())) return res.status(200).json({url:TECH_TICKET_BACKEND});
+        return fail(res,identity.status===401?401:403);
+      }
       if (data.status !== 200) return res.status(200).json({ signedIn: false });
       return res.status(200).json({ signedIn: true, username: data.username, email: data.email, expires: data.expires });
     } catch { return fail(res, 503); }
