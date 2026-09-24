@@ -35,7 +35,7 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(q('.trip-score-breakdown summary span').textContent.includes('1 student · 1 assignment'),true);
   assert.equal(q('.trip-summary'),null);
   assert.equal(q('.trip-layout-help'),null);
-  assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-click its name to rename it.':undefined);
+  assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-tap or double-click this name to rename it.':undefined);
   assert.deepEqual(actions,['tracker']);
  }finally{w.close();}
 });
@@ -127,6 +127,23 @@ test('double-clicking an assignment name edits it and clicking elsewhere saves',
   const canceled=q('.trip-inline-title');canceled.value='Discard this';canceled.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'Escape'}));await tick();
   assert.equal(changes.length,1);
   assert.equal(q('.trip-column-drag span:last-child').textContent,'New safety task');
+ }finally{w.close();}
+});
+
+test('double-tapping the assignment name edits it without moving the column',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'manager'},ready:Promise.resolve(),open(){}};
+ let tracker={role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:['4'],grants:[]};
+ const changes=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.change){changes.push(request.change);tracker={...tracker,revision:tracker.revision+1,assignments:[{id:'a',title:request.change.title}]};}return {ok:true,status:200,json:async()=>tracker};};
+ const touch=(target,type)=>{const event=new w.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(event,{pointerId:{value:1},pointerType:{value:'touch'},button:{value:0},clientX:{value:250},clientY:{value:50}});target.dispatchEvent(event);};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
+  const title=q('.trip-column-drag span:last-child');
+  touch(title,'pointerdown');touch(w,'pointerup');assert.equal(q('.trip-inline-title'),null);
+  touch(title,'pointerdown');touch(w,'pointerup');
+  const input=q('.trip-inline-title');assert.ok(input);input.value='Updated safety';input.blur();await tick();
+  assert.deepEqual(changes,[{type:'rename',assignment:'a',title:'Updated safety'}]);
+  assert.equal(q('.trip-column-drag span:last-child').textContent,'Updated safety');
  }finally{w.close();}
 });
 
