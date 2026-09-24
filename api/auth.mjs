@@ -5,6 +5,7 @@ const errors = { 400: 'Check the information you entered.', 401: 'Your sign-in h
 const fail = (res, status, message) => res.status(status).json({ error: message || errors[status] });
 const passwordValid = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 && !/[\u0000-\u001f\u007f]/.test(value);
 const hashPassword = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 'hex'), 210000, 32, 'sha256').toString('hex');
+const TECH_TICKET_BACKEND = 'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
 const ipHash = req => createHmac('sha256', process.env.SPINNER_BRIDGE_TOKEN || '').update(String(req.headers['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()).digest('hex');
 
 export default async function handler(req, res) {
@@ -13,11 +14,13 @@ export default async function handler(req, res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   const jar = cookies(req);
   if (req.method === 'GET') {
-    if (req.query?.action !== 'me') return fail(res, 400);
+    const action=req.query?.action;
+    if (action !== 'me' && action !== 'tech-ticket') return fail(res, 400);
     const session = validToken(jar[COOKIE]) ? jar[COOKIE] : '';
-    if (!session) return res.status(200).json({ signedIn: false });
+    if (!session) return action==='me'?res.status(200).json({ signedIn: false }):fail(res,401);
     try {
-      const data = await bridge({ action: 'auth-me', session }, 25000);
+      const data = await bridge({ action: action==='me'?'auth-me':'auth-tech-ticket-access', session }, 25000);
+      if (action==='tech-ticket')return data.status===200?res.status(200).json({url:TECH_TICKET_BACKEND}):fail(res,data.status===401?401:403);
       if (data.status !== 200) return res.status(200).json({ signedIn: false });
       return res.status(200).json({ signedIn: true, username: data.username, email: data.email, expires: data.expires });
     } catch { return fail(res, 503); }

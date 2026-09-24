@@ -52,3 +52,14 @@ test('logout asks the bridge to revoke the session',async()=>{
   const calls=[];const restore=withBridge(payload=>{calls.push(payload.action);return {status:200};});
   try {const res=response();await auth(req('logout',{},'__Host-nest-auth='+session),res);assert.equal(res.code,200);assert.deepEqual(calls,['auth-logout']);assert.match(res.headers['Set-Cookie'][0],/Max-Age=0/);} finally {restore();}
 });
+test('Tech Ticket backend URL is returned only for an authorized signed-in technician',async()=>{
+  let allowed=false;const calls=[];const restore=withBridge(payload=>{calls.push(payload.action);return {status:allowed?200:403};});
+  const get=cookie=>({method:'GET',headers:{cookie},query:{action:'tech-ticket'}});
+  try{
+    let res=response();await auth(get(''),res);assert.equal(res.code,401);assert.deepEqual(calls,[]);
+    res=response();await auth(get('__Host-nest-auth='+session),res);assert.equal(res.code,403);
+    allowed=true;res=response();await auth(get('__Host-nest-auth='+session),res);assert.equal(res.code,200);
+    assert.match(res.data.url,/docs\.google\.com\/spreadsheets\/d\/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/);
+    assert.deepEqual(calls,['auth-tech-ticket-access','auth-tech-ticket-access']);
+  }finally{restore();}
+});

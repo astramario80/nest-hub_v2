@@ -1,5 +1,6 @@
 // Display original resources without copying private data or changing sharing.
 (() => {
+  const techTicketForm='/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform';
   function resource(raw) {
     const original=new URL(raw,location.href);if(original.protocol!=='https:'||original.origin===location.origin)return null;
     const url=new URL(original),host=url.hostname;
@@ -24,19 +25,27 @@
     return {original:original.href,embed:url.href,host,previewOnly};
   }
   const dialog=document.createElement('dialog');dialog.className='resource-viewer';dialog.setAttribute('aria-labelledby','resource-title');
-  dialog.innerHTML='<header class="resource-toolbar"><div><h2 id="resource-title"></h2><p data-provider></p></div><button type="button" data-refresh>Refresh content</button><a data-original target="_blank" rel="noopener noreferrer" data-external>Open in new tab ↗</a><button type="button" data-close aria-label="Close resource viewer">Close ✕</button></header><p class="resource-help" data-help></p><div class="resource-stage"></div>';
+  dialog.innerHTML='<header class="resource-toolbar"><div><h2 id="resource-title"></h2><p data-provider></p></div><button type="button" data-refresh>Refresh content</button><a data-original target="_blank" rel="noopener noreferrer" data-external>Open in new tab ↗</a><button type="button" data-close aria-label="Close resource viewer">Close ✕</button></header><p class="resource-help" data-help></p><div class="resource-stage"><a class="resource-tech-backend" data-tech-backend data-external target="_blank" rel="noopener noreferrer" aria-label="Open Tech Ticket backend" title="Open Tech Ticket backend" hidden>⚙️</a></div>';
   document.body.append(dialog);
-  const stage=dialog.querySelector('.resource-stage'),refresh=dialog.querySelector('[data-refresh]'),help=dialog.querySelector('[data-help]');let opener,active;
+  const stage=dialog.querySelector('.resource-stage'),refresh=dialog.querySelector('[data-refresh]'),help=dialog.querySelector('[data-help]'),techBackend=dialog.querySelector('[data-tech-backend]');let opener,active,techRequest=0;
+  function checkTechAccess(target){
+    const request=++techRequest;techBackend.hidden=true;techBackend.removeAttribute('href');
+    if(target.host!=='docs.google.com'||new URL(target.original).pathname!==techTicketForm)return;
+    fetch('/api/auth?action=tech-ticket',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(30000)})
+      .then(response=>response.ok?response.json():null)
+      .then(data=>{if(request===techRequest&&active===target&&dialog.open&&data?.url){techBackend.href=data.url;techBackend.hidden=false;}})
+      .catch(()=>{});
+  }
   function frame(){
-    stage.replaceChildren();if(!active?.embed)return;
+    stage.replaceChildren(techBackend);if(!active?.embed)return;
     const iframe=document.createElement('iframe');iframe.src=active.embed;iframe.title=dialog.querySelector('h2').textContent;
     iframe.setAttribute('allow','fullscreen');iframe.setAttribute('allowfullscreen','');iframe.referrerPolicy='strict-origin-when-cross-origin';
     // Known providers use their standard embed; sandbox generic external sites.
     if(!['padlet.com','docs.google.com','drive.google.com','www.youtube.com','youtube.com','youtu.be'].includes(active.host))iframe.setAttribute('sandbox','allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-presentation');
-    stage.append(iframe);
+    stage.prepend(iframe);
   }
   dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
-  dialog.addEventListener('close',()=>{stage.replaceChildren();document.body.classList.remove('resource-viewer-open');opener?.focus();active=null;});
+  dialog.addEventListener('close',()=>{techRequest++;techBackend.hidden=true;techBackend.removeAttribute('href');stage.replaceChildren(techBackend);document.body.classList.remove('resource-viewer-open');opener?.focus();active=null;});
   dialog.addEventListener('click',event=>{if(event.target===dialog){const box=dialog.getBoundingClientRect();if(event.clientX<box.left||event.clientX>box.right||event.clientY<box.top||event.clientY>box.bottom)dialog.close();}});
   refresh.addEventListener('click',frame);
   document.addEventListener('click',event=>{
@@ -49,6 +58,6 @@
     dialog.querySelector('[data-provider]').textContent=target.host;dialog.querySelector('[data-original]').href=target.original;
     refresh.hidden=Boolean(target.blocked);dialog.classList.toggle('resource-external-only',Boolean(target.blocked));
     help.textContent=target.blocked?'This service requires its own tab. Use “Open in new tab” above; NEST will stay here.':target.previewOnly?'Google provides a preview of this form here. Use “Open in new tab” to complete the form.':'This is live content from the original source. If it is blank or asks you to sign in, use “Open in new tab”.';
-    document.body.classList.add('resource-viewer-open');dialog.showModal();frame();dialog.querySelector('[data-close]').focus();
+    document.body.classList.add('resource-viewer-open');dialog.showModal();frame();checkTechAccess(target);dialog.querySelector('[data-close]').focus();
   });
 })();
