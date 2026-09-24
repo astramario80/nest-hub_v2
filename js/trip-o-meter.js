@@ -2,11 +2,11 @@
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
   const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]');
-  let scoreQueue=[],savingScores=false,saveError=false,queueTimer;
+  let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null;
   const scores=['4','3','2','1','A','NE','Yes','No'];
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  function clear(){data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
+  function clear(){if(activeGesture)activeGesture();data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
@@ -22,6 +22,63 @@
     expiryTimer=setTimeout(scheduleExpiry,Math.min(remaining,2147483647));
   }
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
+  function layoutReady(){return data&&!busy&&!savingScores&&!scoreQueue.length&&!saveError&&!expired();}
+  function pointerGesture(handle,start,onMove,onDrop,onCancel){
+    if(activeGesture)activeGesture();
+    const pointerId=start.pointerId;
+    let done=false;
+    const finish=commit=>{
+      if(done)return;done=true;
+      window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('pointercancel',cancel);window.removeEventListener('keydown',key);
+      if(handle.releasePointerCapture&&handle.hasPointerCapture?.(pointerId))handle.releasePointerCapture(pointerId);
+      activeGesture=null;
+      if(commit)onDrop();else onCancel();
+    };
+    const move=event=>{if(event.pointerId===pointerId)onMove(event);};
+    const up=event=>{if(event.pointerId===pointerId)finish(true);};
+    const cancel=event=>{if(event.pointerId===pointerId)finish(false);};
+    const key=event=>{if(event.key==='Escape'){event.preventDefault();finish(false);}};
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);window.addEventListener('pointercancel',cancel);window.addEventListener('keydown',key);
+    activeGesture=()=>finish(false);
+    if(handle.setPointerCapture)handle.setPointerCapture(pointerId);
+  }
+  function dragColumn(event,handle,assignment,scroll,headers){
+    if(event.button!==0||!layoutReady())return;
+    event.preventDefault();
+    const from=data.assignments.findIndex(item=>item.id===assignment.id),startX=event.clientX,oldStatus=status.textContent;
+    let moved=false,slot=from;
+    const mark=()=>{
+      headers.forEach(th=>th.classList.remove('trip-drop-before','trip-drop-after'));
+      const target=headers[Math.min(slot,headers.length-1)];
+      if(target)target.classList.add(slot===headers.length?'trip-drop-after':'trip-drop-before');
+    };
+    const cleanup=()=>{handle.classList.remove('trip-dragging');headers.forEach(th=>th.classList.remove('trip-drop-before','trip-drop-after'));status.textContent=oldStatus;};
+    pointerGesture(handle,event,move=>{
+      if(Math.abs(move.clientX-startX)>5)moved=true;
+      if(!moved)return;
+      handle.classList.add('trip-dragging');
+      const box=scroll.getBoundingClientRect();
+      if(move.clientX>box.right-28)scroll.scrollLeft+=18;
+      else if(move.clientX<box.left+28)scroll.scrollLeft-=18;
+      slot=headers.filter(th=>move.clientX>th.getBoundingClientRect().left+th.getBoundingClientRect().width/2).length;
+      mark();status.textContent='Release to move '+assignment.title+'. Press Escape to cancel.';
+    },()=>{
+      cleanup();if(!moved)return;
+      const order=data.assignments.map(item=>item.id),[id]=order.splice(from,1),to=Math.max(0,Math.min(order.length,slot-(slot>from?1:0)));
+      order.splice(to,0,id);if(to!==from)save({type:'reorder',order});
+    },cleanup);
+  }
+  function resizeColumn(event,handle,assignment,column,table){
+    if(event.button!==0||!layoutReady())return;
+    event.preventDefault();
+    const initial=assignment.width||180,startX=event.clientX,tableWidth=parseInt(table.style.width,10),oldStatus=status.textContent;
+    let width=initial;
+    const preview=value=>{width=Math.max(120,Math.min(600,Math.round(value)));column.style.width=width+'px';table.style.width=tableWidth+width-initial+'px';};
+    const cleanup=()=>{handle.classList.remove('trip-resizing');status.textContent=oldStatus;};
+    pointerGesture(handle,event,move=>{preview(initial+move.clientX-startX);handle.classList.add('trip-resizing');status.textContent=assignment.title+' width: '+width+' pixels. Press Escape to cancel.';},()=>{
+      cleanup();if(width!==initial)save({type:'resize',assignment:assignment.id,width});
+    },()=>{preview(initial);cleanup();});
+  }
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
@@ -54,20 +111,25 @@
     if(canEdit){
       const form=node('form'),input=node('input');input.required=true;input.maxLength=100;input.placeholder='New assignment title';input.setAttribute('aria-label','New assignment title');
       const add=node('button','Add assignment');add.type='submit';form.append(input,add);form.className='trip-toolbar';form.addEventListener('submit',event=>{event.preventDefault();save({type:'assignment',title:input.value});});view.append(form);
+      const help=node('p','Drag a column heading to move it. Drag its right edge to resize it.');help.className='trip-layout-help';view.append(help);
     }
     const scroll=node('div');scroll.className='trip-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Period '+period+' tracker. Scroll horizontally for assignments.');
     const table=node('table'),caption=node('caption','Period '+period+' assignments');table.append(caption);
     const columns=node('colgroup'),studentColumn=node('col');studentColumn.style.width='190px';columns.append(studentColumn);
-    data.assignments.forEach(a=>{const column=node('col');column.style.width=(a.width||180)+'px';columns.append(column);});
+    const assignmentColumns=data.assignments.map(a=>{const column=node('col');column.style.width=(a.width||180)+'px';columns.append(column);return column;});
     table.append(columns);table.style.width=(190+data.assignments.reduce((sum,a)=>sum+(a.width||180),0))+'px';
     const head=node('thead'),tr=node('tr');const name=node('th','Student');name.scope='col';tr.append(name);
     data.assignments.forEach(a=>{
-      const th=node('th');th.scope='col';const title=node('span',a.title);th.append(title);
+      const th=node('th');th.scope='col';th.dataset.assignment=a.id;if(canEdit){
+        th.className='trip-movable-column';
+        const drag=node('button');drag.type='button';drag.className='trip-column-drag';drag.title='Drag to move this column';drag.setAttribute('aria-label','Drag '+a.title+' column to move');drag.append(node('span','⠿'),node('span',a.title));drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));th.append(drag);
+        const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag to resize this column';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
+      }else th.append(node('span',a.title));
       const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
       if(canEdit){
         const index=data.assignments.indexOf(a),controls=node('details'),summary=node('summary','Edit column');controls.className='trip-column-controls';controls.append(summary);
         const rename=node('form'),titleInput=node('input'),renameButton=node('button','Save name');titleInput.value=a.title;titleInput.maxLength=100;titleInput.required=true;titleInput.setAttribute('aria-label','Rename '+a.title);rename.append(titleInput,renameButton);rename.addEventListener('submit',event=>{event.preventDefault();save({type:'rename',assignment:a.id,title:titleInput.value});});controls.append(rename);
-        const widthForm=node('form'),widthInput=node('input'),widthButton=node('button','Set width');widthInput.type='number';widthInput.min='120';widthInput.max='600';widthInput.step='10';widthInput.required=true;widthInput.value=String(a.width||180);widthInput.setAttribute('aria-label','Width for '+a.title+' in pixels');widthForm.append(widthInput,widthButton);widthForm.addEventListener('submit',event=>{event.preventDefault();save({type:'resize',assignment:a.id,width:Number(widthInput.value)});});controls.append(widthForm);
+        const widthForm=node('form'),widthInput=node('input'),widthButton=node('button','Set width');widthInput.type='number';widthInput.min='120';widthInput.max='600';widthInput.step='1';widthInput.required=true;widthInput.value=String(a.width||180);widthInput.setAttribute('aria-label','Width for '+a.title+' in pixels');widthForm.append(widthInput,widthButton);widthForm.addEventListener('submit',event=>{event.preventDefault();save({type:'resize',assignment:a.id,width:Number(widthInput.value)});});controls.append(widthForm);
         const moves=node('div');moves.className='trip-column-moves';for(const [direction,label] of [[-1,'Move left'],[1,'Move right']]){const button=node('button',label);button.type='button';button.disabled=index+direction<0||index+direction>=data.assignments.length;button.setAttribute('aria-label',label+' '+a.title);button.addEventListener('click',()=>{const order=data.assignments.map(item=>item.id);[order[index],order[index+direction]]=[order[index+direction],order[index]];save({type:'reorder',order});});moves.append(button);}controls.append(moves);
         const remove=node('button','Delete column');remove.type='button';remove.className='trip-column-delete';remove.setAttribute('aria-label','Delete '+a.title+' column');remove.addEventListener('click',()=>{const count=data.students.filter(s=>data.scores[s.id]?.[a.id]).length;if(window.confirm(`Delete “${a.title}” and ${count} saved score${count===1?'':'s'} from this period? This cannot be undone.`))save({type:'delete',assignment:a.id});});controls.append(remove);th.append(controls);
       }
