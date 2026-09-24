@@ -1,12 +1,12 @@
 (() => {
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
-  const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]');
+  const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
   let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false;
   const scores=['4','3','2','1','A','NE','Yes','No'];
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
+  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;exportButton.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
@@ -22,6 +22,7 @@
     expiryTimer=setTimeout(scheduleExpiry,Math.min(remaining,2147483647));
   }
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
+  function overview(values){const students=data.students.length,assignments=data.assignments.length;return ` · ${students} student${students===1?'':'s'} · ${assignments} assignment${assignments===1?'':'s'} · Overall completion: ${percentage(values)}`;}
   function layoutReady(){return data&&!busy&&!savingScores&&!scoreQueue.length&&!saveError&&!editingTitle&&!expired();}
   function pointerGesture(handle,start,onMove,onDrop,onCancel){
     if(activeGesture)activeGesture();
@@ -98,37 +99,15 @@
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
-    status.textContent=`Period ${period} · ${canEdit?'Editing enabled':'View only'} · Access until ${new Date(data.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
+    status.textContent='';exportButton.hidden=data.role!=='administrator';
     scheduleExpiry();
-    const toolbar=node('div');toolbar.className='trip-toolbar';
-    const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
-    const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;await window.NestAuth.logout();if(!window.NestAuth.identity)lock('Signed out of NEST.');});toolbar.append(signout);
-    const exportBar=node('div');exportBar.className='trip-export-bar';
-    const exportTitle=node('strong','Download scores');exportBar.append(exportTitle);
-    if(data.role==='administrator'){
-      const select=node('select');select.setAttribute('aria-label','CSV period');
-      ['1','2','3','4','5','7','CTSO'].forEach(p=>{const o=node('option',p==='CTSO'?'Robotics':'Period '+p);o.value=p;o.selected=p===period;select.append(o);});
-      const exportButton=node('button','Download CSV');exportButton.type='button';exportButton.className='trip-export-button';exportButton.addEventListener('click',()=>download(select.value));exportBar.append(select,exportButton);
-    }else exportBar.append(node('span','CSV downloads are available to NEST administrators.'));
-    view.append(exportBar);
-    view.append(toolbar);
-    if(['administrator','manager'].includes(data.role)){
-      const panel=node('details'),heading=node('summary','Temporary editing access');panel.append(heading);
-      panel.append(node('p','Give someone editing access to this period for six hours. They must verify their own email here. They cannot grant access to others.'));
-      const form=node('form'),email=node('input');email.type='email';email.required=true;email.maxLength=254;email.placeholder='Editor’s email';email.setAttribute('aria-label','Temporary editor email');
-      const button=node('button','Grant six-hour access');button.type='submit';form.className='trip-toolbar';form.append(email,button);form.addEventListener('submit',event=>{event.preventDefault();save({type:'grant',email:email.value});});panel.append(form);
-      (data.grants||[]).forEach(grant=>{const row=node('p',grant.email+' — until '+new Date(grant.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})+' ');const revoke=node('button','Revoke');revoke.type='button';revoke.setAttribute('aria-label','Revoke access for '+grant.email);revoke.addEventListener('click',()=>save({type:'revoke',email:grant.email}));row.append(revoke);panel.append(row);});view.append(panel);
-    }
     const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
-    const summary=node('p',`${data.students.length} students · ${data.assignments.length} assignments · Overall completion: ${percentage(all)}`);summary.className='trip-summary';view.append(summary);
-    const breakdown=node('details'),heading=node('summary','Score breakdown');breakdown.append(heading);
+    const breakdown=node('details'),heading=node('summary');breakdown.className='trip-score-breakdown';heading.append(node('strong','Score breakdown'),node('span',overview(all)));breakdown.append(heading);
     const list=node('p',scores.map(score=>score+': '+all.filter(v=>v===score).length).join(' · '));breakdown.append(list);
     breakdown.append(node('p','Not scored: '+all.filter(v=>!v).length+' · Other imported values: '+all.filter(v=>v&&!scores.includes(v)).length+'. Only a score of 4 counts as completed.'));view.append(breakdown);
     if(canEdit){
       const form=node('form'),input=node('input');input.required=true;input.maxLength=100;input.placeholder='New assignment title';input.setAttribute('aria-label','New assignment title');
       const add=node('button','Add assignment');add.type='submit';form.append(input,add);form.className='trip-toolbar';form.addEventListener('submit',event=>{event.preventDefault();save({type:'assignment',title:input.value});});view.append(form);
-      const help=node('p','Drag a column heading to move it, drag its right edge to resize it, or double-click its name to rename it.');help.className='trip-layout-help';view.append(help);
-      view.append(node('p','Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.'));
     }
     const scroll=node('div');scroll.className='trip-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Period '+period+' tracker. Scroll horizontally for assignments.');
     const table=node('table'),caption=node('caption','Period '+period+' assignments');table.append(caption);
@@ -139,8 +118,8 @@
     data.assignments.forEach(a=>{
       const th=node('th');th.scope='col';th.dataset.assignment=a.id;if(canEdit){
         th.className='trip-movable-column';
-        const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag to move; double-click the name to rename';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-click the name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
-        const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag to resize this column';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
+        const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag a column heading to move it, drag its right edge to resize it.';title.title='Double-click its name to rename it.';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-click the name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
+        const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag a column heading to move it, drag its right edge to resize it.';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
       }else th.append(node('span',a.title));
       const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
       if(canEdit){
@@ -156,7 +135,7 @@
         if(canEdit){const select=node('select');select.dataset.student=student.id;select.dataset.assignment=a.id;select.setAttribute('aria-label',student.name+' — '+a.title);const options=['',...scores];if(value&&!options.includes(value))options.push(value);
           options.forEach(score=>{const option=node('option',score||'Not scored');option.value=score;if(score===value)option.selected=true;if(score&&!scores.includes(score))option.disabled=true;select.append(option);});
           select.addEventListener('change',()=>{cell.dataset.score=select.value;queueScore({student:student.id,assignment:a.id,score:select.value});});
-          if(student===data.students[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Apply first score to unscored cells; confirm to clear the column when Not scored';fill.addEventListener('click',()=>fillColumn(a,select.value));group.append(select,fill);cell.append(group);}else cell.append(select);
+          if(student===data.students[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.';fill.addEventListener('click',()=>fillColumn(a,select.value));group.append(select,fill);cell.append(group);}else cell.append(select);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
     });table.append(body);scroll.append(table);view.append(scroll);
@@ -210,13 +189,13 @@
       data=result;scoreQueue.splice(0,batch.length);scoreControls();
       // Update completion totals without replacing controls or moving keyboard focus.
       const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
-      q('.trip-summary').textContent=`${data.students.length} students · ${data.assignments.length} assignments · Overall completion: ${percentage(all)}`;
+      q('.trip-score-breakdown summary span').textContent=overview(all);
       view.querySelectorAll('thead th:not(:first-child)').forEach((th,index)=>{
         const a=data.assignments[index],values=data.students.map(s=>data.scores[s.id]?.[a.id]||'');
         th.querySelector('small').textContent=percentage(values)+' complete';
         th.querySelector('details small').textContent=scores.map(score=>score+': '+values.filter(v=>v===score).length).join(' · ');
       });
-      const breakdown=[...view.querySelectorAll('details')].find(el=>el.querySelector('summary')?.textContent==='Score breakdown');
+      const breakdown=q('.trip-score-breakdown');
       if(breakdown){const ps=breakdown.querySelectorAll('p');ps[0].textContent=scores.map(score=>score+': '+all.filter(v=>v===score).length).join(' · ');ps[1].textContent='Not scored: '+all.filter(v=>!v).length+' · Other imported values: '+all.filter(v=>v&&!scores.includes(v)).length+'. Only a score of 4 counts as completed.';}
     }catch(e){if(current===version&&data){if(e.status===401||e.status===403)lock('Editing access has ended. Sign in again to continue.');else{saveError=true;scoreControls();status.textContent=e.message;}}}
     finally{savingScores=false;if(scoreQueue.length&&!saveError&&data)flushScores();}
@@ -239,7 +218,9 @@
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
-  host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));load();}));
+  periodSelect.addEventListener('change',()=>{if(busy)return;period=periodSelect.value;refresh.disabled=!period;exportButton.hidden=true;if(period)load();else{clear();status.textContent='';}});
+  refresh.addEventListener('click',load);
+  exportButton.addEventListener('click',()=>download(period));
   q('[data-open-login]').addEventListener('click',()=>window.NestAuth?.open());
   document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period&&!busy){load();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);

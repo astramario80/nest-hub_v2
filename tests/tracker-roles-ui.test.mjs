@@ -10,9 +10,9 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
  w.fetch=async(_,options)=>{const r=JSON.parse(options.body);actions.push(r.action);if(r.action==='tracker')return {ok:true,status:200,json:async()=>tracker};return {ok:true,json:async()=>({})};};
  try{
   w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));
-  q('[data-period="1"]').click();await tick();
+  q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
   assert.equal(q('[data-view]').hidden,false);assert.equal(q('[data-login]').hidden,true);
-  assert.match(q('[data-status]').textContent,role==='manager'?/Editing enabled/:/View only/);
+  assert.equal(q('[data-status]').textContent,'');
   assert.equal(Boolean(q('tbody select')),role==='manager');
   assert.equal(Boolean(q('[aria-label="New assignment title"]')),role==='manager');
   assert.equal(Boolean(q('.trip-column-drag')),role==='manager');
@@ -27,8 +27,33 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
    assert.equal(q('.trip-column-moves'),null);
    assert.equal(q('.trip-column-controls form'),null);
   }
-  assert.equal(q('[data-period="1"]').disabled,false);
+  assert.equal(q('[data-period-select]').disabled,false);
+  assert.equal(q('[data-refresh]').disabled,false);
+  assert.equal(q('[data-export]').hidden,role!=='administrator');
+  assert.equal(q('.trip-score-breakdown summary span').textContent.includes('1 student · 1 assignment'),true);
+  assert.equal(q('.trip-summary'),null);
+  assert.equal(q('.trip-layout-help'),null);
+  assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-click its name to rename it.':undefined);
   assert.deepEqual(actions,['tracker']);
+ }finally{w.close();}
+});
+
+test('compact toolbar changes periods, refreshes, and downloads the selected period',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'administrator'},ready:Promise.resolve(),open(){},logout:async()=>{}};
+ const requests=[];w.URL.createObjectURL=()=> 'blob:test';w.URL.revokeObjectURL=()=>{};w.HTMLAnchorElement.prototype.click=function(){};
+ w.fetch=async(_,options)=>{const request=JSON.parse(options.body);requests.push([request.action,request.period]);return {ok:true,status:200,json:async()=>({role:'administrator',period:request.period,revision:1,expires:Date.now()+21600000,students:[],assignments:[],scores:{},completionScores:['4'],grants:[]})};};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));
+  assert.equal(q('[data-refresh]').disabled,true);assert.equal(q('[data-export]').hidden,true);
+  const period=q('[data-period-select]');period.value='2';period.dispatchEvent(new w.Event('change'));await tick();
+  assert.equal(q('[data-export]').hidden,false);assert.equal(q('[data-refresh]').disabled,false);
+  assert.equal(q('[data-status]').textContent,'');
+  period.value='3';period.dispatchEvent(new w.Event('change'));await tick();
+  q('[data-refresh]').click();await tick();q('[data-export]').click();await tick();
+  assert.deepEqual(requests,[['tracker','2'],['tracker','3'],['tracker','3'],['export','3']]);
+  assert.equal(q('.trip-score-breakdown')!==null,true);
+  assert.equal([...w.document.querySelectorAll('#trip-app button')].some(button=>button.textContent.includes('Sign out')),false);
  }finally{w.close();}
 });
 
@@ -41,7 +66,7 @@ test('double-clicking an assignment name edits it and clicking elsewhere saves',
   changes.push(request.change);tracker={...tracker,revision:tracker.revision+1,assignments:tracker.assignments.map(a=>a.id===request.change.assignment?{...a,title:request.change.title}:a)};
  }return {ok:true,status:200,json:async()=>tracker};};
  try{
-  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period="1"]').click();await tick();
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
   q('.trip-column-drag').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
   const input=q('.trip-inline-title');assert.ok(input);assert.equal(input.value,'Safety');
   input.value='  New safety task  ';input.blur();await tick();
@@ -66,7 +91,7 @@ test('dragging a heading reorders columns and dragging its edge saves the new wi
   }return {ok:true,status:200,json:async()=>tracker};};
  const pointer=(target,type,x)=>{const event=new w.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(event,{pointerId:{value:1},button:{value:0},clientX:{value:x}});target.dispatchEvent(event);};
  try{
-  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period="1"]').click();await tick();
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
   const scroll=q('.trip-table-scroll');scroll.getBoundingClientRect=()=>({left:0,right:800});
   [...w.document.querySelectorAll('thead th[data-assignment]')].forEach((th,i)=>{th.getBoundingClientRect=()=>({left:190+i*180,width:180});});
   pointer(q('.trip-column-drag'),'pointerdown',280);pointer(w,'pointermove',700);pointer(w,'pointerup',700);await tick();

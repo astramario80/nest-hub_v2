@@ -13,7 +13,7 @@ test('a signed-in user is not shown a login prompt when a tracker request fails'
   w.fetch = async () => ({ ok: false, status: 401, json: async () => ({ error: 'Sign in to NEST to continue.' }) });
   try {
     w.eval(fs.readFileSync('js/trip-o-meter.js', 'utf8'));
-    w.document.querySelector('[data-period="1"]').click();
+    const period=w.document.querySelector('[data-period-select]');period.value='1';period.dispatchEvent(new w.Event('change'));
     await tick();
     assert.equal(w.document.querySelector('[data-login]').hidden, true);
     assert.match(w.document.querySelector('[data-status]').textContent, /could not open this period/i);
@@ -31,10 +31,10 @@ test('a 30-day session keeps the tracker open instead of overflowing its expiry 
   }) });
   try {
     w.eval(fs.readFileSync('js/trip-o-meter.js', 'utf8'));
-    w.document.querySelector('[data-period="1"]').click();
+    const period=w.document.querySelector('[data-period-select]');period.value='1';period.dispatchEvent(new w.Event('change'));
     await new Promise(resolve => setTimeout(resolve, 20));
     assert.equal(w.document.querySelector('[data-view]').hidden, false);
     assert.equal(w.document.querySelector('[data-login]').hidden, true);
-    assert.match(w.document.querySelector('[data-status]').textContent, /Access until/);
+    assert.equal(w.document.querySelector('[data-status]').textContent, '');
   } finally { w.close(); }
 });

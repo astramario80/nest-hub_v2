@@ -21,7 +21,7 @@ test('down arrow fills only unscored cells and clears a column only after confir
   request.change.edits.forEach(edit=>{tracker.scores[edit.student][edit.assignment]=edit.score;});
  }return {ok:true,status:200,json:async()=>structuredClone(tracker)};};
  try{
-  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period="1"]').click();await pause(20);
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await pause(20);
   assert.equal(q('.trip-fill-column').textContent,'↓');
   q('.trip-fill-column').click();await pause(400);
   assert.equal(prompts.length,0);
