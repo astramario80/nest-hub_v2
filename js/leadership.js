@@ -19,7 +19,7 @@
   ]);
 
   const state = {
-    leaders: [], // {division, position, firstName}
+    leaders: [], // {division, position, firstName, lastName, email}
     positions: [], // [position]
     ready: false,
   };
@@ -47,7 +47,7 @@
 
   async function fetchText(url, timeout = 30000){
     const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
-    if (!res.ok) throw new Error(`Fetch failed (${res.status}) for ${url}`);
+    if (!res.ok) { const error = new Error(`Fetch failed (${res.status}) for ${url}`); error.status = res.status; throw error; }
     return await res.text();
   }
 
@@ -139,9 +139,10 @@
       pill.className = 'exec-pill';
       pill.innerHTML = `
         <div class="exec-role">${escapeHtml(l.position)}</div>
-        <div class="exec-name">${escapeHtml(l.firstName || '')}</div>
+        <div class="exec-name">${escapeHtml([l.firstName,l.lastName].filter(Boolean).join(' '))}</div>
         <div class="exec-division">${escapeHtml(l.division || '')}</div>
       `;
+      const email = document.createElement('a');email.className = 'leader-email';email.href = `mailto:${l.email}`;email.textContent = l.email;pill.appendChild(email);
       container.appendChild(pill);
     });
   }
@@ -186,11 +187,8 @@
   function renderCardRow(l){
     const div = document.createElement('div');
     div.className = 'leader-row';
-    div.innerHTML = `
-      <div class="leader-pos">${escapeHtml(l.position)}</div>
-      <div class="leader-name">${escapeHtml(l.firstName || '')}</div>
-      <div class="leader-div">${escapeHtml(l.division)}</div>
-    `;
+    div.innerHTML = `<div class="leader-pos">${escapeHtml(l.position)}</div><div class="leader-person"><div class="leader-name">${escapeHtml([l.firstName,l.lastName].filter(Boolean).join(' '))}</div></div><div class="leader-div">${escapeHtml(l.division)}</div>`;
+    const email = document.createElement('a');email.className = 'leader-email';email.href = `mailto:${l.email}`;email.textContent = l.email;div.querySelector('.leader-person').appendChild(email);
     return div;
   }
 
@@ -336,10 +334,29 @@
     els.positionWrap = q('leadership-position-wrap');
     els.managerTools = q('manager-tools');
 
-    clearResults();
-    els.resultsTitle.textContent = 'Loading leadership teams…';
+    const controls = document.querySelector('.leadership-controls');
+    const executives = document.querySelector('.leadership-exec');
+    let generation = 0, activeEmail = '';
+
+    function signedOut(message = 'Sign in to NEST to view names and district email addresses.') {
+      generation++;
+      activeEmail = '';
+      state.leaders = [];
+      state.positions = [];
+      state.ready = false;
+      controls.hidden = true;
+      executives.hidden = true;
+      els.execList.replaceChildren();
+      clearResults();
+      els.resultsTitle.textContent = message;
+      const login = document.createElement('button');
+      login.type = 'button';login.className = 'leadership-clear';login.textContent = 'NEST Login';
+      login.addEventListener('click', () => window.NestAuth?.open());
+      els.resultsGrid.replaceChildren(login);
+    }
 
     async function load(){
+      const own = ++generation;
       els.resultsTitle.textContent = 'Loading leadership teams…';
       els.resultsGrid.replaceChildren();
       try {
@@ -349,6 +366,7 @@
         const directory = JSON.parse(await fetchText(LEADERS_URL, 45000));
         if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
         const positionsCsv = await positionsRequest;
+        if (own !== generation || !window.NestAuth?.identity) return;
         let listedPositions = [];
         if (positionsCsv) {
           try { listedPositions = toPositions(parseCSV(positionsCsv)); } catch (_) { /* Keep current team roles available. */ }
@@ -367,7 +385,9 @@
           els.positionSelect.appendChild(opt);
         });
         updateMode();
-      } catch (_){
+      } catch (error){
+        if (own !== generation || !window.NestAuth?.identity) return;
+        if (error.status === 401) { signedOut('Your sign-in has expired. Sign in again to view the directory.'); return; }
         state.ready = false;
         els.resultsTitle.textContent = 'Leadership data is temporarily unavailable.';
         const retry = document.createElement('button');
@@ -387,7 +407,18 @@
       els.positionSelect.value = '';
       if (state.ready) clearResults();
     });
-    await load();
+    function authChanged(){
+      const identity = window.NestAuth?.identity;
+      if (!identity?.signedIn) { signedOut(); return; }
+      if (activeEmail === identity.email) return;
+      activeEmail = identity.email;
+      controls.hidden = false;
+      executives.hidden = false;
+      load();
+    }
+    signedOut();
+    document.addEventListener('nest-auth-change', authChanged);
+    window.NestAuth?.ready.then(authChanged);
   }
 
   document.addEventListener('DOMContentLoaded', init);
