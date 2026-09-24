@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 function service() {
-  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false;
+  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false;
   const state=new Map(),store={getProperty:key=>state.get(key)||null,setProperty:(key,value)=>state.set(key,value),deleteProperty:key=>state.delete(key),getProperties:()=>Object.fromEntries(state)};
   const cacheState=new Map(),cache={get:key=>cacheState.get(key)?.expires>now?cacheState.get(key).value:null,put:(key,value,seconds)=>cacheState.set(key,{value,expires:now+seconds*1000}),remove:key=>cacheState.delete(key)};
   const lock={tryLock:()=>true,releaseLock:()=>{}};
@@ -18,16 +18,17 @@ function service() {
       if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
       return {values:[]};
     },
-    update(resource,_id,range){if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};}
+    update(resource,_id,range){if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
+    append(resource){accounts.push(resource.values[0]);return {};}
   };
   const batchUpdate=({requests})=>{for(const request of requests){
     if(request.insertDimension)accounts.splice(request.insertDimension.range.startIndex-1,0,[]);
     if(request.updateCells)accounts[request.updateCells.range.startRowIndex-1]=request.updateCells.rows[0].values.map(cell=>Object.values(cell.userEnteredValue)[0]);
-    if(request.sortRange)accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+    if(request.sortRange){if(failSort)throw new Error('Sort unavailable');accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));}
   }return {};};
   const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},CacheService:{getScriptCache:()=>cache},LockService:{getScriptLock:()=>lock},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
   vm.runInContext(source,ctx);
-  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,advance:ms=>now+=ms};
+  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,setSortFailure:value=>failSort=value,advance:ms=>now+=ms};
 }
 const challenge='a'.repeat(64),ticket='b'.repeat(64),session='c'.repeat(64),ip='d'.repeat(64),email='student@students.bethelsd.org';
 test('registration requires known district email, verified code, and unique username',()=>{
@@ -52,6 +53,16 @@ test('registration creates the tool session in the same school call',()=>{
   assert.equal(app.tool({action:'roster',period:'1',session}).status,200);
   app.accounts[0][4]=false;
   assert.equal(app.tool({action:'roster',period:'1',session}).status,401);
+});
+test('a failed account sort still leaves a working new account',()=>{
+  const app=service();
+  app.setSortFailure(true);
+  assert.equal(app.call({action:'auth-register-request',email,challenge,code:'123456',ip}).status,200);
+  assert.equal(app.call({action:'auth-register-verify',challenge,code:'123456',ticket}).status,200);
+  const result=app.call({action:'auth-register',ticket,username:'student1',passwordHash:'e'.repeat(64),passwordSalt:'f'.repeat(32),session,duration:'1d'});
+  assert.equal(result.status,200);
+  assert.equal(app.accounts.length,1);
+  assert.equal(app.call({action:'auth-me',session}).status,200);
 });
 test('new accounts stay sorted below the header and sessions use the right account',()=>{
   const app=service();
