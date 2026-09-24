@@ -10,7 +10,8 @@
   ],
   "functions": {
     "api/auth.mjs": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "regions": ["sfo1"]
     },
     "api/spinner.mjs": {
       "maxDuration": 60
