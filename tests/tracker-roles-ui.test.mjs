@@ -17,6 +17,7 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('[aria-label="New assignment title"]')),role==='manager');
   assert.equal(Boolean(q('.trip-column-drag')),role==='manager');
   assert.equal(Boolean(q('.trip-column-resize')),role==='manager');
+  assert.equal(Boolean(q('.trip-fill-column')),role==='manager');
   assert.equal(q('tbody td').dataset.score,'4');
   assert.equal(Boolean(q('.trip-column-controls')),role==='manager');
   if(role==='manager'){
