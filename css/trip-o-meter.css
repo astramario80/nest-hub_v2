@@ -16,3 +16,5 @@
 
 .trip-layout{max-width:none;align-items:stretch;padding:12px}.trip-access{padding:12px}.trip-table-scroll{width:100%;height:calc(100vh - 48px);height:calc(100dvh - 48px);min-height:360px;max-height:none}
 @media(max-width:600px){.trip-layout{padding:8px}.trip-access{padding:8px}.trip-table-scroll{height:calc(100vh - 32px);height:calc(100dvh - 32px)}}
+
+.trip-table-scroll thead th.trip-name-header,.trip-table-scroll tbody th{min-width:0;max-width:none}.trip-name-header{padding-right:21px!important}.trip-name-header strong{display:block;margin-bottom:6px}.trip-name-header .trip-student-sort,.trip-name-header .trip-role-toggle{display:block;width:100%;min-width:0;margin-top:5px;font-size:.78rem;min-height:36px;padding:5px}.trip-name-resize{z-index:4}.trip-leadership-role{display:block;margin-top:4px!important;color:#bfe3ff;font-size:.75rem;line-height:1.3}

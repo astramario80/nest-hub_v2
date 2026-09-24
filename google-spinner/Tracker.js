@@ -51,7 +51,15 @@ function grantEditor_(r,s,store,now) {
   return {status:200};
 }
 function trackerView_(data,rows,role,expires,includeArchived=false) {
-  const current=rows.map(row=>({id:hash_(email_(row[1])),name:row[0],email:row[1],active:true}));
+  const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+  const leadership=new Map();
+  leaders.forEach(row=>{
+    if(String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()!==data.period)return;
+    const email=email_(row[4]),position=String(row[2]||'').trim();
+    if(!email||!position)return;
+    const roles=leadership.get(email)||[];if(!roles.includes(position))roles.push(position);leadership.set(email,roles);
+  });
+  const current=rows.map(row=>({id:hash_(email_(row[1])),name:row[0],email:row[1],active:true,leadershipRole:(leadership.get(email_(row[1]))||[]).join(' · ')}));
   const students=includeArchived ? [...current,...(data.students||[]).filter(old=>!current.some(s=>s.id===old.id)).map(old=>({...old,active:false}))] : current;
   const scores={};
   students.forEach(s=>{scores[s.id]={};data.assignments.forEach(a=>{scores[s.id][a.id]=(data.scores[s.id]||{})[a.id]||'';});});

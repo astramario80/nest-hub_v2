@@ -4,6 +4,13 @@
   const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
   let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false;
   const scores=['4','3','2','1','A','NE','Yes','No'];
+  let display={sort:'last',showRoles:true,nameWidth:190};
+  const collator=new Intl.Collator(undefined,{sensitivity:'base',numeric:true});
+  function displayKey(){const user=String(window.NestAuth?.identity?.username||window.NestAuth?.identity?.email||'account').toLowerCase();return 'nest-tracker-display:'+user+':'+period;}
+  function readDisplay(){try{const saved=JSON.parse(localStorage.getItem(displayKey())||'{}');return {sort:saved.sort==='first'?'first':'last',showRoles:saved.showRoles!==false,nameWidth:Number.isInteger(saved.nameWidth)&&saved.nameWidth>=130&&saved.nameWidth<=500?saved.nameWidth:190};}catch{return {sort:'last',showRoles:true,nameWidth:190};}}
+  function saveDisplay(){try{localStorage.setItem(displayKey(),JSON.stringify(display));}catch{status.textContent='Display choices could not be saved in this browser.';}}
+  function nameParts(value){const name=String(value||'').trim(),comma=name.indexOf(',');if(comma>=0)return {first:name.slice(comma+1).trim(),last:name.slice(0,comma).trim()};const words=name.split(/\s+/);return {first:words[0]||'',last:words.slice(1).join(' ')||words[0]||''};}
+  function sortedStudents(){return [...data.students].sort((a,b)=>{const left=nameParts(a.name),right=nameParts(b.name),primary=display.sort==='first'?'first':'last',secondary=display.sort==='first'?'last':'first';return collator.compare(left[primary],right[primary])||collator.compare(left[secondary],right[secondary])||collator.compare(a.id,b.id);});}
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
   function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;exportButton.hidden=true;}
@@ -80,6 +87,18 @@
       cleanup();if(width!==initial)save({type:'resize',assignment:assignment.id,width});
     },()=>{preview(initial);cleanup();});
   }
+  function resizeNames(event,handle,column,table){
+    if(event.button!==0||!layoutReady())return;
+    event.preventDefault();
+    const initial=display.nameWidth,startX=event.clientX,tableWidth=parseInt(table.style.width,10),oldStatus=status.textContent;
+    let width=initial;
+    const preview=value=>{width=Math.max(130,Math.min(500,Math.round(value)));column.style.width=width+'px';table.style.width=tableWidth+width-initial+'px';};
+    const cleanup=()=>{handle.classList.remove('trip-resizing');status.textContent=oldStatus;};
+    pointerGesture(handle,event,move=>{preview(initial+move.clientX-startX);handle.classList.add('trip-resizing');status.textContent='Student name width: '+width+' pixels. Press Escape to cancel.';},()=>{
+      cleanup();if(width!==initial){display.nameWidth=width;saveDisplay();}
+    },()=>{preview(initial);cleanup();});
+  }
+  function rerenderDisplay(){if(!layoutReady())return;const result=data,scroll=q('.trip-table-scroll'),left=scroll?.scrollLeft||0,top=scroll?.scrollTop||0;render(result);const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}q('.trip-student-sort')?.focus();}
   function editAssignmentTitle(event,handle,assignment){
     if(!layoutReady())return;
     event.preventDefault();event.stopPropagation();editingTitle=true;
@@ -111,10 +130,13 @@
     }
     const scroll=node('div');scroll.className='trip-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Period '+period+' tracker. Scroll horizontally for assignments.');
     const table=node('table'),caption=node('caption','Period '+period+' assignments');table.append(caption);
-    const columns=node('colgroup'),studentColumn=node('col');studentColumn.style.width='190px';columns.append(studentColumn);
+    const columns=node('colgroup'),studentColumn=node('col');studentColumn.style.width=display.nameWidth+'px';columns.append(studentColumn);
     const assignmentColumns=data.assignments.map(a=>{const column=node('col');column.style.width=(a.width||180)+'px';columns.append(column);return column;});
-    table.append(columns);table.style.width=(190+data.assignments.reduce((sum,a)=>sum+(a.width||180),0))+'px';
-    const head=node('thead'),tr=node('tr');const name=node('th','Student');name.scope='col';tr.append(name);
+    table.append(columns);table.style.width=(display.nameWidth+data.assignments.reduce((sum,a)=>sum+(a.width||180),0))+'px';
+    const head=node('thead'),tr=node('tr');const name=node('th');name.scope='col';name.className='trip-name-header';name.append(node('strong','Student'));
+    const sort=node('select');sort.className='trip-student-sort';sort.setAttribute('aria-label','Sort students by');for(const [value,label] of [['last','By last name'],['first','By first name']]){const option=node('option',label);option.value=value;sort.append(option);}sort.value=display.sort;sort.addEventListener('change',()=>{display.sort=sort.value;saveDisplay();rerenderDisplay();});name.append(sort);
+    const toggle=node('button',display.showRoles?'Hide roles':'Show roles');toggle.type='button';toggle.className='trip-role-toggle';toggle.addEventListener('click',()=>{display.showRoles=!display.showRoles;saveDisplay();toggle.textContent=display.showRoles?'Hide roles':'Show roles';view.querySelectorAll('.trip-leadership-role').forEach(role=>role.hidden=!display.showRoles);});name.append(toggle);
+    const nameGrip=node('button');nameGrip.type='button';nameGrip.className='trip-column-resize trip-name-resize';nameGrip.title='Drag this border to resize the student name column.';nameGrip.setAttribute('aria-label','Drag right edge to resize student name column');nameGrip.addEventListener('pointerdown',event=>resizeNames(event,nameGrip,studentColumn,table));name.append(nameGrip);tr.append(name);
     data.assignments.forEach(a=>{
       const th=node('th');th.scope='col';th.dataset.assignment=a.id;if(canEdit){
         th.className='trip-movable-column';
@@ -128,14 +150,15 @@
       }
       tr.append(th);
     });head.append(tr);table.append(head);const body=node('tbody');
-    data.students.forEach(student=>{
+    const visibleStudents=sortedStudents();visibleStudents.forEach(student=>{
       const row=node('tr'),name=node('th');name.scope='row';const link=node('a',student.name);link.href='mailto:'+student.email;link.title=student.email;name.append(link);row.append(name);
+      if(student.leadershipRole){const role=node('small',student.leadershipRole);role.className='trip-leadership-role';role.hidden=!display.showRoles;name.append(role);}
       data.assignments.forEach(a=>{
         const cell=node('td'),value=data.scores[student.id]?.[a.id]||'';cell.dataset.score=value;
         if(canEdit){const select=node('select');select.dataset.student=student.id;select.dataset.assignment=a.id;select.setAttribute('aria-label',student.name+' — '+a.title);const options=['',...scores];if(value&&!options.includes(value))options.push(value);
           options.forEach(score=>{const option=node('option',score||'Not scored');option.value=score;if(score===value)option.selected=true;if(score&&!scores.includes(score))option.disabled=true;select.append(option);});
           select.addEventListener('change',()=>{cell.dataset.score=select.value;queueScore({student:student.id,assignment:a.id,score:select.value});});
-          if(student===data.students[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.';fill.addEventListener('click',()=>fillColumn(a,select.value));group.append(select,fill);cell.append(group);}else cell.append(select);
+          if(student===visibleStudents[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.';fill.addEventListener('click',()=>fillColumn(a,select.value,student.id));group.append(select,fill);cell.append(group);}else cell.append(select);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
     });table.append(body);scroll.append(table);view.append(scroll);
@@ -167,13 +190,13 @@
     scoreQueue.push(...edits);scoreControls();clearTimeout(queueTimer);queueTimer=setTimeout(flushScores,250);
   }
   function queueScore(edit){queueScores([edit]);}
-  function fillColumn(assignment,firstScore){
+  function fillColumn(assignment,firstScore,firstStudentId){
     if(!layoutReady()||!data.students.length)return;
     if(firstScore&&!scores.includes(firstScore)){status.textContent='This imported score cannot be copied. Choose a standard score first.';return;}
     const clear=!firstScore;
-    const targets=data.students.filter((student,index)=>{
+    const targets=data.students.filter(student=>{
       const current=data.scores[student.id]?.[assignment.id]||'';
-      return clear?Boolean(current):index>0&&!current;
+      return clear?Boolean(current):student.id!==firstStudentId&&!current;
     });
     if(!targets.length){status.textContent=clear?'This column is already clear.':'There are no unscored cells in this column.';return;}
     if(clear&&!window.confirm(`Clear all ${targets.length} saved score${targets.length===1?'':'s'} in “${assignment.title}”? This cannot be undone.`))return;
@@ -218,10 +241,10 @@
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
-  periodSelect.addEventListener('change',()=>{if(busy)return;period=periodSelect.value;refresh.disabled=!period;exportButton.hidden=true;if(period)load();else{clear();status.textContent='';}});
+  periodSelect.addEventListener('change',()=>{if(busy)return;period=periodSelect.value;display=readDisplay();refresh.disabled=!period;exportButton.hidden=true;if(period)load();else{clear();status.textContent='';}});
   refresh.addEventListener('click',load);
   exportButton.addEventListener('click',()=>download(period));
   q('[data-open-login]').addEventListener('click',()=>window.NestAuth?.open());
-  document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period&&!busy){load();}});
+  document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period&&!busy){display=readDisplay();load();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);
 })();

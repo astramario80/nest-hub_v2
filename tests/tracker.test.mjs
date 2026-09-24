@@ -57,6 +57,16 @@ test('tracker output exposes only roster names and emails, never student IDs or 
   const s=service();signIn(s);const result=s.call({...base,action:'tracker'});assert.equal(result.students[0].email,'student@example.org');
   assert.ok(!JSON.stringify(result).includes('"ID"'));assert.deepEqual(Object.keys(result.scores),[result.students[0].id]);
 });
+test('tracker includes each roster student’s leadership role from their email and period',()=>{
+  const s=service();signIn(s,'astramario@gmail.com');s.setLeaders([
+    ['Period 1','','Division Manager','Student A','student@example.org'],
+    ['Period 1','','Safety Lead','Student A','STUDENT@example.org'],
+    ['Period 2','','Other Role','Student A','student@example.org'],
+    ['Period 1','','Unrelated Role','Student B','other@example.org']
+  ]);
+  const student=s.call({...base,action:'tracker'}).students[0];
+  assert.equal(student.leadershipRole,'Division Manager · Safety Lead');
+});
 test('current managers and assistants can grant only period-bound, independently verified editing',()=>{
   for(const position of ['Division Manager','Assistant Manager']){
     const s=service();s.setLeaders([['Period 1','',position,'Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
