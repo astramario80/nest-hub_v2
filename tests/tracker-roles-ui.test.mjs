@@ -21,6 +21,8 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('.trip-fill-column')),role==='manager');
   assert.equal(q('tbody td').dataset.score,'4');
   assert.equal(Boolean(q('.trip-column-controls')),role==='manager');
+  assert.equal(q('[data-temp-access]').hidden,role==='student');
+  assert.equal(q('.trip-temp-access summary')?.textContent,role==='manager'?'Temporary edit access':undefined);
   if(role==='manager'){
    assert.equal(q('.trip-column-controls summary').textContent,'Column options');
    assert.equal(q('.trip-column-delete').textContent,'Delete column');
@@ -36,6 +38,21 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(q('.trip-layout-help'),null);
   assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-click its name to rename it.':undefined);
   assert.deepEqual(actions,['tracker']);
+ }finally{w.close();}
+});
+
+test('temporary editors can grant access with only the district email name',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'editor'},ready:Promise.resolve(),open(){}};
+ let tracker={role:'editor',period:'1',revision:1,expires:Date.now()+21600000,editExpires:Date.now()+21600000,students:[],assignments:[],scores:{},completionScores:['4'],grants:[]};
+ const changes=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.action==='tracker-update'){changes.push(request.change);tracker={...tracker,grants:[{email:request.change.email,expires:Date.now()+21600000}]};}return {ok:true,status:200,json:async()=>tracker};};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
+  const details=q('.trip-temp-access');assert.ok(details);details.open=true;
+  const prefix=q('.trip-email-entry input'),domain=q('.trip-email-entry select');prefix.value='Taylor';domain.value='bethelsd.org';
+  q('.trip-temp-access form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
+  assert.deepEqual(changes,[{type:'grant',email:'Taylor@bethelsd.org'}]);
+  assert.equal(q('.trip-temp-access').open,true);assert.equal(q('.trip-grants li span').textContent.includes('Taylor@bethelsd.org'),true);
  }finally{w.close();}
 });
 
