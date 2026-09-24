@@ -14,4 +14,5 @@
 .nest-auth-dialog label{display:grid;gap:5px;font-weight:600}.nest-auth-dialog input,.nest-auth-dialog select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #9daabc;border-radius:8px;font:inherit}
 .nest-auth-dialog form button,.nest-auth-tabs button{padding:10px;border:1px solid #9daabc;border-radius:8px;cursor:pointer}
 .nest-auth-dialog form button{background:#145d89;color:#fff;font-weight:700}
+.nest-auth-dialog [data-username-help]{margin:0;color:#354660;font-size:.9rem}.nest-auth-dialog [data-username-suggestions]{padding:12px;border:1px solid #9daabc;border-radius:8px;background:#f2f8fc}.nest-auth-dialog [data-username-options]{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.nest-auth-dialog [data-username-options] button{min-height:44px;background:#fff;color:#145d89}.nest-auth-dialog [data-username-suggestions] small{display:block;color:#354660}
 .nest-auth-dialog [data-account]:not([hidden]){display:flex;flex-wrap:wrap;gap:10px}.nest-auth-dialog [data-account] button{padding:10px 14px;border:1px solid #9daabc;border-radius:8px;font:inherit;cursor:pointer}.nest-auth-dialog [data-account-close]{background:#145d89;color:#fff}

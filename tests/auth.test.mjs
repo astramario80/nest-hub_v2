@@ -30,6 +30,13 @@ test('registration sends a one-time code and puts only opaque tokens in secure c
     assert.ok(!JSON.stringify(res.data).includes('123456'));
   } finally {restore();}
 });
+test('account setup explains invalid usernames and expired verification',async()=>{
+  const password='a long private password';
+  let res=response();await auth(req('register',{username:'123456',password,duration:'session'}),res);
+  assert.equal(res.code,400);assert.match(res.data.error,/start with a letter/i);
+  res=response();await auth(req('register',{username:'jared2',password,duration:'session'}),res);
+  assert.equal(res.code,401);assert.match(res.data.error,/verification expired/i);
+});
 test('login checks salted hash and duration before issuing a session',async()=>{
   const {pbkdf2Sync}=await import('node:crypto');
   const salt='a'.repeat(32),password='a long private password';

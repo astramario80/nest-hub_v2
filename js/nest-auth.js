@@ -1,5 +1,11 @@
 (() => {
   let identity = null;
+  const usernameRule = 'Username must start with a letter and be 3–32 characters. Use letters, numbers, periods, underscores, or hyphens.';
+  const usernameIdeas = email => {
+    const parts = String(email || '').split('@')[0].toLowerCase().match(/[a-z]{3,}/g) || [];
+    const base = parts.join('.'), first = parts[0] || 'nestmember';
+    return [...new Set([base || first, first + '1', first + '2'])].filter(name => /^[a-z][a-z0-9._-]{2,31}$/.test(name)).slice(0, 3);
+  };
   const changed = () => document.dispatchEvent(new CustomEvent('nest-auth-change', { detail: identity }));
   const api = async (action, extra = {}) => {
     const response = await fetch('/api/auth', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) });
@@ -15,12 +21,27 @@
     <form data-form="login"><label>Username<input name="username" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Sign in</button></form>
     <form data-form="register-request" hidden><label>District email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Send verification code</button></form>
     <form data-form="register-verify" hidden><label>Six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label><button type="submit">Verify email</button></form>
-    <form data-form="register" hidden><p data-verified-email></p><label>Choose a username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" autocomplete="username" required></label><label>Choose a password (12 or more characters)<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Create account</button></form>
+    <form data-form="register" hidden><p data-verified-email></p><label>Choose a username (start with a letter; 3–32 characters)<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" title="Start with a letter. Use 3–32 letters, numbers, periods, underscores, or hyphens." autocomplete="username" required></label><p data-username-help>Start with a letter. An ID number alone cannot be a username.</p><div data-username-suggestions role="group" aria-label="Username suggestions"><strong>Username ideas</strong><div data-username-options></div><small>Suggestions may already be taken. You can also make your own.</small></div><label>Choose a password (12 or more characters)<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Create account</button></form>
     <div data-account hidden><button type="button" data-account-close>Continue to NEST</button><button type="button" data-account-logout>Log out</button></div>
   </div>`;
   document.body.append(dialog);
   const message = dialog.querySelector('[data-message]');
   const forms = [...dialog.querySelectorAll('[data-form]')];
+  const usernameInput = dialog.querySelector('[data-form="register"] [name="username"]');
+  const usernameOptions = dialog.querySelector('[data-username-options]');
+  usernameInput.addEventListener('invalid', () => { message.textContent = usernameRule; });
+  usernameInput.addEventListener('input', () => {
+    if (usernameInput.validity.valid && message.textContent === usernameRule) message.textContent = 'Choose your NEST username and password.';
+  });
+  function suggestUsernames(email) {
+    usernameOptions.replaceChildren();
+    usernameIdeas(email).forEach(name => {
+      const button = document.createElement('button');button.type = 'button';button.textContent = name;
+      button.setAttribute('aria-label', 'Use username ' + name);
+      button.addEventListener('click', () => { usernameInput.value = name;usernameInput.dispatchEvent(new Event('input', { bubbles: true }));usernameInput.focus(); });
+      usernameOptions.append(button);
+    });
+  }
   function mode(value) {
     forms.forEach(form => form.hidden = form.dataset.form !== value);
     dialog.querySelector('.nest-auth-tabs').hidden = value === 'account';
@@ -44,7 +65,7 @@
     try {
       const data = await api(action, values);
       if (action === 'register-request') { mode('register-verify'); message.textContent = data.message; }
-      else if (action === 'register-verify') { dialog.querySelector('[data-verified-email]').textContent = `Verified: ${data.email}`; mode('register'); }
+      else if (action === 'register-verify') { dialog.querySelector('[data-verified-email]').textContent = `Verified: ${data.email}`; suggestUsernames(data.email); mode('register'); }
       else { identity = data; changed(); refreshLinks(); dialog.close(); form.reset(); }
     } catch (error) { message.textContent = error.message; }
     finally { button.disabled = false; }
