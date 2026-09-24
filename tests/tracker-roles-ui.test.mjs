@@ -19,9 +19,37 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('.trip-column-resize')),role==='manager');
   assert.equal(q('tbody td').dataset.score,'4');
   assert.equal(Boolean(q('.trip-column-controls')),role==='manager');
-  if(role==='manager')assert.equal(q('[aria-label="Width for Safety in pixels"]').value,'180');
+  if(role==='manager'){
+   assert.equal(q('.trip-column-controls summary').textContent,'Column options');
+   assert.equal(q('.trip-column-delete').textContent,'Delete column');
+   assert.equal(q('[aria-label="Width for Safety in pixels"]'),null);
+   assert.equal(q('.trip-column-moves'),null);
+   assert.equal(q('.trip-column-controls form'),null);
+  }
   assert.equal(q('[data-period="1"]').disabled,false);
   assert.deepEqual(actions,['tracker']);
+ }finally{w.close();}
+});
+
+test('double-clicking an assignment name edits it and clicking elsewhere saves',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'manager'},open(){},logout:async()=>{}};
+ let tracker={role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:['4'],grants:[]};
+ const changes=[];
+ w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.action==='tracker-update'){
+  changes.push(request.change);tracker={...tracker,revision:tracker.revision+1,assignments:tracker.assignments.map(a=>a.id===request.change.assignment?{...a,title:request.change.title}:a)};
+ }return {ok:true,status:200,json:async()=>tracker};};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period="1"]').click();await tick();
+  q('.trip-column-drag').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
+  const input=q('.trip-inline-title');assert.ok(input);assert.equal(input.value,'Safety');
+  input.value='  New safety task  ';input.blur();await tick();
+  assert.deepEqual(changes,[{type:'rename',assignment:'a',title:'New safety task'}]);
+  assert.equal(q('.trip-column-drag span:last-child').textContent,'New safety task');
+  q('.trip-column-drag').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
+  const canceled=q('.trip-inline-title');canceled.value='Discard this';canceled.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'Escape'}));await tick();
+  assert.equal(changes.length,1);
+  assert.equal(q('.trip-column-drag span:last-child').textContent,'New safety task');
  }finally{w.close();}
 });
 
