@@ -87,6 +87,6 @@ test('Tech Ticket backend URL requires a current technician or NEST owner sessio
     email='mpenalver@bethelsd.org';allowed=false;
     res=response();await auth(get('__Host-nest-auth='+session),res);assert.equal(res.code,200);
     assert.equal(res.data.url,'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389');
-    assert.deepEqual(calls,['auth-tech-ticket-access','auth-me','auth-tech-ticket-access','auth-tech-ticket-access','auth-me']);
+    assert.deepEqual(calls,['auth-me','auth-tech-ticket-access','auth-me','auth-tech-ticket-access','auth-me']);
   }finally{restore();}
 });
