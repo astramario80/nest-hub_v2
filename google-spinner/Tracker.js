@@ -28,10 +28,18 @@ function manager_(email,period) {
   const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period && ['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase()) && email_(row[4])===email_(email));
 }
+function grantRecord_(store,key,now) {
+  const raw=store.getProperty(key);if(!raw)return null;
+  const grant=JSON.parse(raw);
+  if(grant.expires && grant.expires<=now){store.deleteProperty(key);return null;}
+  // Existing active six-hour grants become revocable grants on first use.
+  if(grant.expires!==Number.MAX_SAFE_INTEGER){grant.expires=Number.MAX_SAFE_INTEGER;store.setProperty(key,JSON.stringify(grant));}
+  return grant;
+}
 function editorGrant_(email,period,seen) {
   const address=email_(email),chain=seen||new Set();
   if(chain.has(address)||chain.size>=50)return null;
-  const store=PropertiesService.getScriptProperties(),grant=read_(store,'grant:'+period+':'+hash_(address),Date.now());
+  const store=PropertiesService.getScriptProperties(),grant=grantRecord_(store,'grant:'+period+':'+hash_(address),Date.now());
   if(!grant||email_(grant.email)!==address||grant.period!==period||!grant.issuer)return null;
   const issuer=email_(grant.issuer);
   if(globalAccess_(issuer)||manager_(issuer,period))return grant;
@@ -50,14 +58,14 @@ function grantEditor_(r,s,store,now) {
   const email=email_((r.change||{}).email);
   if(email.length>254 || !/^[a-z0-9._%+-]+@(students\.)?bethelsd\.org$/.test(email)||email===email_(s.email))return {status:400};
   const key='grant:'+r.period+':'+hash_(email);
-  const existing=read_(store,key,now);
+  const existing=grantRecord_(store,key,now);
   if(!authority&&existing&&email_(existing.issuer)!==email_(s.email))return {status:403};
   if(r.change.type==='revoke'){store.deleteProperty(key);return {status:200};}
   // A delegate cannot grant to someone who is already above them in the chain.
-  if(!authority){let current=email_(s.email),seen=new Set();while(current&&!seen.has(current)){if(current===email)return {status:403};seen.add(current);const grant=read_(store,'grant:'+r.period+':'+hash_(current),now);current=grant&&email_(grant.issuer);}}
-  const all=store.getProperties(),count=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')&&JSON.parse(all[k]).expires>now).length;
+  if(!authority){let current=email_(s.email),seen=new Set();while(current&&!seen.has(current)){if(current===email)return {status:403};seen.add(current);const grant=grantRecord_(store,'grant:'+r.period+':'+hash_(current),now);current=grant&&email_(grant.issuer);}}
+  const all=store.getProperties(),count=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')&&grantRecord_(store,k,now)).length;
   if(count>=50&&!store.getProperty(key))return {status:429};
-  store.setProperty(key,JSON.stringify({email,issuer:email_(s.email),period:r.period,expires:Math.min(now+21600000,parent?parent.expires:Infinity)}));
+  store.setProperty(key,JSON.stringify({email,issuer:email_(s.email),period:r.period,expires:Number.MAX_SAFE_INTEGER}));
   return {status:200};
 }
 function trackerView_(data,rows,role,expires,includeArchived=false) {
@@ -79,7 +87,7 @@ function trackerDispatch_(r,s,rows,store,now) {
   const role=trackerRole_(s.email,r.period),data=trackerRead_(r.period);
   if(!data)return {status:409,message:'This period is waiting for its initial data import.'};
   function view(){const result=trackerView_(data,rows,role,s.expires);if(role==='editor')result.editExpires=editorGrant_(s.email,r.period).expires;
-    if(['administrator','manager','editor'].includes(role)){const all=store.getProperties();result.grants=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')).map(k=>JSON.parse(all[k])).filter(g=>g.expires>now&&editorGrant_(g.email,r.period)&&(role!=='editor'||email_(g.issuer)===email_(s.email))).map(g=>({email:g.email,expires:g.expires}));}return result;}
+    if(['administrator','manager','editor'].includes(role)){const all=store.getProperties();result.grants=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')).map(k=>grantRecord_(store,k,now)).filter(g=>g&&editorGrant_(g.email,r.period)&&(role!=='editor'||email_(g.issuer)===email_(s.email))).map(g=>({email:g.email}));}return result;}
   if(r.action==='tracker')return view();
   if(r.action==='export' && role==='administrator')return trackerView_(data,rows,role,s.expires,true);
   if(r.action!=='tracker-update' || !['administrator','manager','editor'].includes(role))return {status:403};
