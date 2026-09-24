@@ -52,6 +52,7 @@
   }
   function dragColumn(event,handle,assignment,scroll,headers){
     if(event.button!==0||!layoutReady())return;
+    event.preventDefault();
     const from=data.assignments.findIndex(item=>item.id===assignment.id),startX=event.clientX,oldStatus=status.textContent;
     let moved=false,slot=from;
     const mark=()=>{
@@ -117,8 +118,8 @@
   }
   function renderTempAccess(){
     tempAccess.hidden=false;
-    const details=node('details'),summary=node('summary','Temporary edit access');details.className='trip-temp-access';details.append(summary);
-    const form=node('form'),label=node('label','District email name'),entry=node('div'),prefix=node('input'),domain=node('select'),submit=node('button','Grant for six hours');
+    const details=node('details'),summary=node('summary','Shared edit access');details.className='trip-temp-access';details.append(summary);
+    const form=node('form'),label=node('label','District email name'),entry=node('div'),prefix=node('input'),domain=node('select'),submit=node('button','Grant edit access');
     prefix.type='text';prefix.required=true;prefix.maxLength=64;prefix.pattern='[A-Za-z0-9._%+-]+';prefix.placeholder='Name before @';prefix.setAttribute('aria-label','Part of the district email before @');
     domain.setAttribute('aria-label','District email domain');
     for(const value of ['students.bethelsd.org','bethelsd.org']){const option=node('option','@'+value);option.value=value;domain.append(option);}
@@ -127,7 +128,7 @@
     details.append(form);
     if(data.grants?.length){
       const list=node('ul');list.className='trip-grants';
-      data.grants.forEach(grant=>{const item=node('li'),label=node('span',grant.email+' · until '+new Date(grant.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})),revoke=node('button','Remove');revoke.type='button';revoke.setAttribute('aria-label','Remove temporary edit access for '+grant.email);revoke.addEventListener('click',()=>save({type:'revoke',email:grant.email}));item.append(label,revoke);list.append(item);});
+      data.grants.forEach(grant=>{const item=node('li'),label=node('span',grant.email),revoke=node('button','×');revoke.type='button';revoke.className='trip-grant-remove';revoke.title='Revoke edit access';revoke.setAttribute('aria-label','Revoke edit access for '+grant.email);revoke.addEventListener('click',()=>save({type:'revoke',email:grant.email}));item.append(label,revoke);list.append(item);});
       details.append(list);
     }
     tempAccess.append(details);
@@ -160,11 +161,11 @@
         const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag a column heading to move it, drag its right edge to resize it.';title.title='Double-click its name to rename it.';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-click the name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
         const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag a column heading to move it, drag its right edge to resize it.';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
       }else th.append(node('span',a.title));
-      const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
+      const meta=node('div'),rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');meta.className='trip-assignment-meta';meta.append(rate);
       if(canEdit){
-        const controls=node('details'),summary=node('summary','Column options');controls.className='trip-column-controls';controls.append(summary);
-        const remove=node('button','Delete column');remove.type='button';remove.className='trip-column-delete';remove.setAttribute('aria-label','Delete '+a.title+' column');remove.addEventListener('click',()=>{const count=data.students.filter(s=>data.scores[s.id]?.[a.id]).length;if(window.confirm(`Delete “${a.title}” and ${count} saved score${count===1?'':'s'} from this period? This cannot be undone.`))save({type:'delete',assignment:a.id});});controls.append(remove);th.append(controls);
+        const remove=node('button','×');remove.type='button';remove.className='trip-column-delete';remove.title='Delete assignment';remove.setAttribute('aria-label','Delete '+a.title+' column');remove.addEventListener('click',()=>{const count=data.students.filter(s=>data.scores[s.id]?.[a.id]).length;if(window.confirm(`Delete “${a.title}” and ${count} saved score${count===1?'':'s'} from this period? This cannot be undone.`))save({type:'delete',assignment:a.id});});meta.append(remove);
       }
+      th.append(meta);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
       tr.append(th);
     });head.append(tr);table.append(head);const body=node('tbody');
     const visibleStudents=sortedStudents();visibleStudents.forEach(student=>{
@@ -251,7 +252,27 @@
       lock(window.NestAuth.identity?'NEST could not open this period. Choose it again to retry.':'Your NEST sign-in has ended. Sign in again to continue.');
     }else lock(e.status===403?'Your NEST account does not have access to this period.':e.message,false);
   }finally{if(current===version)setBusy(false);}}
-  async function save(change){if(busy||savingScores||scoreQueue.length||!data||expired())return;const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0,accessOpen=Boolean(q('.trip-temp-access')?.open);const show=result=>{render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};setBusy(true);try{show(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {show(data);status.textContent=e.message;}}finally{setBusy(false);}}
+  async function save(change){
+    if(busy||savingScores||scoreQueue.length||!data||expired())return;
+    const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0,accessOpen=Boolean(q('.trip-temp-access')?.open);
+    const show=result=>{render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};
+    setBusy(true);
+    try{
+      let result;
+      try{result=await api('tracker-update',{revision:data.revision,change});}
+      catch(error){
+        if(change.type!=='reorder'||![409,503].includes(error.status))throw error;
+        const fresh=await api('tracker');
+        if(fresh.assignments.map(a=>a.id).join('|')===change.order.join('|'))result=fresh;
+        else if(fresh.assignments.length===change.order.length&&fresh.assignments.every(a=>change.order.includes(a.id))){
+          result=await api('tracker-update',{revision:fresh.revision,change});
+        }else{show(fresh);status.textContent='Assignments changed while you moved the column. Drag it again to place it in the refreshed tracker.';return;}
+      }
+      show(result);
+      if(change.type==='reorder')status.textContent='Column order saved.';
+    }catch(e){if(e.status===401)lock();else {show(data);status.textContent=e.message;}}
+    finally{setBusy(false);}
+  }
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
   async function download(target){if(!target||busy||scoreQueue.length||expired())return;setBusy(true);status.textContent='Preparing your CSV download…';try{
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);

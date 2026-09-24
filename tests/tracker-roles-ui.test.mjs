@@ -20,15 +20,14 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('.trip-name-resize')),true);
   assert.equal(Boolean(q('.trip-fill-column')),role==='manager');
   assert.equal(q('tbody td').dataset.score,'4');
-  assert.equal(Boolean(q('.trip-column-controls')),role==='manager');
+  assert.equal(q('.trip-column-controls'),null);
   assert.equal(q('[data-temp-access]').hidden,role==='student');
-  assert.equal(q('.trip-temp-access summary')?.textContent,role==='manager'?'Temporary edit access':undefined);
+  assert.equal(q('.trip-temp-access summary')?.textContent,role==='manager'?'Shared edit access':undefined);
   if(role==='manager'){
-   assert.equal(q('.trip-column-controls summary').textContent,'Column options');
-   assert.equal(q('.trip-column-delete').textContent,'Delete column');
+   assert.equal(q('.trip-column-delete').textContent,'×');
+   assert.equal(q('.trip-assignment-meta .trip-column-delete')!==null,true);
    assert.equal(q('[aria-label="Width for Safety in pixels"]'),null);
    assert.equal(q('.trip-column-moves'),null);
-   assert.equal(q('.trip-column-controls form'),null);
   }
   assert.equal(q('[data-period-select]').disabled,false);
   assert.equal(q('[data-refresh]').disabled,false);
@@ -44,8 +43,8 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
 test('temporary editors can grant access with only the district email name',async()=>{
  const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
  w.NestAuth={identity:{username:'editor'},ready:Promise.resolve(),open(){}};
- let tracker={role:'editor',period:'1',revision:1,expires:Date.now()+21600000,editExpires:Date.now()+21600000,students:[],assignments:[],scores:{},completionScores:['4'],grants:[]};
- const changes=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.action==='tracker-update'){changes.push(request.change);tracker={...tracker,grants:[{email:request.change.email,expires:Date.now()+21600000}]};}return {ok:true,status:200,json:async()=>tracker};};
+ let tracker={role:'editor',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[],scores:{},completionScores:['4'],grants:[]};
+ const changes=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.action==='tracker-update'){changes.push(request.change);tracker={...tracker,grants:[{email:request.change.email}]};}return {ok:true,status:200,json:async()=>tracker};};
  try{
   w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
   const details=q('.trip-temp-access');assert.ok(details);details.open=true;
@@ -53,6 +52,40 @@ test('temporary editors can grant access with only the district email name',asyn
   q('.trip-temp-access form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();
   assert.deepEqual(changes,[{type:'grant',email:'Taylor@bethelsd.org'}]);
   assert.equal(q('.trip-temp-access').open,true);assert.equal(q('.trip-grants li span').textContent.includes('Taylor@bethelsd.org'),true);
+  assert.equal(q('.trip-grants .trip-grant-remove').textContent,'×');
+ }finally{w.close();}
+});
+
+test('assignment delete icon confirms before deleting',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'manager'},ready:Promise.resolve(),open(){}};
+ const tracker={role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:['4'],grants:[]};
+ const changes=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);if(request.change)changes.push(request.change);return {ok:true,status:200,json:async()=>tracker};};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
+  w.confirm=()=>false;q('.trip-column-delete').click();assert.equal(changes.length,0);
+  w.confirm=()=>true;q('.trip-column-delete').click();await tick();assert.deepEqual(changes,[{type:'delete',assignment:'a'}]);
+ }finally{w.close();}
+});
+
+test('column move refreshes and retries after a stale revision',async()=>{
+ const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
+ w.NestAuth={identity:{username:'manager'},ready:Promise.resolve(),open(){}};
+ let tracker={role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[{id:'a',title:'First'},{id:'b',title:'Second'}],scores:{},completionScores:['4'],grants:[]};
+ const requests=[];w.fetch=async(_,options)=>{const request=JSON.parse(options.body);requests.push(request);
+  if(request.change?.type==='reorder'&&request.revision===1)return {ok:false,status:409,json:async()=>({error:'Another person saved changes.'})};
+  if(request.action==='tracker'&&requests.length>1)tracker={...tracker,revision:2};
+  if(request.change?.type==='reorder')tracker={...tracker,revision:3,assignments:request.change.order.map(id=>tracker.assignments.find(a=>a.id===id))};
+  return {ok:true,status:200,json:async()=>tracker};};
+ const pointer=(target,type,x)=>{const event=new w.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(event,{pointerId:{value:1},button:{value:0},clientX:{value:x}});target.dispatchEvent(event);};
+ try{
+  w.eval(fs.readFileSync('js/trip-o-meter.js','utf8'));q('[data-period-select]').value='1';q('[data-period-select]').dispatchEvent(new w.Event('change'));await tick();
+  q('.trip-table-scroll').getBoundingClientRect=()=>({left:0,right:800});
+  [...w.document.querySelectorAll('thead th[data-assignment]')].forEach((th,i)=>{th.getBoundingClientRect=()=>({left:190+i*180,width:180});});
+  pointer(q('.trip-column-drag'),'pointerdown',280);pointer(w,'pointermove',600);pointer(w,'pointerup',600);await tick();
+  assert.deepEqual(requests.map(r=>[r.action,r.revision]),[['tracker',undefined],['tracker-update',1],['tracker',undefined],['tracker-update',2]]);
+  assert.deepEqual([...w.document.querySelectorAll('thead th[data-assignment]')].map(th=>th.dataset.assignment),['b','a']);
+  assert.equal(q('[data-status]').textContent,'Column order saved.');
  }finally{w.close();}
 });
 

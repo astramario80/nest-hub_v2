@@ -104,6 +104,28 @@ test('a temporary editor may remove only grants they issued and revoking them en
   signIn(s,'manager@example.org');assert.equal(update({type:'revoke',email:'helper@students.bethelsd.org'}).status,200);
   signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
+test('edit grants stay active after six hours and after the manager signs out, until revoked',()=>{
+  const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
+  const change=(type,email)=>s.call({...base,action:'tracker-update',revision:1,change:{type,email}});
+  assert.equal(change('grant','helper@students.bethelsd.org').status,200);
+  const key='grant:1:'+s.ctx.hash_('helper@students.bethelsd.org');
+  assert.equal(JSON.parse(s.state.get(key)).expires,Number.MAX_SAFE_INTEGER);
+  signIn(s,'helper@students.bethelsd.org');s.advance(21600001);
+  s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email:'helper@students.bethelsd.org',expires:1000000000+2*21600000}));
+  assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email:'manager@example.org',expires:1000000000+2*21600000}));
+  assert.equal(change('revoke','helper@students.bethelsd.org').status,200);
+  s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email:'helper@students.bethelsd.org',expires:1000000000+2*21600000}));
+  assert.equal(s.call({...base,action:'tracker'}).status,403);
+});
+test('an active older six-hour grant is retained until revoked',()=>{
+  const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);
+  const email='helper@bethelsd.org',key='grant:1:'+s.ctx.hash_(email);
+  s.state.set(key,JSON.stringify({email,issuer:'manager@example.org',period:'1',expires:1000000000+1000}));
+  signIn(s,email);assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  assert.equal(JSON.parse(s.state.get(key)).expires,Number.MAX_SAFE_INTEGER);
+  s.advance(2000);assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+});
 test('each successful grant remains usable through a longer delegation chain',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
   for(let index=0;index<10;index++){
