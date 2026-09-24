@@ -16,7 +16,8 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('tbody select')),role==='manager');
   assert.equal(Boolean(q('[aria-label="New assignment title"]')),role==='manager');
   assert.equal(Boolean(q('.trip-column-drag')),role==='manager');
-  assert.equal(Boolean(q('.trip-column-resize')),role==='manager');
+  assert.equal(Boolean(q('.trip-movable-column .trip-column-resize')),role==='manager');
+  assert.equal(Boolean(q('.trip-name-resize')),true);
   assert.equal(Boolean(q('.trip-fill-column')),role==='manager');
   assert.equal(q('tbody td').dataset.score,'4');
   assert.equal(Boolean(q('.trip-column-controls')),role==='manager');
@@ -96,12 +97,12 @@ test('dragging a heading reorders columns and dragging its edge saves the new wi
   [...w.document.querySelectorAll('thead th[data-assignment]')].forEach((th,i)=>{th.getBoundingClientRect=()=>({left:190+i*180,width:180});});
   pointer(q('.trip-column-drag'),'pointerdown',280);pointer(w,'pointermove',700);pointer(w,'pointerup',700);await tick();
   assert.deepEqual(changes[0],{type:'reorder',order:['b','c','a']});
-  const grip=q('.trip-column-resize');pointer(grip,'pointerdown',300);pointer(w,'pointermove',350);
+  const grip=q('.trip-movable-column .trip-column-resize');pointer(grip,'pointerdown',300);pointer(w,'pointermove',350);
   assert.equal(q('colgroup col:nth-child(2)').style.width,'230px');
   pointer(w,'pointerup',350);await tick();
   assert.deepEqual(changes[1],{type:'resize',assignment:'b',width:230});
   assert.equal(q('colgroup col:nth-child(2)').style.width,'230px');
-  const currentGrip=q('.trip-column-resize');pointer(currentGrip,'pointerdown',350);pointer(w,'pointermove',390);
+  const currentGrip=q('.trip-movable-column .trip-column-resize');pointer(currentGrip,'pointerdown',350);pointer(w,'pointermove',390);
   w.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'Escape'}));
   assert.equal(q('colgroup col:nth-child(2)').style.width,'230px');
   assert.equal(changes.length,2);
