@@ -81,7 +81,10 @@ export default async function handler(req, res) {
     }
     if (body.action === 'register') {
       const name = username(body.username), ticket = jar[TICKET];
-      if (!name || !passwordValid(body.password) || !validToken(ticket) || !Object.hasOwn(durations, body.duration)) return fail(res, 400);
+      if (!name) return fail(res, 400, 'Username must start with a letter and be 3–32 characters. Use letters, numbers, periods, underscores, or hyphens.');
+      if (!passwordValid(body.password)) return fail(res, 400, 'Password must be 12–128 characters and cannot contain line breaks.');
+      if (!validToken(ticket)) return fail(res, 401, 'Your email verification expired. Start account setup again.');
+      if (!Object.hasOwn(durations, body.duration)) return fail(res, 400);
       const salt = randomBytes(16).toString('hex');
       const passwordHash = hashPassword(body.password, salt);
       const session = token();
