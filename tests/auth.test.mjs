@@ -37,7 +37,14 @@ test('login checks salted hash and duration before issuing a session',async()=>{
   let calls=[];const restore=withBridge(payload=>{calls.push(payload.action);return payload.action==='auth-lookup'?{status:200,email:'student@bethelsd.org',passwordSalt:salt,passwordHash:hash}:{status:200,expires:Date.now()+86400000};});
   try {
     let res=response();await auth(req('login',{username:'student',password:'wrong password',duration:'1d'}),res);assert.equal(res.code,401);assert.deepEqual(calls,['auth-lookup']);
-    calls=[];res=response();await auth(req('login',{username:'student',password,duration:'1d'}),res);assert.equal(res.code,200);assert.deepEqual(calls,['auth-lookup','auth-session']);assert.match(res.headers['Set-Cookie'],/Max-Age=86400/);assert.ok(!JSON.stringify(res.data).includes(session));
+    calls=[];res=response();await auth(req('login',{username:'student',password,duration:'1d'}),res);assert.equal(res.code,200);assert.deepEqual(calls,['auth-lookup','auth-session']);assert.match(res.headers['Set-Cookie'][0],/Max-Age=86400/);assert.ok(!JSON.stringify(res.data).includes(session));
+    assert.match(res.headers['Set-Cookie'][1],/__Host-nest-identity=/);
+    assert.match(res.headers['Set-Cookie'][1],/HttpOnly; Secure; SameSite=Strict/);
+    const jar=res.headers['Set-Cookie'].map(value=>value.split(';')[0]).join('; ');
+    calls=[];const me=response();await auth({method:'GET',headers:{cookie:jar},query:{action:'me'}},me);
+    assert.equal(me.code,200);assert.equal(me.data.email,'student@bethelsd.org');assert.deepEqual(calls,[]);
+    const changed=response();await auth({method:'GET',headers:{cookie:jar.replace('student','other')},query:{action:'me'}},changed);
+    assert.equal(changed.code,200);
   } finally {restore();}
 });
 test('login and session checks retry temporary school bridge failures',async()=>{
@@ -63,6 +70,17 @@ test('session identity retries a temporary bridge failure',async()=>{
     const res=response();await auth({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{action:'me'}},res);
     assert.equal(res.code,200);assert.equal(res.data.signedIn,true);assert.equal(calls,2);
   }finally{restore();}
+});
+test('signed identity is tied to the opaque session and expires without a bridge call',async()=>{
+  const {signedIdentity,readIdentity}=await import('../lib/nest-auth.mjs');
+  const previous=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-token';
+  try {
+    const identity=signedIdentity(session,{username:'student',email:'student@bethelsd.org',expires:Date.now()+60000});
+    assert.equal(readIdentity(session,identity).username,'student');
+    assert.equal(readIdentity('d'.repeat(64),identity),null);
+    assert.equal(readIdentity(session,identity.slice(0,-1)+'x'),null);
+    assert.equal(signedIdentity(session,{username:'student',email:'outsider@example.com',expires:Date.now()+60000}),'');
+  }finally{if(previous===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=previous;}
 });
 test('protected tool requires the NEST cookie and blocks cross-site writes',async()=>{
   const restore=withBridge(payload=>({status:200,names:['Student'],expires:Date.now()+86400000}));

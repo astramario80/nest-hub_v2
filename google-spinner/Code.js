@@ -24,9 +24,18 @@ function doPost(e) {
     } catch(_){return json_({status:503});}
   }
   if(!/^auth-/.test(r.action||'') && !Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
+  // Account reads and independent session writes must not queue behind tracker edits.
+  // Auth.js takes short locks only where a shared counter or registration is changed.
+  if(/^auth-/.test(r.action||'')) {
+    try { return json_(authDispatch_(r)); }
+    catch(error) {
+      console.error('NEST bridge dispatch failed',r.action,String(error&&error.message||error).slice(0,300));
+      return json_({status:503});
+    }
+  }
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(15000)) return json_({status:503});
-  try { return json_(/^auth-/.test(r.action||'') ? authDispatch_(r) : dispatch_(r)); }
+  try { return json_(dispatch_(r)); }
   catch (error) {
     console.error('NEST bridge dispatch failed',r.action,String(error&&error.message||error).slice(0,300));
     return json_({status:503});
