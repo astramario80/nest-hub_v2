@@ -45,8 +45,8 @@
     return (str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
   }
 
-  async function fetchText(url){
-    const res = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(30000) });
+  async function fetchText(url, timeout = 30000){
+    const res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
     if (!res.ok) throw new Error(`Fetch failed (${res.status}) for ${url}`);
     return await res.text();
   }
@@ -337,49 +337,57 @@
     els.managerTools = q('manager-tools');
 
     clearResults();
+    els.resultsTitle.textContent = 'Loading leadership teams…';
 
-    try {
-      const [leadersJson, positionsCsv] = await Promise.all([
-        fetchText(LEADERS_URL),
-        fetchText(POSITIONS_CSV_URL)
-      ]);
+    async function load(){
+      els.resultsTitle.textContent = 'Loading leadership teams…';
+      els.resultsGrid.replaceChildren();
+      try {
+        // The position list helps identify vacancies, but the current teams can
+        // still be shown if that separate published sheet is slow on a phone.
+        const positionsRequest = fetchText(POSITIONS_CSV_URL, 10000).catch(() => null);
+        const directory = JSON.parse(await fetchText(LEADERS_URL, 45000));
+        if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
+        const positionsCsv = await positionsRequest;
+        let listedPositions = [];
+        if (positionsCsv) {
+          try { listedPositions = toPositions(parseCSV(positionsCsv)); } catch (_) { /* Keep current team roles available. */ }
+        }
 
-      const directory = JSON.parse(leadersJson);
-      if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
-      const posRows = parseCSV(positionsCsv);
+        state.leaders = directory.leaders;
+        state.positions = [...new Set([...listedPositions, ...state.leaders.map(l => l.position)])];
+        state.ready = true;
+        renderExecStrip();
 
-      state.leaders = directory.leaders;
-      state.positions = [...new Set([...toPositions(posRows), ...state.leaders.map(l => l.position)])];
-      state.ready = true;
-
-      renderExecStrip();
-
-      // Populate positions dropdown (in database order)
-      els.positionSelect.innerHTML = '<option value="">Choose a position…</option>';
-      state.positions.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p;
-        opt.textContent = p;
-        els.positionSelect.appendChild(opt);
-      });
-
-      // Wire events
-      els.mode.addEventListener('change', updateMode);
-      els.divisionSelect.addEventListener('change', () => renderDivisionResults(els.divisionSelect.value));
-      els.positionSelect.addEventListener('change', () => renderPositionResults(els.positionSelect.value));
-      els.clearBtn.addEventListener('click', () => {
-        els.divisionSelect.value = '';
-        els.positionSelect.value = '';
-        clearResults();
-      });
-
-      // Initial mode render
-      updateMode();
-
-    } catch (err){
-      els.resultsTitle.textContent = 'Leadership data failed to load.';
-      els.resultsGrid.innerHTML = `<div class="results-empty">${escapeHtml(err.message)}</div>`;
+        els.positionSelect.innerHTML = '<option value="">Choose a position…</option>';
+        state.positions.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p;
+          opt.textContent = p;
+          els.positionSelect.appendChild(opt);
+        });
+        updateMode();
+      } catch (_){
+        state.ready = false;
+        els.resultsTitle.textContent = 'Leadership data is temporarily unavailable.';
+        const retry = document.createElement('button');
+        retry.type = 'button';
+        retry.className = 'leadership-clear';
+        retry.textContent = 'Try again';
+        retry.addEventListener('click', load, { once: true });
+        els.resultsGrid.replaceChildren(retry);
+      }
     }
+
+    els.mode.addEventListener('change', () => { if (state.ready) updateMode(); });
+    els.divisionSelect.addEventListener('change', () => { if (state.ready) renderDivisionResults(els.divisionSelect.value); });
+    els.positionSelect.addEventListener('change', () => { if (state.ready) renderPositionResults(els.positionSelect.value); });
+    els.clearBtn.addEventListener('click', () => {
+      els.divisionSelect.value = '';
+      els.positionSelect.value = '';
+      if (state.ready) clearResults();
+    });
+    await load();
   }
 
   document.addEventListener('DOMContentLoaded', init);

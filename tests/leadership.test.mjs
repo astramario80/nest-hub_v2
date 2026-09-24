@@ -16,3 +16,19 @@ test('directory displays populated roles and marks only missing roles for hiring
  const select=w.document.querySelector('#leadership-division');select.value='Division 1';select.dispatchEvent(new w.Event('change'));
  assert.match(w.document.querySelector('#results-grid').textContent,/Alex/);assert.doesNotMatch(w.document.querySelector('#missing-list').textContent,/Division Manager/);assert.match(w.document.querySelector('#missing-list').textContent,/Assistant Manager/);assert.match(w.document.querySelector('#exec-list').textContent,/Sam/);assert.doesNotMatch(w.document.querySelector('#leadership-position').textContent,/3d Print Specialist/);assert.match(w.document.querySelector('#leadership-position').textContent,/Fabrication Supervisor/);dom.window.close();
 });
+test('directory remains usable when the separate position list fails',async()=>{
+ const dom=new JSDOM(fs.readFileSync('leadership.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/leadership'});const w=dom.window;
+ w.AbortSignal=AbortSignal;w.fetch=async url=>url==='/api/leadership'?{ok:true,text:async()=>JSON.stringify({leaders:[{division:'Period 1',position:'Division Manager',firstName:'Alex'}]})}:Promise.reject(new Error('Fetch is aborted'));
+ w.eval(fs.readFileSync('js/leadership.js','utf8'));await new Promise(r=>setTimeout(r,30));
+ const select=w.document.querySelector('#leadership-division');select.value='Division 1';select.dispatchEvent(new w.Event('change'));
+ assert.match(w.document.querySelector('#results-grid').textContent,/Alex/);assert.doesNotMatch(w.document.querySelector('#results-grid').textContent,/aborted/i);w.close();
+});
+test('failed directory offers a retry and then displays the selected division',async()=>{
+ const dom=new JSDOM(fs.readFileSync('leadership.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/leadership'});const w=dom.window;let calls=0;
+ w.AbortSignal=AbortSignal;w.fetch=async url=>url!=='/api/leadership'?{ok:true,text:async()=>'Position\nDivision Manager'}:++calls===1?Promise.reject(new Error('Fetch is aborted')):{ok:true,text:async()=>JSON.stringify({leaders:[{division:'Period 1',position:'Division Manager',firstName:'Alex'}]})};
+ w.eval(fs.readFileSync('js/leadership.js','utf8'));await new Promise(r=>setTimeout(r,30));
+ const select=w.document.querySelector('#leadership-division');select.value='Division 1';select.dispatchEvent(new w.Event('change'));
+ assert.match(w.document.querySelector('#results-title').textContent,/temporarily unavailable/i);assert.doesNotMatch(w.document.querySelector('#results-grid').textContent,/aborted/i);
+ w.document.querySelector('#results-grid button').click();await new Promise(r=>setTimeout(r,30));
+ assert.match(w.document.querySelector('#results-grid').textContent,/Alex/);assert.equal(calls,2);w.close();
+});

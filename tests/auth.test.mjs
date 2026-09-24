@@ -40,6 +40,30 @@ test('login checks salted hash and duration before issuing a session',async()=>{
     calls=[];res=response();await auth(req('login',{username:'student',password,duration:'1d'}),res);assert.equal(res.code,200);assert.deepEqual(calls,['auth-lookup','auth-session']);assert.match(res.headers['Set-Cookie'],/Max-Age=86400/);assert.ok(!JSON.stringify(res.data).includes(session));
   } finally {restore();}
 });
+test('login and session checks retry temporary school bridge failures',async()=>{
+  const {pbkdf2Sync}=await import('node:crypto');
+  const salt='b'.repeat(32),password='another long private password';
+  const hash=pbkdf2Sync(password,Buffer.from(salt,'hex'),210000,32,'sha256').toString('hex');
+  const calls=[],sessions=[];
+  const restore=withBridge(payload=>{
+    calls.push(payload.action);
+    if(payload.action==='auth-lookup')return calls.filter(x=>x==='auth-lookup').length===1?{status:503}:{status:200,email:'student@bethelsd.org',passwordSalt:salt,passwordHash:hash};
+    sessions.push(payload.session);
+    return sessions.length===1?{status:503}:{status:200,expires:Date.now()+86400000};
+  });
+  try {
+    const res=response();await auth(req('login',{username:'student',password,duration:'1d'}),res);
+    assert.equal(res.code,200);assert.deepEqual(calls,['auth-lookup','auth-lookup','auth-session','auth-session']);
+    assert.equal(sessions[0],sessions[1]);
+  }finally{restore();}
+});
+test('session identity retries a temporary bridge failure',async()=>{
+  let calls=0;const restore=withBridge(()=>++calls===1?{status:503}:{status:200,username:'student',email:'student@bethelsd.org',expires:Date.now()+86400000});
+  try {
+    const res=response();await auth({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{action:'me'}},res);
+    assert.equal(res.code,200);assert.equal(res.data.signedIn,true);assert.equal(calls,2);
+  }finally{restore();}
+});
 test('protected tool requires the NEST cookie and blocks cross-site writes',async()=>{
   const restore=withBridge(payload=>({status:200,names:['Student'],expires:Date.now()+86400000}));
   try {
