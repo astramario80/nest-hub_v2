@@ -1,7 +1,7 @@
 (() => {
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
-  const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
+  const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),tempAccess=q('[data-temp-access]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
   let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false;
   const scores=['4','3','2','1','A','NE','Yes','No'];
   let display={sort:'last',showRoles:true,nameWidth:190};
@@ -13,7 +13,7 @@
   function sortedStudents(){return [...data.students].sort((a,b)=>{const left=nameParts(a.name),right=nameParts(b.name),primary=display.sort==='first'?'first':'last',secondary=display.sort==='first'?'last':'first';return collator.compare(left[primary],right[primary])||collator.compare(left[secondary],right[secondary])||collator.compare(a.id,b.id);});}
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;exportButton.hidden=true;}
+  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;tempAccess.replaceChildren();tempAccess.hidden=true;exportButton.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
@@ -115,10 +115,27 @@
     input.addEventListener('blur',()=>finish(true));
     input.addEventListener('keydown',key=>{if(key.key==='Enter'){key.preventDefault();finish(true);}else if(key.key==='Escape'){key.preventDefault();finish(false);}});
   }
+  function renderTempAccess(){
+    tempAccess.hidden=false;
+    const details=node('details'),summary=node('summary','Temporary edit access');details.className='trip-temp-access';details.append(summary);
+    const form=node('form'),label=node('label','District email name'),entry=node('div'),prefix=node('input'),domain=node('select'),submit=node('button','Grant for six hours');
+    prefix.type='text';prefix.required=true;prefix.maxLength=64;prefix.pattern='[A-Za-z0-9._%+-]+';prefix.placeholder='Name before @';prefix.setAttribute('aria-label','Part of the district email before @');
+    domain.setAttribute('aria-label','District email domain');
+    for(const value of ['students.bethelsd.org','bethelsd.org']){const option=node('option','@'+value);option.value=value;domain.append(option);}
+    submit.type='submit';entry.className='trip-email-entry';entry.append(prefix,domain);label.append(entry);form.append(label,submit);
+    form.addEventListener('submit',event=>{event.preventDefault();if(!prefix.reportValidity())return;save({type:'grant',email:prefix.value.trim()+'@'+domain.value});});
+    details.append(form);
+    if(data.grants?.length){
+      const list=node('ul');list.className='trip-grants';
+      data.grants.forEach(grant=>{const item=node('li'),label=node('span',grant.email+' · until '+new Date(grant.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})),revoke=node('button','Remove');revoke.type='button';revoke.setAttribute('aria-label','Remove temporary edit access for '+grant.email);revoke.addEventListener('click',()=>save({type:'revoke',email:grant.email}));item.append(label,revoke);list.append(item);});
+      details.append(list);
+    }
+    tempAccess.append(details);
+  }
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
-    status.textContent='';exportButton.hidden=data.role!=='administrator';
+    status.textContent='';exportButton.hidden=data.role!=='administrator';if(canEdit)renderTempAccess();
     scheduleExpiry();
     const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
     const breakdown=node('details'),heading=node('summary');breakdown.className='trip-score-breakdown';heading.append(node('strong','Score breakdown'),node('span',overview(all)));breakdown.append(heading);
@@ -234,7 +251,7 @@
       lock(window.NestAuth.identity?'NEST could not open this period. Choose it again to retry.':'Your NEST sign-in has ended. Sign in again to continue.');
     }else lock(e.status===403?'Your NEST account does not have access to this period.':e.message,false);
   }finally{if(current===version)setBusy(false);}}
-  async function save(change){if(busy||savingScores||scoreQueue.length||!data||expired())return;const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0;const show=result=>{render(result);const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};setBusy(true);try{show(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {show(data);status.textContent=e.message;}}finally{setBusy(false);}}
+  async function save(change){if(busy||savingScores||scoreQueue.length||!data||expired())return;const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0,accessOpen=Boolean(q('.trip-temp-access')?.open);const show=result=>{render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};setBusy(true);try{show(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {show(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
   async function download(target){if(!target||busy||scoreQueue.length||expired())return;setBusy(true);status.textContent='Preparing your CSV download…';try{
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);

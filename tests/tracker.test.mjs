@@ -67,23 +67,42 @@ test('tracker includes each roster student’s leadership role from their email 
   const student=s.call({...base,action:'tracker'}).students[0];
   assert.equal(student.leadershipRole,'Division Manager · Safety Lead');
 });
-test('current managers and assistants can grant only period-bound, independently verified editing',()=>{
+test('managers, assistants and temporary editors can grant district-only, period-bound editing',()=>{
   for(const position of ['Division Manager','Assistant Manager']){
     const s=service();s.setLeaders([['Period 1','',position,'Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
-    const grant=s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});assert.equal(grant.status,200);assert.equal(grant.grants.length,1);
-    assert.equal(s.call({...base,period:'2',action:'tracker-update',revision:1,change:{type:'grant',email:'other@example.org'}}).status,403);
-    signIn(s,'helper@example.org');
+    const update=change=>s.call({...base,action:'tracker-update',revision:1,change});
+    assert.equal(update({type:'grant',email:'outside@example.org'}).status,400);
+    const grant=update({type:'grant',email:'helper@students.bethelsd.org'});assert.equal(grant.status,200);assert.equal(grant.grants.length,1);
+    assert.equal(s.call({...base,period:'2',action:'tracker-update',revision:1,change:{type:'grant',email:'other@bethelsd.org'}}).status,403);
+    signIn(s,'helper@students.bethelsd.org');
     assert.equal(s.call({...base,action:'tracker'}).role,'editor');
     assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'assignment',title:'New assignment'}}).status,200);
-    assert.equal(s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@example.org'}}).status,403);
+    const delegated=s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@bethelsd.org'}});
+    assert.equal(delegated.status,200);assert.deepEqual(delegated.grants.map(g=>g.email),['third@bethelsd.org']);
+    signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+    assert.equal(s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'manager@example.org'}}).status,400);
     assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
     s.advance(21600000);assert.equal(s.call({...base,action:'tracker'}).status,401);
   }
 });
 test('removing manager authority revokes their active delegated editors',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
-  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@example.org'}});signIn(s,'helper@example.org');
-  assert.equal(s.call({...base,action:'tracker'}).role,'editor');s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,403);
+  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@students.bethelsd.org'}});signIn(s,'helper@students.bethelsd.org');
+  assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'third@bethelsd.org'}});
+  signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,403);
+});
+test('a temporary editor may remove only grants they issued and revoking them ends downstream access',()=>{
+  const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
+  const update=change=>s.call({...base,action:'tracker-update',revision:1,change});
+  update({type:'grant',email:'helper@students.bethelsd.org'});
+  update({type:'grant',email:'peer@bethelsd.org'});
+  signIn(s,'helper@students.bethelsd.org');
+  assert.equal(update({type:'revoke',email:'peer@bethelsd.org'}).status,403);
+  assert.equal(update({type:'grant',email:'third@bethelsd.org'}).status,200);
+  signIn(s,'manager@example.org');assert.equal(update({type:'revoke',email:'helper@students.bethelsd.org'}).status,200);
+  signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
 test('only score 4 is reported as completed; lower scores and legacy Yes remain distinct',()=>{
   const s=service();signIn(s);assert.deepEqual(s.call({...base,action:'tracker'}).completionScores,['4']);
