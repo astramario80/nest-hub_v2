@@ -16,10 +16,14 @@ function service() {
       if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
       return {values:[]};
     },
-    append(resource){accounts.push(resource.values[0]);return {};},
     update(resource,_id,range){accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};}
   };
-  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{Values:values,get:()=>({sheets:[]})}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
+  const batchUpdate=({requests})=>{for(const request of requests){
+    if(request.insertDimension)accounts.splice(request.insertDimension.range.startIndex-1,0,[]);
+    if(request.updateCells)accounts[request.updateCells.range.startRowIndex-1]=request.updateCells.rows[0].values.map(cell=>Object.values(cell.userEnteredValue)[0]);
+    if(request.sortRange)accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  }return {};};
+  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
   vm.runInContext(source,ctx);
   return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,advance:ms=>now+=ms};
 }
@@ -34,6 +38,17 @@ test('registration requires known district email, verified code, and unique user
   assert.equal(app.call({action:'auth-register',ticket,username:'student1',passwordHash:'e'.repeat(64),passwordSalt:'f'.repeat(32)}).status,200);
   assert.deepEqual(JSON.parse(JSON.stringify(app.accounts[0].slice(0,6))),['student1',email,'e'.repeat(64),'f'.repeat(32),true,1]);
   assert.equal(app.call({action:'auth-register',ticket,username:'student2',passwordHash:'e'.repeat(64),passwordSalt:'f'.repeat(32)}).status,401);
+});
+test('new accounts stay sorted below the header and session updates follow the moved row',()=>{
+  const app=service();
+  app.accounts.push(['zeta','other@bethelsd.org','e'.repeat(64),'f'.repeat(32),true,1,'','']);
+  assert.equal(app.call({action:'auth-register-request',email,challenge,code:'123456',ip}).status,200);
+  assert.equal(app.call({action:'auth-register-verify',challenge,code:'123456',ticket}).status,200);
+  assert.equal(app.call({action:'auth-register',ticket,username:'alpha',passwordHash:'e'.repeat(64),passwordSalt:'f'.repeat(32)}).status,200);
+  assert.deepEqual(app.accounts.map(row=>row[0]),['alpha','zeta']);
+  assert.equal(app.call({action:'auth-session',email,session,duration:'1d'}).status,200);
+  assert.ok(app.accounts[0][7]);
+  assert.equal(app.accounts[1][7],'');
 });
 test('session is available across tools, expires, and logout revokes it',()=>{
   const app=service();
