@@ -3,10 +3,10 @@
 .header-dropdown .dropdown-content .nest-auth-identity{cursor:default;font-weight:700}
 .nest-auth-dialog{width:min(440px,calc(100vw - 30px));max-height:calc(100vh - 30px);border:0;border-radius:18px;padding:0;color:#1a2432;box-shadow:0 20px 70px #0008}
 .nest-auth-dialog::backdrop{background:#0b1c31aa}
-.nest-auth-card{padding:28px;overflow:auto;max-height:calc(100vh - 30px)}
+.nest-auth-card{position:relative;padding:28px;overflow:auto;max-height:calc(100vh - 30px)}
 .nest-auth-brand{display:flex;align-items:center;gap:14px;margin:-28px -28px 20px;padding:18px 54px 18px 22px;background:#172b50;color:#fff}.nest-auth-brand img{width:72px;height:72px;object-fit:contain}.nest-auth-brand h2{margin:0;font-size:1.35rem;line-height:1.2}
 .nest-auth-card h2{margin:0 32px 8px 0}.nest-auth-card [data-message]{min-height:2.5em;margin:8px 0 16px}
-.nest-auth-close{float:right;border:0;background:transparent;font-size:26px;cursor:pointer}
+.nest-auth-close{position:absolute;right:14px;top:14px;z-index:1;border:0;background:transparent;color:#fff;font-size:26px;cursor:pointer}
 .nest-auth-tabs{display:flex;gap:8px;margin-bottom:18px}.nest-auth-tabs button{flex:1}
 .nest-auth-dialog [hidden]{display:none!important}
 .nest-auth-tabs button[aria-current=true]{font-weight:700;border-color:#2779a9;background:#e8f5ff}
