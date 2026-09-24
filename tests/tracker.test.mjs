@@ -104,6 +104,15 @@ test('a temporary editor may remove only grants they issued and revoking them en
   signIn(s,'manager@example.org');assert.equal(update({type:'revoke',email:'helper@students.bethelsd.org'}).status,200);
   signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
+test('each successful grant remains usable through a longer delegation chain',()=>{
+  const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
+  for(let index=0;index<10;index++){
+    const email=`delegate${index}@bethelsd.org`;
+    assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email}}).status,200);
+    signIn(s,email);
+    assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  }
+});
 test('only score 4 is reported as completed; lower scores and legacy Yes remain distinct',()=>{
   const s=service();signIn(s);assert.deepEqual(s.call({...base,action:'tracker'}).completionScores,['4']);
 });

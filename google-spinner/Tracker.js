@@ -30,7 +30,7 @@ function manager_(email,period) {
 }
 function editorGrant_(email,period,seen) {
   const address=email_(email),chain=seen||new Set();
-  if(chain.has(address)||chain.size>=8)return null;
+  if(chain.has(address)||chain.size>=50)return null;
   const store=PropertiesService.getScriptProperties(),grant=read_(store,'grant:'+period+':'+hash_(address),Date.now());
   if(!grant||email_(grant.email)!==address||grant.period!==period||!grant.issuer)return null;
   const issuer=email_(grant.issuer);
