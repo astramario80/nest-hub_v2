@@ -136,16 +136,14 @@ function authDispatch_(r) {
     });
     if(reserved.status!==200)return reserved;
     try {
-      const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
-      if(!sheet)return {status:503};
-      const sheetId=sheet.properties.sheetId;
-      const cells=[name,ticket.email,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),''].map(value=>({userEnteredValue:typeof value==='boolean'?{boolValue:value}:typeof value==='number'?{numberValue:value}:{stringValue:value}}));
-      Sheets.Spreadsheets.batchUpdate({requests:[
-        {insertDimension:{range:{sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},
-        {updateCells:{range:{sheetId,startRowIndex:1,endRowIndex:2,startColumnIndex:0,endColumnIndex:8},rows:[{values:cells}],fields:'userEnteredValue'}},
-        {sortRange:{range:{sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:8},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}
-      ]},NEST_DATABASE);
+      // Commit the account before doing optional sheet housekeeping. A failed sort
+      // must never turn a successful account write into a setup error.
+      Sheets.Spreadsheets.Values.append({values:[[name,ticket.email,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),'']]},NEST_DATABASE,AUTH_SHEET,{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'});
       CacheService.getScriptCache().remove('auth-directory-v1');
+      try {
+        const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
+        if(sheet)Sheets.Spreadsheets.batchUpdate({requests:[{sortRange:{range:{sheetId:sheet.properties.sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:8},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}]},NEST_DATABASE);
+      }catch(error){console.error('NEST account sort failed',String(error&&error.message||error).slice(0,300));}
     } finally {
       store.deleteProperty('auth-reserve:'+hash_(name));
       store.deleteProperty('auth-reserve:'+hash_(ticket.email));

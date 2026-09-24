@@ -86,6 +86,7 @@ export default async function handler(req, res) {
       const passwordHash = hashPassword(body.password, salt);
       const session = token();
       const data = await bridge({ action: 'auth-register', ticket, username: name, passwordHash, passwordSalt: salt, session, duration: body.duration });
+      if (data.status !== 200) console.error('NEST account creation rejected', { status: data.status });
       if (data.status !== 200) return fail(res, [400, 401, 409].includes(data.status) ? data.status : 503);
       // Older school-script deployments still require the separate session action.
       const sessionData = Number.isFinite(data.expires) ? data : await bridge({ action: 'auth-session', email: data.email, session, duration: body.duration });
