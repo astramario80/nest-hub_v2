@@ -16,6 +16,7 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(Boolean(q('tbody select')),role==='manager');
   assert.equal(Boolean(q('[aria-label="New assignment title"]')),role==='manager');
   assert.equal(Boolean(q('.trip-column-drag')),role==='manager');
+  assert.equal(Boolean(q('.trip-column-edit')),role==='manager');
   assert.equal(Boolean(q('.trip-movable-column .trip-column-resize')),role==='manager');
   assert.equal(Boolean(q('.trip-name-resize')),true);
   assert.equal(Boolean(q('.trip-fill-column')),role==='manager');
@@ -35,7 +36,7 @@ for(const role of ['student','manager'])test(`verified ${role} opens tracker wit
   assert.equal(q('.trip-score-breakdown summary span').textContent.includes('1 student · 1 assignment'),true);
   assert.equal(q('.trip-summary'),null);
   assert.equal(q('.trip-layout-help'),null);
-  assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-click its name to rename it.':undefined);
+  assert.equal(q('.trip-column-drag span:last-child')?.title,role==='manager'?'Double-click its name to rename it, or tap Edit name below.':undefined);
   assert.deepEqual(actions,['tracker']);
  }finally{w.close();}
 });
@@ -108,7 +109,7 @@ test('compact toolbar changes periods, refreshes, and downloads the selected per
  }finally{w.close();}
 });
 
-test('double-clicking an assignment name edits it and clicking elsewhere saves',async()=>{
+test('double-click and single-tap Edit name both open assignment renaming',async()=>{
  const dom=new JSDOM(fs.readFileSync('trip-o-meter.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/trip-o-meter'}),w=dom.window,q=s=>w.document.querySelector(s);w.AbortSignal=AbortSignal;
  w.NestAuth={identity:{username:'manager'},open(){},logout:async()=>{}};
  let tracker={role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[],assignments:[{id:'a',title:'Safety'}],scores:{},completionScores:['4'],grants:[]};
@@ -123,7 +124,8 @@ test('double-clicking an assignment name edits it and clicking elsewhere saves',
   input.value='  New safety task  ';input.blur();await tick();
   assert.deepEqual(changes,[{type:'rename',assignment:'a',title:'New safety task'}]);
   assert.equal(q('.trip-column-drag span:last-child').textContent,'New safety task');
-  q('.trip-column-drag').dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
+  assert.equal(q('.trip-column-edit').getAttribute('aria-label'),'Edit assignment name for New safety task');
+  q('.trip-column-edit').click();
   const canceled=q('.trip-inline-title');canceled.value='Discard this';canceled.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'Escape'}));await tick();
   assert.equal(changes.length,1);
   assert.equal(q('.trip-column-drag span:last-child').textContent,'New safety task');
