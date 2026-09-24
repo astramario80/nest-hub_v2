@@ -128,6 +128,7 @@
       const form=node('form'),input=node('input');input.required=true;input.maxLength=100;input.placeholder='New assignment title';input.setAttribute('aria-label','New assignment title');
       const add=node('button','Add assignment');add.type='submit';form.append(input,add);form.className='trip-toolbar';form.addEventListener('submit',event=>{event.preventDefault();save({type:'assignment',title:input.value});});view.append(form);
       const help=node('p','Drag a column heading to move it, drag its right edge to resize it, or double-click its name to rename it.');help.className='trip-layout-help';view.append(help);
+      view.append(node('p','Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.'));
     }
     const scroll=node('div');scroll.className='trip-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Period '+period+' tracker. Scroll horizontally for assignments.');
     const table=node('table'),caption=node('caption','Period '+period+' assignments');table.append(caption);
@@ -154,7 +155,8 @@
         const cell=node('td'),value=data.scores[student.id]?.[a.id]||'';cell.dataset.score=value;
         if(canEdit){const select=node('select');select.dataset.student=student.id;select.dataset.assignment=a.id;select.setAttribute('aria-label',student.name+' — '+a.title);const options=['',...scores];if(value&&!options.includes(value))options.push(value);
           options.forEach(score=>{const option=node('option',score||'Not scored');option.value=score;if(score===value)option.selected=true;if(score&&!scores.includes(score))option.disabled=true;select.append(option);});
-          select.addEventListener('change',()=>{cell.dataset.score=select.value;queueScore({student:student.id,assignment:a.id,score:select.value});});cell.append(select);
+          select.addEventListener('change',()=>{cell.dataset.score=select.value;queueScore({student:student.id,assignment:a.id,score:select.value});});
+          if(student===data.students[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Apply first score to unscored cells; confirm to clear the column when Not scored';fill.addEventListener('click',()=>fillColumn(a,select.value));group.append(select,fill);cell.append(group);}else cell.append(select);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
     });table.append(body);scroll.append(table);view.append(scroll);
@@ -181,9 +183,22 @@
       });notice.append(retry);
     }
   }
-  function queueScore(edit){
+  function queueScores(edits){
     if(!data||expired())return;
-    scoreQueue.push(edit);scoreControls();clearTimeout(queueTimer);queueTimer=setTimeout(flushScores,250);
+    scoreQueue.push(...edits);scoreControls();clearTimeout(queueTimer);queueTimer=setTimeout(flushScores,250);
+  }
+  function queueScore(edit){queueScores([edit]);}
+  function fillColumn(assignment,firstScore){
+    if(!layoutReady()||!data.students.length)return;
+    if(firstScore&&!scores.includes(firstScore)){status.textContent='This imported score cannot be copied. Choose a standard score first.';return;}
+    const clear=!firstScore;
+    const targets=data.students.filter((student,index)=>{
+      const current=data.scores[student.id]?.[assignment.id]||'';
+      return clear?Boolean(current):index>0&&!current;
+    });
+    if(!targets.length){status.textContent=clear?'This column is already clear.':'There are no unscored cells in this column.';return;}
+    if(clear&&!window.confirm(`Clear all ${targets.length} saved score${targets.length===1?'':'s'} in “${assignment.title}”? This cannot be undone.`))return;
+    queueScores(targets.map(student=>({student:student.id,assignment:assignment.id,score:clear?'':firstScore})));
   }
   async function flushScores(){
     if(savingScores||saveError||!scoreQueue.length||!data)return;
