@@ -2,11 +2,11 @@
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
   const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]');
-  let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null;
+  let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false;
   const scores=['4','3','2','1','A','NE','Yes','No'];
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  function clear(){if(activeGesture)activeGesture();data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
+  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
@@ -22,7 +22,7 @@
     expiryTimer=setTimeout(scheduleExpiry,Math.min(remaining,2147483647));
   }
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
-  function layoutReady(){return data&&!busy&&!savingScores&&!scoreQueue.length&&!saveError&&!expired();}
+  function layoutReady(){return data&&!busy&&!savingScores&&!scoreQueue.length&&!saveError&&!editingTitle&&!expired();}
   function pointerGesture(handle,start,onMove,onDrop,onCancel){
     if(activeGesture)activeGesture();
     const pointerId=start.pointerId;
@@ -44,7 +44,6 @@
   }
   function dragColumn(event,handle,assignment,scroll,headers){
     if(event.button!==0||!layoutReady())return;
-    event.preventDefault();
     const from=data.assignments.findIndex(item=>item.id===assignment.id),startX=event.clientX,oldStatus=status.textContent;
     let moved=false,slot=from;
     const mark=()=>{
@@ -56,6 +55,7 @@
     pointerGesture(handle,event,move=>{
       if(Math.abs(move.clientX-startX)>5)moved=true;
       if(!moved)return;
+      move.preventDefault();
       handle.classList.add('trip-dragging');
       const box=scroll.getBoundingClientRect();
       if(move.clientX>box.right-28)scroll.scrollLeft+=18;
@@ -78,6 +78,22 @@
     pointerGesture(handle,event,move=>{preview(initial+move.clientX-startX);handle.classList.add('trip-resizing');status.textContent=assignment.title+' width: '+width+' pixels. Press Escape to cancel.';},()=>{
       cleanup();if(width!==initial)save({type:'resize',assignment:assignment.id,width});
     },()=>{preview(initial);cleanup();});
+  }
+  function editAssignmentTitle(event,handle,assignment){
+    if(!layoutReady())return;
+    event.preventDefault();event.stopPropagation();editingTitle=true;
+    const input=node('input');input.type='text';input.className='trip-inline-title';input.value=assignment.title;input.maxLength=100;input.setAttribute('aria-label','Assignment name for '+assignment.title);
+    handle.hidden=true;handle.after(input);input.focus();input.select();
+    let finished=false;
+    const finish=commit=>{
+      if(finished)return;finished=true;editingTitle=false;
+      const title=input.value.trim();input.remove();handle.hidden=false;
+      if(!commit){handle.focus();return;}
+      if(!title){status.textContent='Assignment name cannot be empty.';handle.focus();return;}
+      if(title!==assignment.title){status.textContent='Saving assignment name…';save({type:'rename',assignment:assignment.id,title});}
+    };
+    input.addEventListener('blur',()=>finish(true));
+    input.addEventListener('keydown',key=>{if(key.key==='Enter'){key.preventDefault();finish(true);}else if(key.key==='Escape'){key.preventDefault();finish(false);}});
   }
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
@@ -111,7 +127,7 @@
     if(canEdit){
       const form=node('form'),input=node('input');input.required=true;input.maxLength=100;input.placeholder='New assignment title';input.setAttribute('aria-label','New assignment title');
       const add=node('button','Add assignment');add.type='submit';form.append(input,add);form.className='trip-toolbar';form.addEventListener('submit',event=>{event.preventDefault();save({type:'assignment',title:input.value});});view.append(form);
-      const help=node('p','Drag a column heading to move it. Drag its right edge to resize it.');help.className='trip-layout-help';view.append(help);
+      const help=node('p','Drag a column heading to move it, drag its right edge to resize it, or double-click its name to rename it.');help.className='trip-layout-help';view.append(help);
     }
     const scroll=node('div');scroll.className='trip-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Period '+period+' tracker. Scroll horizontally for assignments.');
     const table=node('table'),caption=node('caption','Period '+period+' assignments');table.append(caption);
@@ -122,15 +138,12 @@
     data.assignments.forEach(a=>{
       const th=node('th');th.scope='col';th.dataset.assignment=a.id;if(canEdit){
         th.className='trip-movable-column';
-        const drag=node('button');drag.type='button';drag.className='trip-column-drag';drag.title='Drag to move this column';drag.setAttribute('aria-label','Drag '+a.title+' column to move');drag.append(node('span','⠿'),node('span',a.title));drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));th.append(drag);
+        const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag to move; double-click the name to rename';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-click the name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
         const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag to resize this column';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
       }else th.append(node('span',a.title));
       const rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');th.append(rate);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
       if(canEdit){
-        const index=data.assignments.indexOf(a),controls=node('details'),summary=node('summary','Edit column');controls.className='trip-column-controls';controls.append(summary);
-        const rename=node('form'),titleInput=node('input'),renameButton=node('button','Save name');titleInput.value=a.title;titleInput.maxLength=100;titleInput.required=true;titleInput.setAttribute('aria-label','Rename '+a.title);rename.append(titleInput,renameButton);rename.addEventListener('submit',event=>{event.preventDefault();save({type:'rename',assignment:a.id,title:titleInput.value});});controls.append(rename);
-        const widthForm=node('form'),widthInput=node('input'),widthButton=node('button','Set width');widthInput.type='number';widthInput.min='120';widthInput.max='600';widthInput.step='1';widthInput.required=true;widthInput.value=String(a.width||180);widthInput.setAttribute('aria-label','Width for '+a.title+' in pixels');widthForm.append(widthInput,widthButton);widthForm.addEventListener('submit',event=>{event.preventDefault();save({type:'resize',assignment:a.id,width:Number(widthInput.value)});});controls.append(widthForm);
-        const moves=node('div');moves.className='trip-column-moves';for(const [direction,label] of [[-1,'Move left'],[1,'Move right']]){const button=node('button',label);button.type='button';button.disabled=index+direction<0||index+direction>=data.assignments.length;button.setAttribute('aria-label',label+' '+a.title);button.addEventListener('click',()=>{const order=data.assignments.map(item=>item.id);[order[index],order[index+direction]]=[order[index+direction],order[index]];save({type:'reorder',order});});moves.append(button);}controls.append(moves);
+        const controls=node('details'),summary=node('summary','Column options');controls.className='trip-column-controls';controls.append(summary);
         const remove=node('button','Delete column');remove.type='button';remove.className='trip-column-delete';remove.setAttribute('aria-label','Delete '+a.title+' column');remove.addEventListener('click',()=>{const count=data.students.filter(s=>data.scores[s.id]?.[a.id]).length;if(window.confirm(`Delete “${a.title}” and ${count} saved score${count===1?'':'s'} from this period? This cannot be undone.`))save({type:'delete',assignment:a.id});});controls.append(remove);th.append(controls);
       }
       tr.append(th);
@@ -204,7 +217,7 @@
       lock(window.NestAuth.identity?'NEST could not open this period. Choose it again to retry.':'Your NEST sign-in has ended. Sign in again to continue.');
     }else lock(e.status===403?'Your NEST account does not have access to this period.':e.message,false);
   }finally{if(current===version)setBusy(false);}}
-  async function save(change){if(busy||savingScores||scoreQueue.length||!data||expired())return;setBusy(true);try{render(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {render(data);status.textContent=e.message;}}finally{setBusy(false);}}
+  async function save(change){if(busy||savingScores||scoreQueue.length||!data||expired())return;const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0;const show=result=>{render(result);const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};setBusy(true);try{show(await api('tracker-update',{revision:data.revision,change}));}catch(e){if(e.status===401)lock();else {show(data);status.textContent=e.message;}}finally{setBusy(false);}}
   function csvCell(value){let text=String(value??'');if(/^[=+@\-\t\r]/.test(text))text="'"+text;return '"'+text.replace(/"/g,'""')+'"';}
   async function download(target){if(!target||busy||scoreQueue.length||expired())return;setBusy(true);status.textContent='Preparing your CSV download…';try{
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action:'export',period:target})});const result=await response.json();if(!response.ok)throw new Error(result.error);
