@@ -22,11 +22,46 @@ function accounts_() {
   return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:email_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1})).filter(a=>a.email);
 }
 function accountByEmail_(email) {return accounts_().find(a=>a.email===email_(email));}
+function withAuthLock_(work) {
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(10000))return {status:503};
+  try{return work();}finally{lock.releaseLock();}
+}
+function lookupAccounts_() {
+  const cache=CacheService.getScriptCache(),key='auth-directory-v1';
+  const cached=cache.get(key);
+  if(cached)return JSON.parse(cached);
+  const result=withAuthLock_(()=>{
+    const latest=cache.get(key);
+    if(latest)return JSON.parse(latest);
+    const rows=accounts_();
+    const encoded=JSON.stringify(rows);
+    if(encoded.length<90000)cache.put(key,encoded,20);
+    return rows;
+  });
+  if(result.status===503)throw new Error('Account directory busy');
+  return result;
+}
 function recognizedForAccount_(email) {
   if(OWNER_EMAILS.includes(email))return true;
-  if(Object.keys(PERIODS).some(period=>rows_(period).some(row=>row[1]===email)))return true;
-  const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!F2:F").values||[];
-  return leaders.some(row=>email_(row[0])===email)||globalAccess_(email);
+  const cache=CacheService.getScriptCache(),key='auth-recognized-v1';
+  let cached=cache.get(key);
+  if(!cached){
+    const result=withAuthLock_(()=>{
+      const latest=cache.get(key);
+      if(latest)return latest;
+      const known=new Set();
+      Object.keys(PERIODS).forEach(period=>rows_(period).forEach(row=>known.add(row[1])));
+      const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!F2:F").values||[];
+      leaders.forEach(row=>known.add(email_(row[0])));
+      const encoded=JSON.stringify([...known]);
+      if(encoded.length<90000)cache.put(key,encoded,60);
+      return encoded;
+    });
+    if(result.status===503)throw new Error('Account eligibility busy');
+    cached=result;
+  }
+  return JSON.parse(cached).includes(email)||globalAccess_(email);
 }
 function authSession_(raw,store,now) {
   if(!/^[a-f0-9]{64}$/.test(raw||''))return null;
@@ -39,20 +74,29 @@ function authSession_(raw,store,now) {
 function authDispatch_(r) {
   const store=PropertiesService.getScriptProperties(),now=Date.now();
   if(Number(store.getProperty('auth-cleanup')||0)<now-3600000){
-    const all=store.getProperties();
-    Object.keys(all).forEach(key=>{
-      if(/^auth(session|challenge|ticket|\-ip|\-email|\-cooldown|\-login\-ip|\-login\-name):/.test(key)){
-        try{if(JSON.parse(all[key]).expires<=now)store.deleteProperty(key);}catch(_){store.deleteProperty(key);}
+    const lock=LockService.getScriptLock();
+    if(lock.tryLock(100))try{
+      if(Number(store.getProperty('auth-cleanup')||0)<now-3600000){
+        store.setProperty('auth-cleanup',String(now));
+        const all=store.getProperties();
+        Object.keys(all).forEach(key=>{
+          if(/^auth(session|challenge|ticket|\-ip|\-email|\-cooldown|\-login\-ip|\-login\-name|\-reserve):/.test(key)){
+            try{if(JSON.parse(all[key]).expires<=now)store.deleteProperty(key);}catch(_){store.deleteProperty(key);}
+          }
+        });
       }
-    });
-    store.setProperty('auth-cleanup',String(now));
+    }finally{lock.releaseLock();}
   }
   if(r.action==='auth-register-request') {
     const email=districtEmail_(r.email);
     if(!email||!/^\d{6}$/.test(r.code||'')||! /^[a-f0-9]{64}$/.test(r.challenge||'')||! /^[a-f0-9]{64}$/.test(r.ip||''))return {status:400};
-    if(!rate_(store,'auth-ip:'+r.ip,30,3600000,now)||!rate_(store,'auth-email:'+hash_(email),5,3600000,now))return {status:429};
-    if(!rate_(store,'auth-cooldown:'+hash_(email),1,60000,now))return {status:429};
-    if(accountByEmail_(email)||!recognizedForAccount_(email))return {status:200};
+    const limited=withAuthLock_(()=>{
+      if(!rate_(store,'auth-ip:'+r.ip,30,3600000,now)||!rate_(store,'auth-email:'+hash_(email),5,3600000,now))return {status:429};
+      if(!rate_(store,'auth-cooldown:'+hash_(email),1,60000,now))return {status:429};
+      return {status:200};
+    });
+    if(limited.status!==200)return limited;
+    if(lookupAccounts_().some(a=>a.email===email)||!recognizedForAccount_(email))return {status:200};
     if(MailApp.getRemainingDailyQuota()<1)return {status:503};
     const key='authchallenge:'+hash_(r.challenge);
     store.setProperty(key,JSON.stringify({email,digest:hash_(r.challenge+':'+r.code),attempts:0,expires:now+600000}));
@@ -62,14 +106,19 @@ function authDispatch_(r) {
   }
   if(r.action==='auth-register-verify') {
     if(!/^[a-f0-9]{64}$/.test(r.challenge||'')||!/^\d{6}$/.test(r.code||'')||! /^[a-f0-9]{64}$/.test(r.ticket||''))return {status:401};
-    const key='authchallenge:'+hash_(r.challenge),challenge=read_(store,key,now);
-    if(!challenge||challenge.attempts>=5)return {status:401};
-    challenge.attempts++;store.setProperty(key,JSON.stringify(challenge));
-    if(challenge.digest!==hash_(r.challenge+':'+r.code))return {status:401};
-    if(accountByEmail_(challenge.email))return {status:409};
-    store.setProperty('authticket:'+hash_(r.ticket),JSON.stringify({email:challenge.email,expires:now+600000}));
-    store.deleteProperty(key);
-    return {status:200,email:challenge.email};
+    const key='authchallenge:'+hash_(r.challenge);
+    const verified=withAuthLock_(()=>{
+      const challenge=read_(store,key,now);
+      if(!challenge||challenge.attempts>=5)return {status:401};
+      challenge.attempts++;store.setProperty(key,JSON.stringify(challenge));
+      if(challenge.digest!==hash_(r.challenge+':'+r.code))return {status:401};
+      store.setProperty('authticket:'+hash_(r.ticket),JSON.stringify({email:challenge.email,expires:now+600000}));
+      store.deleteProperty(key);
+      return {status:200,email:challenge.email};
+    });
+    if(verified.status!==200)return verified;
+    if(lookupAccounts_().some(a=>a.email===verified.email)){store.deleteProperty('authticket:'+hash_(r.ticket));return {status:409};}
+    return verified;
   }
   if(r.action==='auth-register') {
     const name=username_(r.username),ticket=/^[a-f0-9]{64}$/.test(r.ticket||'')?read_(store,'authticket:'+hash_(r.ticket),now):null;
@@ -78,23 +127,47 @@ function authDispatch_(r) {
     const all=accounts_();
     if(all.some(a=>a.username===name||a.email===ticket.email))return {status:409};
     if(!recognizedForAccount_(ticket.email))return {status:403};
-    const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
-    if(!sheet)return {status:503};
-    const sheetId=sheet.properties.sheetId;
-    const cells=[name,ticket.email,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),''].map(value=>({userEnteredValue:typeof value==='boolean'?{boolValue:value}:typeof value==='number'?{numberValue:value}:{stringValue:value}}));
-    Sheets.Spreadsheets.batchUpdate({requests:[
-      {insertDimension:{range:{sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},
-      {updateCells:{range:{sheetId,startRowIndex:1,endRowIndex:2,startColumnIndex:0,endColumnIndex:8},rows:[{values:cells}],fields:'userEnteredValue'}},
-      {sortRange:{range:{sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:8},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}
-    ]},NEST_DATABASE);
+    const reserved=withAuthLock_(()=>{
+      const nameKey='auth-reserve:'+hash_(name),emailKey='auth-reserve:'+hash_(ticket.email);
+      if(read_(store,nameKey,now)||read_(store,emailKey,now))return {status:409};
+      const value=JSON.stringify({expires:now+120000});
+      store.setProperty(nameKey,value);store.setProperty(emailKey,value);
+      return {status:200};
+    });
+    if(reserved.status!==200)return reserved;
+    try {
+      const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
+      if(!sheet)return {status:503};
+      const sheetId=sheet.properties.sheetId;
+      const cells=[name,ticket.email,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),''].map(value=>({userEnteredValue:typeof value==='boolean'?{boolValue:value}:typeof value==='number'?{numberValue:value}:{stringValue:value}}));
+      Sheets.Spreadsheets.batchUpdate({requests:[
+        {insertDimension:{range:{sheetId,dimension:'ROWS',startIndex:1,endIndex:2},inheritFromBefore:false}},
+        {updateCells:{range:{sheetId,startRowIndex:1,endRowIndex:2,startColumnIndex:0,endColumnIndex:8},rows:[{values:cells}],fields:'userEnteredValue'}},
+        {sortRange:{range:{sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:8},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}
+      ]},NEST_DATABASE);
+      CacheService.getScriptCache().remove('auth-directory-v1');
+    } finally {
+      store.deleteProperty('auth-reserve:'+hash_(name));
+      store.deleteProperty('auth-reserve:'+hash_(ticket.email));
+    }
     store.deleteProperty('authticket:'+hash_(r.ticket));
+    const duration=AUTH_DURATIONS[r.duration];
+    if(duration&&/^[a-f0-9]{64}$/.test(r.session||'')){
+      const expires=now+duration;
+      store.setProperty('authsession:'+hash_(r.session),JSON.stringify({email:ticket.email,version:1,expires}));
+      return {status:200,email:ticket.email,expires};
+    }
     return {status:200,email:ticket.email};
   }
   if(r.action==='auth-lookup') {
     const name=username_(r.username);
     if(!name||! /^[a-f0-9]{64}$/.test(r.ip||''))return {status:400};
-    if(!rate_(store,'auth-login-ip:'+r.ip,60,3600000,now)||!rate_(store,'auth-login-name:'+hash_(name),15,3600000,now))return {status:429};
-    const account=accounts_().find(a=>a.username===name&&a.active);
+    const limited=withAuthLock_(()=>{
+      if(!rate_(store,'auth-login-ip:'+r.ip,60,3600000,now)||!rate_(store,'auth-login-name:'+hash_(name),15,3600000,now))return {status:429};
+      return {status:200};
+    });
+    if(limited.status!==200)return limited;
+    const account=lookupAccounts_().find(a=>a.username===name&&a.active);
     if(!account)return {status:401};
     return {status:200,email:account.email,passwordHash:account.passwordHash,passwordSalt:account.passwordSalt};
   }
@@ -105,12 +178,6 @@ function authDispatch_(r) {
     if(!account||!account.active)return {status:401};
     const expires=now+duration;
     store.setProperty('authsession:'+hash_(r.session),JSON.stringify({email,version:account.version,expires}));
-    try {
-      Sheets.Spreadsheets.Values.update({values:[[new Date(now).toISOString()]]},NEST_DATABASE,"'StudentNESTAccess'!H"+account.row,{valueInputOption:'RAW'});
-    } catch (error) {
-      // This audit timestamp is optional; an active account must still receive its session.
-      console.error('NEST last login timestamp failed',String(error&&error.message||error).slice(0,300));
-    }
     return {status:200,expires};
   }
   if(r.action==='auth-me') {

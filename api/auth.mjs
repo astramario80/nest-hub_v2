@@ -1,5 +1,5 @@
 import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { COOKIE, CHALLENGE, TICKET, durations, token, validToken, districtEmail, username, cookies, setCookie, originAllowed, bridge } from '../lib/nest-auth.mjs';
+import { COOKIE, CHALLENGE, TICKET, IDENTITY, IDENTITY_TTL, durations, token, validToken, districtEmail, username, cookies, setCookie, signedIdentity, readIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
 const errors = { 400: 'Check the information you entered.', 401: 'Your sign-in has expired. Please sign in again.', 403: 'This action is unavailable.', 409: 'That username or district email already has an account.', 429: 'Too many attempts. Please try later.', 503: 'NEST sign-in is temporarily unavailable.' };
 const fail = (res, status, message) => res.status(status).json({ error: message || errors[status] });
@@ -8,6 +8,7 @@ const hashPassword = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 
 const TECH_TICKET_BACKEND = 'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
 const NEST_OWNERS = new Set(['astramario@gmail.com', 'mpenalver@bethelsd.org', 'mario@memberhq.net']);
 const ipHash = req => createHmac('sha256', process.env.SPINNER_BRIDGE_TOKEN || '').update(String(req.headers['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()).digest('hex');
+const identityCookie = (session, data) => setCookie(IDENTITY, signedIdentity(session, data), IDENTITY_TTL);
 async function retryableAuthBridge(payload, deadline = Date.now() + 55000) {
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -33,6 +34,10 @@ export default async function handler(req, res) {
     if (action !== 'me' && action !== 'tech-ticket') return fail(res, 400);
     const session = validToken(jar[COOKIE]) ? jar[COOKIE] : '';
     if (!session) return action==='me'?res.status(200).json({ signedIn: false }):fail(res,401);
+    if (action === 'me') {
+      const identity = readIdentity(session, jar[IDENTITY]);
+      if (identity) return res.status(200).json({ signedIn: true, ...identity });
+    }
     try {
       const deadline=Date.now()+55000;
       const data = await retryableAuthBridge({ action:'auth-me',session },deadline);
@@ -43,6 +48,8 @@ export default async function handler(req, res) {
         return tech.status===200?res.status(200).json({url:TECH_TICKET_BACKEND}):fail(res,tech.status===401?401:tech.status===403?403:503);
       }
       if (data.status !== 200) return res.status(200).json({ signedIn: false });
+      const signed = signedIdentity(session, data);
+      if (signed) res.setHeader('Set-Cookie', setCookie(IDENTITY, signed, Math.min(IDENTITY_TTL, Math.max(0, Math.floor((data.expires - Date.now()) / 1000)))));
       return res.status(200).json({ signedIn: true, username: data.username, email: data.email, expires: data.expires });
     } catch { return fail(res, 503); }
   }
@@ -77,12 +84,13 @@ export default async function handler(req, res) {
       if (!name || !passwordValid(body.password) || !validToken(ticket) || !Object.hasOwn(durations, body.duration)) return fail(res, 400);
       const salt = randomBytes(16).toString('hex');
       const passwordHash = hashPassword(body.password, salt);
-      const data = await bridge({ action: 'auth-register', ticket, username: name, passwordHash, passwordSalt: salt });
-      if (data.status !== 200) return fail(res, [400, 401, 409].includes(data.status) ? data.status : 503);
       const session = token();
-      const sessionData = await bridge({ action: 'auth-session', email: data.email, session, duration: body.duration });
+      const data = await bridge({ action: 'auth-register', ticket, username: name, passwordHash, passwordSalt: salt, session, duration: body.duration });
+      if (data.status !== 200) return fail(res, [400, 401, 409].includes(data.status) ? data.status : 503);
+      // Older school-script deployments still require the separate session action.
+      const sessionData = Number.isFinite(data.expires) ? data : await bridge({ action: 'auth-session', email: data.email, session, duration: body.duration });
       if (sessionData.status !== 200) return fail(res, 503);
-      res.setHeader('Set-Cookie', [setCookie(TICKET, '', 0), setCookie(COOKIE, session, body.duration === 'session' ? undefined : durations[body.duration])]);
+      res.setHeader('Set-Cookie', [setCookie(TICKET, '', 0), setCookie(COOKIE, session, body.duration === 'session' ? undefined : durations[body.duration]), identityCookie(session, { username: name, email: data.email, expires: sessionData.expires })]);
       return res.status(200).json({ signedIn: true, username: name, email: data.email, expires: sessionData.expires });
     }
     if (body.action === 'login') {
@@ -98,12 +106,12 @@ export default async function handler(req, res) {
       const session = token();
       const sessionData = await retryableAuthBridge({ action: 'auth-session', email: data.email, session, duration: body.duration }, deadline);
       if (sessionData.status !== 200) return fail(res, sessionData.status === 401 ? 401 : 503);
-      res.setHeader('Set-Cookie', setCookie(COOKIE, session, body.duration === 'session' ? undefined : durations[body.duration]));
+      res.setHeader('Set-Cookie', [setCookie(COOKIE, session, body.duration === 'session' ? undefined : durations[body.duration]), identityCookie(session, { username: name, email: data.email, expires: sessionData.expires })]);
       return res.status(200).json({ signedIn: true, username: name, email: data.email, expires: sessionData.expires });
     }
     if (body.action === 'logout') {
       if (validToken(jar[COOKIE])) await bridge({ action: 'auth-logout', session: jar[COOKIE] }, 25000);
-      res.setHeader('Set-Cookie', [setCookie(COOKIE, '', 0), setCookie(CHALLENGE, '', 0), setCookie(TICKET, '', 0)]);
+      res.setHeader('Set-Cookie', [setCookie(COOKIE, '', 0), setCookie(IDENTITY, '', 0), setCookie(CHALLENGE, '', 0), setCookie(TICKET, '', 0)]);
       return res.status(200).json({ signedIn: false });
     }
     return fail(res, 400);
