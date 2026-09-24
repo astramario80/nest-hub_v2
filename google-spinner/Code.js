@@ -17,10 +17,10 @@ function doPost(e) {
   try { r=JSON.parse(e.postData.contents); } catch (_) { return json_({status:400}); }
   if(typeof r.token!=='string' || hash_(r.token)!==BRIDGE_DIGEST) return json_({status:401});
   if(r.action==='leadership') {try{return json_(leadershipDirectory_());}catch(_){return json_({status:503});}}
-  if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
+  if(!/^auth-/.test(r.action||'') && !Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(15000)) return json_({status:503});
-  try { return json_(dispatch_(r)); }
+  try { return json_(/^auth-/.test(r.action||'') ? authDispatch_(r) : dispatch_(r)); }
   catch (_) { return json_({status:503}); }
   finally { lock.releaseLock(); }
 }
@@ -97,12 +97,13 @@ function dispatch_(r) {
     return {status:200,expires:session.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }
   if(['roster','logout','tracker','tracker-update','export'].includes(r.action)) {
-    if(!/^[a-f0-9]{64}$/.test(r.session||'')) return {status:401};
-    const key='session:'+hash_(r.session),s=read_(store,key,now);
-    if(!s || (s.period!==r.period && !globalAccess_(s.email))) return {status:401};
-    if(r.action==='logout') {store.deleteProperty(key);return {status:200};}
+    const auth=authSession_(r.session,store,now);
+    const legacyKey='session:'+hash_(r.session||'');
+    const s=auth||(/^[a-f0-9]{64}$/.test(r.session||'')?read_(store,legacyKey,now):null);
+    if(!s||(!auth&&s.period!==r.period&&!globalAccess_(s.email)))return {status:401};
+    if(r.action==='logout'){if(!auth)store.deleteProperty(legacyKey);return {status:200};}
     const rows=rows_(r.period);
-    if(!authorized_(rows,s.email,r.period)) {store.deleteProperty(key);return {status:401};}
+    if(!authorized_(rows,s.email,r.period)) return {status:403};
     if(['tracker','tracker-update','export'].includes(r.action))return trackerDispatch_(r,s,rows,store,now);
     return {status:200,expires:s.expires,names:rows.map(row=>String(row[0]||'').trim()).filter(Boolean)};
   }

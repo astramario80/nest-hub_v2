@@ -1,7 +1,7 @@
 (() => {
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
-  const status=q('[data-status]'),login=q('form'),view=q('[data-view]');
+  const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]');
   let scoreQueue=[],savingScores=false,saveError=false,queueTimer;
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
@@ -12,17 +12,17 @@
     let result;try{result=await response.json();}catch{throw new Error('Access is temporarily unavailable. Please try again.');}
     if(!response.ok)throw Object.assign(new Error(result.error||'Unable to complete this request.'),{status:response.status});return result;
   }
-  function lock(message){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=false;status.textContent=message||'Verify your email to open this period. Your NEST sign-in also works in Magic Spinner.';}
-  function expired(){if(data&&Date.now()>=data.expires){lock('Your six-hour access has ended. Verify again to continue.');return true;}return false;}
+  function lock(message){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=false;status.textContent=message||'Sign in to NEST to open this period.';}
+  function expired(){if(data&&Date.now()>=data.expires){lock('Your NEST sign-in has ended. Sign in again to continue.');return true;}return false;}
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
     status.textContent=`Period ${period} · ${canEdit?'Editing enabled':'View only'} · Access until ${new Date(data.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
-    expiryTimer=setTimeout(()=>lock('Your six-hour access has ended. Verify again to continue.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
+    expiryTimer=setTimeout(()=>lock('Your NEST sign-in has ended. Sign in again to continue.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
     const toolbar=node('div');toolbar.className='trip-toolbar';
     const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
-    const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;clear();setBusy(true);try{await api('logout');lock('Signed out of NEST.');}catch(e){lock(e.message);}finally{setBusy(false);}});toolbar.append(signout);
+    const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;await window.NestAuth.logout();if(!window.NestAuth.identity)lock('Signed out of NEST.');});toolbar.append(signout);
     const exportBar=node('div');exportBar.className='trip-export-bar';
     const exportTitle=node('strong','Download scores');exportBar.append(exportTitle);
     if(data.role==='administrator'){
@@ -109,7 +109,7 @@
       });
       const breakdown=[...view.querySelectorAll('details')].find(el=>el.querySelector('summary')?.textContent==='Score breakdown');
       if(breakdown){const ps=breakdown.querySelectorAll('p');ps[0].textContent=['4','3','2','1','NE'].map(score=>score+': '+all.filter(v=>v===score).length).join(' · ');ps[1].textContent='Not scored: '+all.filter(v=>!v).length+' · Imported legacy values: '+all.filter(v=>v&&!['4','3','2','1','NE'].includes(v)).length+'. Only a score of 4 counts as completed.';}
-    }catch(e){if(current===version&&data){if(e.status===401||e.status===403)lock('Editing access has ended. Verify again to continue.');else{saveError=true;scoreControls();status.textContent=e.message;}}}
+    }catch(e){if(current===version&&data){if(e.status===401||e.status===403)lock('Editing access has ended. Sign in again to continue.');else{saveError=true;scoreControls();status.textContent=e.message;}}}
     finally{savingScores=false;if(scoreQueue.length&&!saveError&&data)flushScores();}
   }
   window.addEventListener('beforeunload',event=>{if(scoreQueue.length){event.preventDefault();event.returnValue='';}});
@@ -121,21 +121,9 @@
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
-  host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));login.reset();q('[data-code-row]').hidden=true;load();}));
-  q('[type=email]').addEventListener('input',()=>{
-    q('[data-code]').value='';
-    if(q('[type=email]').validity.valid)q('[data-code-row]').hidden=false;
-  });
-  login.addEventListener('submit',async event=>{
-    event.preventDefault();if(busy||!period||!q('[type=email]').reportValidity())return;
-    setBusy(true);q('[data-code-row]').hidden=false;q('[data-code]').disabled=false;q('[data-code]').focus();
-    status.textContent='Requesting your code… Enter it below when it arrives.';
-    try{await api('prepare');const result=await api('request',{email:q('[type=email]').value});status.textContent=result.message;}
-    catch(e){status.textContent=e.message;}
-    finally{setBusy(false);}
-  });
-  q('[data-verify]').addEventListener('click',async()=>{const code=q('[data-code]').value.trim();if(busy||!/^\d{6}$/.test(code)){status.textContent='Enter the six-digit code from your email.';return;}setBusy(true);status.textContent='Verifying your code…';const waiting=setTimeout(()=>{status.textContent='Still checking your sign-in. Please keep this page open…';},8000);try{await api('verify',{code});clearTimeout(waiting);status.textContent='Verified. Loading your period’s tracker…';render(await api('tracker'));}catch(e){status.textContent=e.name==='TimeoutError'||e.status===503?'The connection was interrupted. Select your period again to check your access. If asked to verify, request a fresh code.':e.message;}finally{clearTimeout(waiting);setBusy(false);}});
-  q('[data-code]').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();q('[data-verify]').click();}});
+  host.querySelectorAll('[data-period]').forEach(button=>button.addEventListener('click',()=>{if(busy)return;period=button.dataset.period;host.querySelectorAll('[data-period]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));load();}));
+  q('[data-open-login]').addEventListener('click',()=>window.NestAuth?.open());
+  document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period){load();}});
   document.addEventListener('visibilitychange',expired);window.addEventListener('pageshow',expired);
   document.addEventListener('click',event=>{if(expired()){event.preventDefault();event.stopImmediatePropagation();}},true);
 })();
