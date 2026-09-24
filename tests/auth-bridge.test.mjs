@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 function service() {
-  let now=1_000_000_000, accounts=[], sent=[],leaders=[];
+  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false;
   const state=new Map(),store={getProperty:key=>state.get(key)||null,setProperty:(key,value)=>state.set(key,value),deleteProperty:key=>state.delete(key),getProperties:()=>Object.fromEntries(state)};
   const values={
     get(_id,range){
@@ -16,7 +16,7 @@ function service() {
       if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
       return {values:[]};
     },
-    update(resource,_id,range){accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};}
+    update(resource,_id,range){if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};}
   };
   const batchUpdate=({requests})=>{for(const request of requests){
     if(request.insertDimension)accounts.splice(request.insertDimension.range.startIndex-1,0,[]);
@@ -25,7 +25,7 @@ function service() {
   }return {};};
   const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
   vm.runInContext(source,ctx);
-  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,setLeaders:value=>leaders=value,advance:ms=>now+=ms};
+  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,advance:ms=>now+=ms};
 }
 const challenge='a'.repeat(64),ticket='b'.repeat(64),session='c'.repeat(64),ip='d'.repeat(64),email='student@students.bethelsd.org';
 test('registration requires known district email, verified code, and unique username',()=>{
@@ -70,6 +70,13 @@ test('session is available across tools, expires, and logout revokes it',()=>{
   app.call({action:'auth-session',email,session,duration:'1d'});
   app.advance(86400000);
   assert.equal(app.call({action:'auth-me',session}).status,401);
+});
+test('an unavailable audit column does not prevent a valid account session',()=>{
+  const app=service();
+  app.accounts.push(['student1',email,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
+  app.setAuditFailure(true);
+  assert.equal(app.call({action:'auth-session',email,session,duration:'1d'}).status,200);
+  assert.equal(app.call({action:'auth-me',session}).status,200);
 });
 test('Tech Ticket backend check requires a current Software Technician and an active NEST session',()=>{
   const app=service();app.accounts.push(['student1',email,'e'.repeat(64),'f'.repeat(32),true,1,'','']);

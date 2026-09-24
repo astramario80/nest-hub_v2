@@ -105,7 +105,12 @@ function authDispatch_(r) {
     if(!account||!account.active)return {status:401};
     const expires=now+duration;
     store.setProperty('authsession:'+hash_(r.session),JSON.stringify({email,version:account.version,expires}));
-    Sheets.Spreadsheets.Values.update({values:[[new Date(now).toISOString()]]},NEST_DATABASE,"'StudentNESTAccess'!H"+account.row,{valueInputOption:'RAW'});
+    try {
+      Sheets.Spreadsheets.Values.update({values:[[new Date(now).toISOString()]]},NEST_DATABASE,"'StudentNESTAccess'!H"+account.row,{valueInputOption:'RAW'});
+    } catch (error) {
+      // This audit timestamp is optional; an active account must still receive its session.
+      console.error('NEST last login timestamp failed',String(error&&error.message||error).slice(0,300));
+    }
     return {status:200,expires};
   }
   if(r.action==='auth-me') {

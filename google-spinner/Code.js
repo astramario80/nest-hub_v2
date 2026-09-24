@@ -27,7 +27,10 @@ function doPost(e) {
   const lock=LockService.getScriptLock();
   if(!lock.tryLock(15000)) return json_({status:503});
   try { return json_(/^auth-/.test(r.action||'') ? authDispatch_(r) : dispatch_(r)); }
-  catch (_) { return json_({status:503}); }
+  catch (error) {
+    console.error('NEST bridge dispatch failed',r.action,String(error&&error.message||error).slice(0,300));
+    return json_({status:503});
+  }
   finally { lock.releaseLock(); }
 }
 const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
