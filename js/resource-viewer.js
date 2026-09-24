@@ -31,7 +31,7 @@
   function checkTechAccess(target){
     const request=++techRequest;techBackend.hidden=true;techBackend.removeAttribute('href');
     if(target.host!=='docs.google.com'||new URL(target.original).pathname!==techTicketForm)return;
-    fetch('/api/auth?action=tech-ticket',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(30000)})
+    fetch('/api/auth?action=tech-ticket',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(58000)})
       .then(response=>response.ok?response.json():null)
       .then(data=>{if(request===techRequest&&active===target&&dialog.open&&data?.url){techBackend.href=data.url;techBackend.hidden=false;}})
       .catch(()=>{});

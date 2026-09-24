@@ -8,17 +8,19 @@ const hashPassword = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 
 const TECH_TICKET_BACKEND = 'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
 const NEST_OWNERS = new Set(['astramario@gmail.com', 'mpenalver@bethelsd.org', 'mario@memberhq.net']);
 const ipHash = req => createHmac('sha256', process.env.SPINNER_BRIDGE_TOKEN || '').update(String(req.headers['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()).digest('hex');
-async function retryableAuthBridge(payload) {
+async function retryableAuthBridge(payload, deadline = Date.now() + 55000) {
   let lastError;
   for (let attempt = 0; attempt < 2; attempt++) {
+    const remaining = deadline - Date.now();
+    if (remaining < 1000) break;
     try {
-      const data = await bridge(payload, 12000);
+      const data = await bridge(payload, Math.min(26000, remaining));
       if (data.status !== 503) return data;
       lastError = new Error('School service unavailable');
     } catch (error) { lastError = error; }
-    console.error('NEST auth bridge retry', { action: payload.action, attempt: attempt + 1, kind: lastError?.name || 'Error' });
+    console.error('NEST auth bridge retry', { action: payload.action, attempt: attempt + 1, kind: lastError?.name || 'Error', message: lastError?.message });
   }
-  throw lastError;
+  throw lastError || new Error('School service deadline exceeded');
 }
 
 export default async function handler(req, res) {
@@ -32,13 +34,13 @@ export default async function handler(req, res) {
     const session = validToken(jar[COOKIE]) ? jar[COOKIE] : '';
     if (!session) return action==='me'?res.status(200).json({ signedIn: false }):fail(res,401);
     try {
-      const data = await (action==='me'?retryableAuthBridge({ action:'auth-me',session }):bridge({ action:'auth-tech-ticket-access',session },25000));
+      const deadline=Date.now()+55000;
+      const data = await retryableAuthBridge({ action:'auth-me',session },deadline);
       if (action==='tech-ticket') {
-        if (data.status===200) return res.status(200).json({url:TECH_TICKET_BACKEND});
-        if (data.status===401) return fail(res,401);
-        const identity=await retryableAuthBridge({action:'auth-me',session});
-        if (identity.status===200 && NEST_OWNERS.has(String(identity.email||'').toLowerCase())) return res.status(200).json({url:TECH_TICKET_BACKEND});
-        return fail(res,identity.status===401?401:403);
+        if (data.status!==200) return fail(res,data.status===401?401:503);
+        if (NEST_OWNERS.has(String(data.email||'').toLowerCase())) return res.status(200).json({url:TECH_TICKET_BACKEND});
+        const tech=await retryableAuthBridge({action:'auth-tech-ticket-access',session},deadline);
+        return tech.status===200?res.status(200).json({url:TECH_TICKET_BACKEND}):fail(res,tech.status===401?401:tech.status===403?403:503);
       }
       if (data.status !== 200) return res.status(200).json({ signedIn: false });
       return res.status(200).json({ signedIn: true, username: data.username, email: data.email, expires: data.expires });
@@ -84,16 +86,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ signedIn: true, username: name, email: data.email, expires: sessionData.expires });
     }
     if (body.action === 'login') {
+      const deadline = Date.now() + 55000;
       const name = username(body.username);
       if (!name || typeof body.password !== 'string' || body.password.length > 128 || !Object.hasOwn(durations, body.duration)) return fail(res, 400);
-      const data = await retryableAuthBridge({ action: 'auth-lookup', username: name, ip: ipHash(req) });
+      const data = await retryableAuthBridge({ action: 'auth-lookup', username: name, ip: ipHash(req) }, deadline);
       if (data.status === 429) return fail(res, 429);
       if (data.status === 503) return fail(res, 503);
       if (data.status !== 200 || !/^[a-f0-9]{32}$/.test(data.passwordSalt || '') || !/^[a-f0-9]{64}$/.test(data.passwordHash || '')) return fail(res, 401, 'Incorrect username or password.');
       const actual = Buffer.from(hashPassword(body.password, data.passwordSalt), 'hex');
       if (!timingSafeEqual(actual, Buffer.from(data.passwordHash, 'hex'))) return fail(res, 401, 'Incorrect username or password.');
       const session = token();
-      const sessionData = await retryableAuthBridge({ action: 'auth-session', email: data.email, session, duration: body.duration });
+      const sessionData = await retryableAuthBridge({ action: 'auth-session', email: data.email, session, duration: body.duration }, deadline);
       if (sessionData.status !== 200) return fail(res, sessionData.status === 401 ? 401 : 503);
       res.setHeader('Set-Cookie', setCookie(COOKIE, session, body.duration === 'session' ? undefined : durations[body.duration]));
       return res.status(200).json({ signedIn: true, username: name, email: data.email, expires: sessionData.expires });
