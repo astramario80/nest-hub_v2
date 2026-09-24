@@ -2,7 +2,7 @@
   const host=document.getElementById('trip-app');if(!host)return;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
   const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),tempAccess=q('[data-temp-access]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
-  let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false;
+  let scoreQueue=[],savingScores=false,saveError=false,queueTimer,activeGesture=null,editingTitle=false,lastTitleTap=null;
   const scores=['4','3','2','1','A','NE','Yes','No'];
   let display={sort:'last',showRoles:true,nameWidth:190};
   const collator=new Intl.Collator(undefined,{sensitivity:'base',numeric:true});
@@ -13,7 +13,7 @@
   function sortedStudents(){return [...data.students].sort((a,b)=>{const left=nameParts(a.name),right=nameParts(b.name),primary=display.sort==='first'?'first':'last',secondary=display.sort==='first'?'last':'first';return collator.compare(left[primary],right[primary])||collator.compare(left[secondary],right[secondary])||collator.compare(a.id,b.id);});}
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
-  function clear(){if(activeGesture)activeGesture();editingTitle=false;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;tempAccess.replaceChildren();tempAccess.hidden=true;exportButton.hidden=true;}
+  function clear(){if(activeGesture)activeGesture();editingTitle=false;lastTitleTap=null;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;tempAccess.replaceChildren();tempAccess.hidden=true;exportButton.hidden=true;}
   function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
@@ -50,7 +50,7 @@
     activeGesture=()=>finish(false);
     if(handle.setPointerCapture)handle.setPointerCapture(pointerId);
   }
-  function dragColumn(event,handle,assignment,scroll,headers){
+  function dragColumn(event,handle,assignment,scroll,headers,onTap){
     if(event.button!==0||!layoutReady())return;
     event.preventDefault();
     const from=data.assignments.findIndex(item=>item.id===assignment.id),startX=event.clientX,oldStatus=status.textContent;
@@ -72,10 +72,19 @@
       slot=headers.filter(th=>move.clientX>th.getBoundingClientRect().left+th.getBoundingClientRect().width/2).length;
       mark();status.textContent='Release to move '+assignment.title+'. Press Escape to cancel.';
     },()=>{
-      cleanup();if(!moved)return;
+      cleanup();if(!moved){if(event.pointerType==='touch')onTap(event);return;}
+      lastTitleTap=null;
       const order=data.assignments.map(item=>item.id),[id]=order.splice(from,1),to=Math.max(0,Math.min(order.length,slot-(slot>from?1:0)));
       order.splice(to,0,id);if(to!==from)save({type:'reorder',order});
     },cleanup);
+  }
+  function touchTitleTap(event,handle,assignment,title){
+    if(event.target!==title){lastTitleTap=null;return;}
+    const now=Date.now(),previous=lastTitleTap;
+    lastTitleTap={id:assignment.id,at:now,x:event.clientX,y:event.clientY};
+    if(previous?.id===assignment.id&&now-previous.at<450&&Math.hypot(event.clientX-previous.x,event.clientY-previous.y)<24){
+      lastTitleTap=null;editAssignmentTitle(event,handle,assignment);
+    }
   }
   function resizeColumn(event,handle,assignment,column,table){
     if(event.button!==0||!layoutReady())return;
@@ -158,12 +167,11 @@
     data.assignments.forEach(a=>{
       const th=node('th');th.scope='col';th.dataset.assignment=a.id;if(canEdit){
         th.className='trip-movable-column';
-        const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag a column heading to move it, drag its right edge to resize it.';title.title='Double-click its name to rename it, or tap Edit name below.';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-click the name or use Edit name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')]));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
+        const drag=node('button'),title=node('span',a.title);drag.type='button';drag.className='trip-column-drag';drag.title='Drag a column heading to move it, double-tap or double-click its name to rename it.';title.title='Double-tap or double-click this name to rename it.';drag.setAttribute('aria-label','Drag '+a.title+' column to move. Double-tap or double-click the name to rename.');drag.append(node('span','⠿'),title);drag.addEventListener('pointerdown',event=>dragColumn(event,drag,a,scroll,[...tr.querySelectorAll('th[data-assignment]')],tap=>touchTitleTap(tap,drag,a,title)));drag.addEventListener('dblclick',event=>editAssignmentTitle(event,drag,a));th.append(drag);
         const grip=node('button');grip.type='button';grip.className='trip-column-resize';grip.title='Drag a column heading to move it, drag its right edge to resize it.';grip.setAttribute('aria-label','Drag right edge to resize '+a.title+' column');grip.addEventListener('pointerdown',event=>resizeColumn(event,grip,a,assignmentColumns[data.assignments.indexOf(a)],table));th.append(grip);
       }else th.append(node('span',a.title));
       const meta=node('div'),rate=node('small',percentage(data.students.map(s=>data.scores[s.id]?.[a.id]||''))+' complete');meta.className='trip-assignment-meta';meta.append(rate);
       if(canEdit){
-        const edit=node('button','Edit name');edit.type='button';edit.className='trip-column-edit';edit.setAttribute('aria-label','Edit assignment name for '+a.title);edit.addEventListener('click',event=>editAssignmentTitle(event,th.querySelector('.trip-column-drag'),a));meta.append(edit);
         const remove=node('button','×');remove.type='button';remove.className='trip-column-delete';remove.title='Delete assignment';remove.setAttribute('aria-label','Delete '+a.title+' column');remove.addEventListener('click',()=>{const count=data.students.filter(s=>data.scores[s.id]?.[a.id]).length;if(window.confirm(`Delete “${a.title}” and ${count} saved score${count===1?'':'s'} from this period? This cannot be undone.`))save({type:'delete',assignment:a.id});});meta.append(remove);
       }
       th.append(meta);const counts=node('details'),label=node('summary','Scores');counts.append(label);counts.append(node('small',scores.map(score=>score+': '+data.students.filter(s=>data.scores[s.id]?.[a.id]===score).length).join(' · ')));th.append(counts);
