@@ -14,12 +14,18 @@
   }
   function lock(message,needsLogin=!window.NestAuth?.identity){scoreQueue=[];saveError=false;clearTimeout(queueTimer);clear();login.hidden=!needsLogin;status.textContent=message||(needsLogin?'Sign in to NEST to open this period.':'Choose a period. NEST will check your access.');}
   function expired(){if(data&&Date.now()>=Math.min(data.expires,data.editExpires||data.expires)){lock('Your access to this period has ended. Choose the period to refresh.');return true;}return false;}
+  function scheduleExpiry(){
+    if(!data)return;
+    const remaining=Math.min(data.expires,data.editExpires||data.expires)-Date.now();
+    if(remaining<=0){expired();return;}
+    expiryTimer=setTimeout(scheduleExpiry,Math.min(remaining,2147483647));
+  }
   function percentage(values){if(!Array.isArray(data.completionScores))return 'Pending scoring rule';if(!values.length)return '—';return Math.round(values.filter(v=>data.completionScores.includes(v)).length/values.length*100)+'%';}
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
     status.textContent=`Period ${period} · ${canEdit?'Editing enabled':'View only'} · Access until ${new Date(data.expires).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}`;
-    expiryTimer=setTimeout(()=>lock('Your access to this period has ended. Choose the period to refresh.'),Math.max(0,Math.min(data.expires,data.editExpires||data.expires)-Date.now()));
+    scheduleExpiry();
     const toolbar=node('div');toolbar.className='trip-toolbar';
     const refresh=node('button','Refresh');refresh.type='button';refresh.addEventListener('click',load);toolbar.append(refresh);
     const signout=node('button','Sign out of NEST');signout.type='button';signout.addEventListener('click',async()=>{if(busy)return;await window.NestAuth.logout();if(!window.NestAuth.identity)lock('Signed out of NEST.');});toolbar.append(signout);
