@@ -18,7 +18,9 @@ test('all homepage links and nested groups remain accessible; touch toggles and 
  assert.equal(nested.nextElementSibling.hidden,false);assert.equal(button.getAttribute('aria-expanded'),'true');
  assert.equal(nested.nextElementSibling.querySelector('a').getAttribute('href'),'/bell-schedule');
  w.document.activeElement.blur();
- const group=panels[3].querySelector('.gear-group');const hover=new w.Event('pointerenter');Object.defineProperty(hover,'pointerType',{value:'mouse'});panels[3].dispatchEvent(hover);group.dispatchEvent(hover);const out=new w.Event('pointerleave');Object.defineProperty(out,'pointerType',{value:'mouse'});group.dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),true);panels[3].dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),false);
+ const group=panels[3].querySelector('.gear-group');const hover=new w.Event('pointerenter');Object.defineProperty(hover,'pointerType',{value:'mouse'});panels[3].dispatchEvent(hover);group.dispatchEvent(hover);assert.equal(group.classList.contains('is-open'),false);
+ group.querySelector('button').click();assert.equal(group.classList.contains('is-open'),true);
+ const out=new w.Event('pointerleave');Object.defineProperty(out,'pointerType',{value:'mouse'});group.dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),true);panels[3].dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),false);
  dom.window.close();
 });
 test('Pacific period highlight handles boundaries, PM rollover, passing time, and stale dates on both pages',async()=>{

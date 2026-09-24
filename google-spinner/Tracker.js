@@ -1,5 +1,5 @@
 // Private tracker files, created by this app. Original spreadsheets are read only during import.
-const SCORE_OPTIONS = ['4','3','2','1','NE'];
+const SCORE_OPTIONS = ['4','3','2','1','A','NE','Yes','No'];
 function trackerFile_(period) {
   const store=PropertiesService.getScriptProperties();
   return store.getProperty('tracker-file:'+period);
@@ -82,6 +82,18 @@ function trackerDispatch_(r,s,rows,store,now) {
   } else if(change.type==='rename') {
     const a=data.assignments.find(a=>a.id===change.assignment),title=String(change.title||'').trim();
     if(!a || !title || title.length>100)return {status:400};a.title=title;
+  } else if(change.type==='resize') {
+    const a=data.assignments.find(a=>a.id===change.assignment),width=Number(change.width);
+    if(!a || !Number.isInteger(width) || width<120 || width>600)return {status:400};a.width=width;
+  } else if(change.type==='reorder') {
+    const order=change.order;
+    if(!Array.isArray(order)||order.length!==data.assignments.length||new Set(order).size!==order.length||order.some(id=>typeof id!=='string'||!data.assignments.some(a=>a.id===id)))return {status:400};
+    const byId=new Map(data.assignments.map(a=>[a.id,a]));data.assignments=order.map(id=>byId.get(id));
+  } else if(change.type==='delete') {
+    const index=data.assignments.findIndex(a=>a.id===change.assignment);
+    if(index<0)return {status:400};
+    const id=data.assignments[index].id;data.assignments.splice(index,1);
+    Object.values(data.scores).forEach(scores=>{if(scores&&typeof scores==='object')delete scores[id];});
   } else return {status:400};
   const current=rows.map(row=>({id:hash_(email_(row[1])),name:row[0],email:row[1]}));
   data.students=[...current,...(data.students||[]).filter(old=>!current.some(s=>s.id===old.id))];

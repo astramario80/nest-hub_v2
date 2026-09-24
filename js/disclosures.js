@@ -42,6 +42,7 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
     pointerDown = false;
   });
   panel.addEventListener('pointerenter', event => {
+    if (gear && panel !== gear) return;
     if (event.pointerType === 'mouse') { cancelClose(); setOpen(true); }
   });
   panel.addEventListener('pointerleave', event => {
@@ -51,7 +52,7 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
     if (gear) closeTimer = setTimeout(() => { if (!pinned && !panel.contains(document.activeElement)) setOpen(false); }, 1100);
     else setOpen(false);
   });
-  panel.addEventListener('focusin', () => { if (!pointerDown) setOpen(true); });
+  panel.addEventListener('focusin', () => { if (!pointerDown && (!gear || panel === gear)) setOpen(true); });
   panel.addEventListener('focusout', event => {
     if (!panel.contains(event.relatedTarget)) { pinned = false; setOpen(false); }
   });

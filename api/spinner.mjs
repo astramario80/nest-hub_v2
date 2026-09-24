@@ -14,7 +14,7 @@ export default async function handler(req,res) {
   if(!String(req.headers['content-type']||'').startsWith('application/json')) return fail(400);
   let body=req.body;
   try {if(typeof body==='string') body=JSON.parse(body);} catch {return fail(400);}
-  if(!body||Array.isArray(body)||JSON.stringify(body).length>4096||!periods.has(body.period)||!actions.has(body.action)) return fail(400);
+  if(!body||Array.isArray(body)||JSON.stringify(body).length>8192||!periods.has(body.period)||!actions.has(body.action)) return fail(400);
   const session=cookies(req)[COOKIE];
   if(!validToken(session))return fail(401);
   const {period,action}=body;

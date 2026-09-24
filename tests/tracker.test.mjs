@@ -86,3 +86,18 @@ test('score batches validate every edit before writing and advance one revision'
  update.change.edits[1].assignment='a';const result=s.call(update);assert.equal(result.status,200);assert.equal(result.revision,2);assert.equal(result.scores[student].a,'3');assert.equal(s.saves,1);
  assert.equal(s.call(update).status,409);
 });
+
+test('editors can resize, reorder, rename and delete columns with their scores',()=>{
+ const s=service();signIn(s,'astramario@gmail.com');const student=s.ctx.hash_('student@example.org');
+ const change=(revision,value)=>s.call({...base,action:'tracker-update',revision,change:value});
+ assert.equal(change(1,{type:'resize',assignment:'a',width:119}).status,400);
+ assert.equal(change(1,{type:'resize',assignment:'a',width:280}).assignments[0].width,280);
+ assert.equal(change(2,{type:'assignment',title:'Project'}).assignments.length,2);
+ assert.equal(change(3,{type:'reorder',order:['a','a']}).status,400);
+ assert.deepEqual(change(3,{type:'reorder',order:[String(1000000000),'a']}).assignments.map(a=>a.title),['Project','Safety']);
+ assert.equal(change(4,{type:'rename',assignment:'a',title:'Updated Safety'}).assignments[1].title,'Updated Safety');
+ for(const score of ['A','NE','Yes','No'])assert.equal(change(s.data.revision,{type:'score',student,assignment:'a',score}).scores[student].a,score);
+ const deleted=change(s.data.revision,{type:'delete',assignment:'a'});assert.equal(deleted.status,200);
+ assert.equal(deleted.assignments.length,1);assert.equal(s.data.scores[student].a,undefined);
+ assert.equal(change(s.data.revision,{type:'delete',assignment:'a'}).status,400);
+});
