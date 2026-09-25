@@ -3199,3 +3199,4 @@ img.tripometer-gif{
         padding: 20px 16px;
     }
 }
+.weather-gear{color:#fff;text-decoration:none;font-weight:700;padding:9px 12px;border:1px solid rgba(255,255,255,.3);border-radius:10px;white-space:nowrap}.weather-gear:hover{border-color:var(--primary-orange)}

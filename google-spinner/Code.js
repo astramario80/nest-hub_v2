@@ -23,6 +23,35 @@ function doPost(e) {
       return json_(session?memberLeadershipDirectory_():{status:401});
     } catch(_){return json_({status:503});}
   }
+  if(r.action==='auth-weather') {
+    try {
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      return json_(session?weatherForMember_(session.email,r.period,r.page):{status:401});
+    } catch(error){console.error('Weather view failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
+  }
+  if(r.action==='auth-hiring-access') {
+    try {
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      if(!session)return json_({status:401});
+      if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period))return json_({status:400});
+      return json_({status:hiringPermissions_(session.email,r.period).canReview?200:403});
+    } catch(error){console.error('Hiring access failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
+  }
+  if(r.action==='auth-hiring-view') {
+    try {
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      return json_(session?hiringView_(session.email,r.period,r.page):{status:401});
+    } catch(error){console.error('Hiring view failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
+  }
+  if(r.action==='auth-hiring-assign') {
+    const lock=LockService.getScriptLock();
+    if(!lock.tryLock(15000))return json_({status:503});
+    try {
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      return json_(session?hiringAssign_(session.email,r):{status:401});
+    } catch(error){console.error('Hiring assignment failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
+    finally{lock.releaseLock();}
+  }
   if(!/^auth-/.test(r.action||'') && !Object.prototype.hasOwnProperty.call(PERIODS,r.period)) return json_({status:400});
   // Account reads and independent session writes must not queue behind tracker edits.
   // Auth.js takes short locks only where a shared counter or registration is changed.

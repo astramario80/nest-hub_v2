@@ -18,6 +18,15 @@
     },
     "api/leadership.mjs": {
       "maxDuration": 50
+    },
+    "api/weather.mjs": {
+      "maxDuration": 30
+    },
+    "api/hiring-access.mjs": {
+      "maxDuration": 30
+    },
+    "api/hiring.mjs": {
+      "maxDuration": 40
     }
   }
 }

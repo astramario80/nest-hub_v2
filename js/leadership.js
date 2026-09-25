@@ -155,18 +155,9 @@
     // Manager tools panel
     if (els.managerTools) els.managerTools.style.display = 'none';
 
-    if (els.divisionHiringLink){
-      els.divisionHiringLink.href = '#';
-    }
+    if (els.divisionHiringLink) els.divisionHiringLink.href = '/hiring#manager-hiring';
 
     els.resultsTitle.textContent = 'Select a division or position to begin.';
-  }
-
-  function getUniqueHiringLinkForDivision(division){
-    const rows = state.leaders.filter(l => l.division === division && l.hiringLink);
-    if (!rows.length) return '';
-    // Often same link repeated; just return first
-    return rows[0].hiringLink;
   }
 
   function getMissingPositionsForDivision(division){
@@ -227,12 +218,10 @@
 
     els.resultsTitle.textContent = `Leadership — ${division}`;
 
-    // Hiring link once per division (Manager Tools section)
-    const hiringLink = getUniqueHiringLinkForDivision(dataDivision);
-    if (hiringLink){
-      els.divisionHiringLink.href = hiringLink;
-      if (els.managerTools) els.managerTools.style.display = 'block';
-    }
+    // The destination checks the current manager role before any private data is shown.
+    const period = dataDivision === 'NEST Robotics' ? 'CTSO' : dataDivision.replace('Period ', '');
+    els.divisionHiringLink.href = '/hiring?period=' + encodeURIComponent(period) + '#manager-hiring';
+    if (els.managerTools) els.managerTools.style.display = 'block';
 
     if (!rows.length){
       els.resultsGrid.innerHTML = '<div class="results-empty">No leaders found for this division yet.</div>';

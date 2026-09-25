@@ -28,7 +28,7 @@ const SOP_LINKS = [
   },
   {
     terms: ["Weather Reports"],
-    url: "https://docs.google.com/spreadsheets/d/1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8/edit?gid=362165540#gid=362165540"
+    url: "/weather"
   },
   {
     terms: ["POW"],
@@ -52,11 +52,11 @@ const SOP_LINKS = [
   },
   {
     terms: ["NEST™ Print Form"],
-    url: "https://docs.google.com/forms/d/e/1FAIpQLScGtcbvGnwnloQKpd15pelduyp5ohsT6aQx6qF13DBcZ4RKgg/viewform"
+    url: "/print-queue"
   },
   {
     terms: ["Printer Queue"],
-    url: "https://docs.google.com/spreadsheets/d/13Dnk31EDgx2_E46gkEAJ_e0gamqsA_VoFSf8qQEr4vk/edit?gid=47407658#gid=47407658"
+    url: "/print-queue"
   }
 ];
 
