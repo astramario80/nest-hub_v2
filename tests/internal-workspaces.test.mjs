@@ -9,8 +9,8 @@ import hiringViewHandler from '../api/hiring.mjs';
 const code=fs.readFileSync('google-spinner/Code.js','utf8')+fs.readFileSync('google-spinner/Tracker.js','utf8')+fs.readFileSync('google-spinner/Weather.js','utf8')+fs.readFileSync('google-spinner/Hiring.js','utf8');
 function context(role='Partner Liaison') {
   const calls=[];
-  const rows=[['Period 1','','Division Manager','', 'manager@students.bethelsd.org'],['Period 2','',role,'','liaison@students.bethelsd.org']];
-  const Sheets={Spreadsheets:{get:(id)=>{calls.push(['metadata',id]);return {sheets:[{properties:{title:'Period 1',hidden:false,gridProperties:{rowCount:200}}},{properties:{title:'Division 2',hidden:false,gridProperties:{rowCount:200}}},{properties:{title:'Period 3',hidden:false,gridProperties:{rowCount:200}}}]};},Values:{get:(id,range)=>{calls.push(['values',id,range]);if(range==="'Imported'!B2:F")return {values:rows};if(range.endsWith('A9:M9'))return {values:[['Timestamp','Report']]};return {values:[['A','','','Period 2'],['B','','','Period 1']]};}}}};
+  const rows=[['Period 1','','Division Manager','', 'manager@students.bethelsd.org'],['Period 2','',role,'','liaison@students.bethelsd.org'],['Advisory','','Partner Liaison','','advisory@students.bethelsd.org']];
+  const Sheets={Spreadsheets:{get:(id)=>{calls.push(['metadata',id]);return {sheets:[{properties:{sheetId:746267134,title:'Period 1',hidden:false,gridProperties:{rowCount:200}}},{properties:{sheetId:1427888033,title:'Period 2',hidden:false,gridProperties:{rowCount:200}}},{properties:{sheetId:336431884,title:'Advisory',hidden:false,gridProperties:{rowCount:200}}}]};},Values:{get:(id,range)=>{calls.push(['values',id,range]);if(range==="'Imported'!B2:F")return {values:rows};if(range.endsWith('C2:F6'))return {values:[["Today's Trimester 1","Pacing","Rigor","Safety"],['',3,2,5],['Trimester 1',3,2,5]]};if(range.endsWith('A9:M9'))return {values:[['Timestamp','Report']]};return {values:[['A','','','Period 2'],['B','','','Period 1']]};}}}};
   const ctx=vm.createContext({Sheets,console});vm.runInContext(code,ctx);return {ctx,calls};
 }
 test('weather bridge reads only the requested authorized division tab',()=>{
@@ -18,16 +18,20 @@ test('weather bridge reads only the requested authorized division tab',()=>{
  const denied=ctx.weatherForMember_('manager@students.bethelsd.org','2',0);
  assert.equal(denied.status,403);assert.equal(calls.some(call=>call[0]==='metadata'&&call[1]==='1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8'),false);
  const allowed=ctx.weatherForMember_('liaison@students.bethelsd.org','2',0);
- assert.equal(allowed.status,200);assert.equal(allowed.division,'Division 2');
+ assert.equal(allowed.status,200);assert.equal(allowed.division,'Period 2');
+ assert.equal(allowed.summary[1][1],'3');
  assert.equal(allowed.rows.length,1);
  assert.equal(calls.filter(call=>call[0]==='metadata'&&call[1]==='1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8').length,1);
- assert.deepEqual(calls.filter(call=>call[0]==='values'&&call[1]==='1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8').map(call=>call[2]),["'Division 2'!A9:M9","'Division 2'!A10:M109"]);
+ assert.deepEqual(calls.filter(call=>call[0]==='values'&&call[1]==='1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8').map(call=>call[2]),["'Period 2'!C2:F6","'Period 2'!A9:M9","'Period 2'!A10:M109"]);
+ assert.equal(ctx.weatherForMember_('advisory@students.bethelsd.org','Advisory',0).status,200);
  assert.equal(ctx.weatherForMember_('liaison@students.bethelsd.org','bogus',0).status,400);
  assert.equal(ctx.weatherForMember_('liaison@students.bethelsd.org','7',0).status,400);
 });
 test('weather division list exposes only authorized periods',()=>{
  const {ctx}=context();
  assert.deepEqual(Array.from(ctx.weatherForMember_('liaison@students.bethelsd.org','mine').periods),['2']);
+ const typo=context('Parnter Liaison');
+ assert.deepEqual(Array.from(typo.ctx.weatherForMember_('liaison@students.bethelsd.org','mine').periods),['2']);
 });
 function response(){return {headers:{},statusCode:0,setHeader(k,v){this.headers[k]=v;return this;},status(n){this.statusCode=n;return this;},json(data){this.data=data;return this;}};}
 for(const [name,handler] of [['weather',weatherHandler],['hiring',hiringHandler],['hiring view',hiringViewHandler]])test(`${name} API rejects missing session and invalid division`,async()=>{

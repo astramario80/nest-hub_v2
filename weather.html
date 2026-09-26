@@ -1,1 +1,42 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEST™ Weather Reports</title><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/internal-workspaces.css"></head><body><header class="internal-header"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a><nav><a href="/leadership">Leadership</a> · <a href="/">Menu</a></nav></header><main class="internal-page"><h1>Weather reports</h1><p>Choose a division you manage to see its report data.</p><div id="weather-status" role="status">Checking access…</div><div id="weather-divisions" class="internal-actions" aria-label="Your divisions"></div><section id="weather-data" hidden><h2 id="weather-title"></h2><div class="internal-actions" id="weather-pages" hidden><button type="button" id="weather-prev">Previous</button><span id="weather-page-label"></span><button type="button" id="weather-next">Next</button></div><div class="table-scroll"><table><thead></thead><tbody></tbody></table></div></section></main><script src="/js/nest-auth.js"></script><script src="/js/weather.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEST™ Weather Report</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/nest-auth.css">
+  <link rel="stylesheet" href="/css/internal-workspaces.css">
+</head>
+<body>
+  <header class="internal-header">
+    <a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a>
+    <nav><a href="/">Menu</a></nav>
+  </header>
+  <main class="internal-page">
+    <h1>Weather Report</h1>
+    <p>Share how your division is doing. Division leaders can review their own report data and charts here.</p>
+    <nav id="weather-divisions" class="internal-actions weather-division-buttons" aria-label="Division weather reports"></nav>
+    <div id="weather-status" role="status">Checking division access…</div>
+    <section id="weather-data" class="internal-card" hidden>
+      <h2 id="weather-title"></h2>
+      <div id="weather-charts" class="weather-charts" aria-label="Weather report charts"></div>
+      <div id="weather-trimesters" class="weather-trimesters"></div>
+      <h3>Responses</h3>
+      <div class="internal-actions" id="weather-pages" hidden>
+        <button type="button" id="weather-prev">Previous</button>
+        <span id="weather-page-label"></span>
+        <button type="button" id="weather-next">Next</button>
+      </div>
+      <div class="table-scroll"><table><thead></thead><tbody></tbody></table></div>
+    </section>
+    <section class="internal-card" aria-labelledby="weather-form-heading">
+      <h2 id="weather-form-heading">Submit a weather report</h2>
+      <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform?embedded=true" title="NEST weather report form" loading="lazy"></iframe>
+      <p class="internal-muted">If the form does not load, <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank" rel="noopener noreferrer">open it in Google Forms</a>.</p>
+    </section>
+  </main>
+  <script src="/js/nest-auth.js"></script>
+  <script src="/js/weather.js"></script>
+</body>
+</html>
