@@ -88,7 +88,12 @@ function globalAccess_(email) {
     return links.some(link=>typeof link==='string' && /^mailto:/i.test(link) && email_(decodeURIComponent(link.slice(7).split('?')[0]))===email);
   }))));
 }
-function authorized_(rows,email,period) { return rows.some(row=>email_(row[1])===email_(email)) || globalAccess_(email) || (period && (manager_(email,period) || Boolean(editorGrant_(email,period)))); }
+function manualPeriodAccess_(email,period) {
+  if(typeof accountByEmail_!=='function')return false;
+  const account=accountByEmail_(email);
+  return Boolean(account&&account.active&&account.periods.includes(period));
+}
+function authorized_(rows,email,period) { return rows.some(row=>email_(row[1])===email_(email)) || globalAccess_(email) || (period && (manualPeriodAccess_(email,period) || manager_(email,period) || Boolean(editorGrant_(email,period)))); }
 function read_(store,key,now) {
   const raw=store.getProperty(key); if(!raw) return null;
   const value=JSON.parse(raw); if(value.expires<=now) {store.deleteProperty(key);return null;} return value;

@@ -2,6 +2,7 @@
 const WEATHER_DATABASE = '1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8';
 const WEATHER_PERIODS = ['1','2','3','4','5','CTSO'];
 function weatherRole_(email,period,leaders) {
+  if(OWNER_EMAILS.includes(email_(email)))return true;
   leaders=leaders||Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   return leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period &&
     /^(division manager|assistant manager|partner liaison)$/i.test(String(row[2]||'').trim()) && email_(row[4])===email_(email));

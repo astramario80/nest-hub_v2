@@ -1,5 +1,5 @@
 // NEST account records live in StudentNESTAccess. Only salted hashes are stored.
-const AUTH_SHEET = "'StudentNESTAccess'!A2:H";
+const AUTH_SHEET = "'StudentNESTAccess'!A2:J";
 const AUTH_DURATIONS = {session:43200000,'1d':86400000,'7d':604800000,'30d':2592000000};
 // Run once in the school-owned editor after changing the manifest's Sheets scope.
 function authorizeNestAuth() {
@@ -13,13 +13,21 @@ function districtEmail_(value) {
   const email=email_(value);
   return email.length<=254 && /^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(email)?email:'';
 }
+function accountEmail_(value) {
+  const key=email_(value);
+  return districtEmail_(key)||(OWNER_EMAILS.includes(key)?key:'')||(/^manual:[a-z][a-z0-9._-]{2,31}$/.test(key)?key:'');
+}
+function registrationEmail_(value) {
+  const email=accountEmail_(value);
+  return districtEmail_(email)||(OWNER_EMAILS.includes(email)?email:'');
+}
 function username_(value) {
   const name=String(value||'').trim().toLowerCase();
   return /^[a-z][a-z0-9._-]{2,31}$/.test(name)?name:'';
 }
 function accounts_() {
   const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,AUTH_SHEET).values||[];
-  return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:email_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1})).filter(a=>a.email);
+  return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:accountEmail_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1,periods:String(row[8]||'').split(',').filter(value=>Object.prototype.hasOwnProperty.call(PERIODS,value)),recoveryEmail:districtEmail_(row[9])||(OWNER_EMAILS.includes(email_(row[9]))?email_(row[9]):'')||districtEmail_(row[1])||(OWNER_EMAILS.includes(email_(row[1]))?email_(row[1]):'')})).filter(a=>a.email);
 }
 function accountByEmail_(email) {return accounts_().find(a=>a.email===email_(email));}
 function withAuthLock_(work) {
@@ -73,6 +81,7 @@ function authSession_(raw,store,now) {
 }
 function authDispatch_(r) {
   const store=PropertiesService.getScriptProperties(),now=Date.now();
+  if(/^auth-(admin-create|admin-reset|profile-read|profile-update|recover-request|recover-verify|recover-reset)$/.test(r.action||''))return accountDispatch_(r,store,now);
   if(Number(store.getProperty('auth-cleanup')||0)<now-3600000){
     const lock=LockService.getScriptLock();
     if(lock.tryLock(100))try{
@@ -80,7 +89,7 @@ function authDispatch_(r) {
         store.setProperty('auth-cleanup',String(now));
         const all=store.getProperties();
         Object.keys(all).forEach(key=>{
-          if(/^auth(session|challenge|ticket|\-ip|\-email|\-cooldown|\-login\-ip|\-login\-name|\-reserve):/.test(key)){
+          if(/^auth(session|challenge|ticket|recover|recoveryticket|\-ip|\-email|\-cooldown|\-login\-ip|\-login\-name|\-reserve|\-recover\-ip|\-recover\-email|\-recover\-cooldown):/.test(key)){
             try{if(JSON.parse(all[key]).expires<=now)store.deleteProperty(key);}catch(_){store.deleteProperty(key);}
           }
         });
@@ -88,7 +97,7 @@ function authDispatch_(r) {
     }finally{lock.releaseLock();}
   }
   if(r.action==='auth-register-request') {
-    const email=districtEmail_(r.email);
+    const email=registrationEmail_(r.email);
     if(!email||!/^\d{6}$/.test(r.code||'')||! /^[a-f0-9]{64}$/.test(r.challenge||'')||! /^[a-f0-9]{64}$/.test(r.ip||''))return {status:400};
     const limited=withAuthLock_(()=>{
       if(!rate_(store,'auth-ip:'+r.ip,30,3600000,now)||!rate_(store,'auth-email:'+hash_(email),5,3600000,now))return {status:429};
@@ -100,7 +109,7 @@ function authDispatch_(r) {
     if(MailApp.getRemainingDailyQuota()<1)return {status:503};
     const key='authchallenge:'+hash_(r.challenge);
     store.setProperty(key,JSON.stringify({email,digest:hash_(r.challenge+':'+r.code),attempts:0,expires:now+600000}));
-    try {MailApp.sendEmail({to:email,name:'gk NEST',subject:'Create your NEST account',body:'Your one-time NEST account verification code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org. If you did not request an account, ignore this email.'});}
+    try {MailApp.sendEmail({to:email,name:'gk NEST',subject:'Create your NEST account',body:'Your one-time NEST account verification code is '+r.code+'. It expires in 10 minutes. Enter it only at https://gknest.org. If you did not request an account, ignore this email.',htmlBody:nestEmailHtml_('Create your NEST account','Your account verification code is',r.code)});}
     catch(_){store.deleteProperty(key);return {status:503};}
     return {status:200};
   }
@@ -142,7 +151,7 @@ function authDispatch_(r) {
       CacheService.getScriptCache().remove('auth-directory-v1');
       try {
         const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
-        if(sheet)Sheets.Spreadsheets.batchUpdate({requests:[{sortRange:{range:{sheetId:sheet.properties.sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:8},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}]},NEST_DATABASE);
+        if(sheet)Sheets.Spreadsheets.batchUpdate({requests:[{sortRange:{range:{sheetId:sheet.properties.sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:10},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}]},NEST_DATABASE);
       }catch(error){console.error('NEST account sort failed',String(error&&error.message||error).slice(0,300));}
     } finally {
       store.deleteProperty('auth-reserve:'+hash_(name));
@@ -170,7 +179,7 @@ function authDispatch_(r) {
     return {status:200,email:account.email,passwordHash:account.passwordHash,passwordSalt:account.passwordSalt};
   }
   if(r.action==='auth-session') {
-    const email=districtEmail_(r.email),duration=AUTH_DURATIONS[r.duration];
+    const email=accountEmail_(r.email),duration=AUTH_DURATIONS[r.duration];
     if(!email||!duration||! /^[a-f0-9]{64}$/.test(r.session||''))return {status:400};
     const account=accountByEmail_(email);
     if(!account||!account.active)return {status:401};

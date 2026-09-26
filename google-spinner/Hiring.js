@@ -2,6 +2,7 @@
 const HIRING_PERIODS = ['1','2','3','4','5','7','CTSO'];
 function hiringRows_() {return Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];}
 function hiringPermissions_(email,period,rows) {
+  if(OWNER_EMAILS.includes(email_(email)))return {canReview:true,canManage:true};
   rows=rows||hiringRows_();
   const normalized=email_(email);
   const own=rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&

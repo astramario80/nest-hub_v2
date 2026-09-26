@@ -1,5 +1,5 @@
 import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { COOKIE, CHALLENGE, TICKET, IDENTITY, IDENTITY_TTL, durations, token, validToken, districtEmail, username, cookies, setCookie, signedIdentity, readIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
+import { COOKIE, CHALLENGE, TICKET, IDENTITY, IDENTITY_TTL, durations, token, validToken, registrationEmail, username, cookies, setCookie, signedIdentity, readIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
 const errors = { 400: 'Check the information you entered.', 401: 'Your sign-in has expired. Please sign in again.', 403: 'This action is unavailable.', 409: 'That username is taken, or this district email already has an account. Try another username or sign in.', 429: 'Too many attempts. Please try later.', 503: 'NEST sign-in is temporarily unavailable.' };
 const fail = (res, status, message) => res.status(status).json({ error: message || errors[status] });
@@ -61,8 +61,8 @@ export default async function handler(req, res) {
   if (!body || Array.isArray(body) || JSON.stringify(body).length > 2048) return fail(res, 400);
   try {
     if (body.action === 'register-request') {
-      const email = districtEmail(body.email);
-      if (!email) return fail(res, 400, 'Use your district email address.');
+      const email = registrationEmail(body.email);
+      if (!email) return fail(res, 400, 'Use your district email address or an approved administrator email.');
       const challenge = token();
       const data = await bridge({ action: 'auth-register-request', email, challenge, code: String(randomBytes(4).readUInt32BE() % 1000000).padStart(6, '0'), ip: ipHash(req) });
       if (data.status === 429) return fail(res, 429);

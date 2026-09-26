@@ -86,7 +86,9 @@ test('signed identity is tied to the opaque session and expires without a bridge
     assert.equal(readIdentity(session,identity).username,'student');
     assert.equal(readIdentity('d'.repeat(64),identity),null);
     assert.equal(readIdentity(session,identity.slice(0,-1)+'x'),null);
+    assert.equal(readIdentity(session,signedIdentity(session,{username:'student',email:'manual:student',expires:Date.now()+60000})).email,'manual:student');
     assert.equal(signedIdentity(session,{username:'student',email:'outsider@example.com',expires:Date.now()+60000}),'');
+    assert.equal(signedIdentity(session,{username:'student',email:'invalid',expires:Date.now()+60000}),'');
   }finally{if(previous===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=previous;}
 });
 test('protected tool requires the NEST cookie and blocks cross-site writes',async()=>{

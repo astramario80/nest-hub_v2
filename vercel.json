@@ -9,6 +9,10 @@
     }
   ],
   "functions": {
+    "api/account.mjs": {
+      "maxDuration": 60,
+      "regions": ["sfo1"]
+    },
     "api/auth.mjs": {
       "maxDuration": 60,
       "regions": ["sfo1"]

@@ -4,21 +4,23 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
 
-const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
+const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Account.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 function service() {
-  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false;
+  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false,allowedHeader='',recoveryHeader='';
   const state=new Map(),store={getProperty:key=>state.get(key)||null,setProperty:(key,value)=>state.set(key,value),deleteProperty:key=>state.delete(key),getProperties:()=>Object.fromEntries(state)};
   const cacheState=new Map(),cache={get:key=>cacheState.get(key)?.expires>now?cacheState.get(key).value:null,put:(key,value,seconds)=>cacheState.set(key,{value,expires:now+seconds*1000}),remove:key=>cacheState.delete(key)};
   const lock={tryLock:()=>true,releaseLock:()=>{}};
   const values={
     get(_id,range){
+      if(range.includes('StudentNESTAccess')&&range.includes('I1'))return {values:allowedHeader?[[allowedHeader,recoveryHeader]]:[]};
       if(range.includes('StudentNESTAccess'))return {values:accounts};
       if(range.includes("'Imported'"))return {values:leaders};
       if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
       return {values:[]};
     },
-    update(resource,_id,range){if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
+    update(resource,_id,range){if(range.includes('I1')){allowedHeader=resource.values[0][0];recoveryHeader=resource.values[0][1];return {};}if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
+    batchUpdate(resource){for(const item of resource.data){const match=item.range.match(/!([A-I])(\d+)/),row=accounts[Number(match[2])-2],value=item.values[0];if(match[1]==='A')row[0]=value[0];if(match[1]==='C'){row[2]=value[0];row[3]=value[1];}if(match[1]==='F')row[5]=value[0];}return {};},
     append(resource){accounts.push(resource.values[0]);return {};}
   };
   const batchUpdate=({requests})=>{for(const request of requests){
@@ -121,4 +123,37 @@ test('existing email-code sessions remain usable during the website rollout',()=
   assert.equal(app.tool({action:'roster',period:'2',session}).status,401);
   assert.equal(app.tool({action:'logout',period:'1',session}).status,200);
   assert.equal(app.tool({action:'roster',period:'1',session}).status,401);
+});
+test('only an active administrator may create a manual account with scoped period access',()=>{
+  const app=service(),owner='mario@memberhq.net',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
+  app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
+  assert.equal(app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'}).status,200);
+  const request={action:'auth-admin-create',username:'visitor',recoveryEmail:'',passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),periods:['1']};
+  assert.equal(app.call({...request,session:studentSession}).status,403);
+  assert.equal(app.call({...request,session:ownerSession}).status,200);
+  assert.equal(app.call({...request,session:ownerSession}).status,409);
+  assert.equal(app.accounts[1][8],'1');
+  assert.equal(app.accounts[1][9],'');
+  assert.equal(app.call({action:'auth-session',email:'manual:visitor',session:studentSession,duration:'1d'}).status,200);
+  assert.equal(app.tool({action:'roster',period:'1',session:studentSession}).status,200);
+  assert.equal(app.tool({action:'roster',period:'2',session:studentSession}).status,403);
+  assert.equal(app.sent.length,0);
+});
+test('profile changes revoke old sessions and recovery email carries banner and username',()=>{
+  const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
+  app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
+  app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});
+  assert.equal(app.call({action:'auth-admin-create',session:ownerSession,username:'visitor',recoveryEmail:owner,passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),periods:[]}).status,200);
+  app.call({action:'auth-session',email:'manual:visitor',session:studentSession,duration:'1d'});
+  assert.equal(app.call({action:'auth-profile-update',session:studentSession,username:'visitor2'}).status,200);
+  assert.equal(app.call({action:'auth-me',session:studentSession}).status,401);
+  const recovery='3'.repeat(64),reset='4'.repeat(64);
+  assert.equal(app.call({action:'auth-recover-request',email:owner,challenge:recovery,code:'123456',ip}).status,200);
+  assert.match(app.sent[0].htmlBody,/nest-email-banner\.png/);
+  assert.match(app.sent[0].body,/visitor2/);
+  assert.equal(app.call({action:'auth-recover-verify',challenge:recovery,code:'000000',ticket:reset}).status,401);
+  assert.deepEqual(app.call({action:'auth-recover-verify',challenge:recovery,code:'123456',ticket:reset}).usernames,['mario','visitor2']);
+  assert.equal(app.call({action:'auth-recover-reset',ticket:reset,username:'visitor2',passwordHash:'c'.repeat(64),passwordSalt:'d'.repeat(32)}).status,200);
+  assert.equal(app.call({action:'auth-recover-reset',ticket:reset,username:'visitor2',passwordHash:'c'.repeat(64),passwordSalt:'d'.repeat(32)}).status,401);
+  assert.equal(app.accounts[1][2],'c'.repeat(64));
 });

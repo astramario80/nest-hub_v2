@@ -18,11 +18,11 @@
   dialog.innerHTML = `<div class="nest-auth-card"><button type="button" class="nest-auth-close" aria-label="Close">×</button>
     <div class="nest-auth-brand"><img src="/assets/nest_menu_icon.png" alt="NEST™ logo"><h2>NEST™ Account</h2></div><p data-message role="status" aria-live="polite">Sign in to use your NEST tools.</p>
     <nav class="nest-auth-tabs" aria-label="Account options"><button type="button" data-mode="login">Sign in</button><button type="button" data-mode="register-request">Create account</button></nav>
-    <form data-form="login"><label>Username<input name="username" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Sign in</button></form>
-    <form data-form="register-request" hidden><label>District email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Send verification code</button></form>
+    <form data-form="login"><label>Username<input name="username" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Sign in</button><a href="/profile">Forgot username or password?</a></form>
+    <form data-form="register-request" hidden><label>District email or approved administrator email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Send verification code</button></form>
     <form data-form="register-verify" hidden><label>Six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label><button type="submit">Verify email</button></form>
     <form data-form="register" hidden><p data-verified-email></p><label>Choose a username (start with a letter; 3–32 characters)<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" title="Start with a letter. Use 3–32 letters, numbers, periods, underscores, or hyphens." autocomplete="username" required></label><p data-username-help>Start with a letter. An ID number alone cannot be a username.</p><div data-username-suggestions role="group" aria-label="Username suggestions"><strong>Username ideas</strong><div data-username-options></div><small>Suggestions may already be taken. You can also make your own.</small></div><label>Choose a password (12 or more characters)<input name="password" type="password" minlength="12" maxlength="128" autocomplete="new-password" required></label><label>Stay signed in<select name="duration"><option value="session">Until I close the browser (shared computer)</option><option value="1d">1 day</option><option value="7d">7 days</option><option value="30d">30 days</option></select></label><button type="submit">Create account</button></form>
-    <div data-account hidden><button type="button" data-account-close>Continue to NEST</button><button type="button" data-account-logout>Log out</button></div>
+    <div data-account hidden><a href="/profile">Your profile</a><button type="button" data-account-close>Continue to NEST</button><button type="button" data-account-logout>Log out</button></div>
   </div>`;
   document.body.append(dialog);
   const message = dialog.querySelector('[data-message]');
@@ -47,7 +47,7 @@
     dialog.querySelector('.nest-auth-tabs').hidden = value === 'account';
     dialog.querySelector('[data-account]').hidden = value !== 'account';
     dialog.querySelectorAll('[data-mode]').forEach(button => button.setAttribute('aria-current', String(button.dataset.mode === value)));
-    message.textContent = value === 'account' ? `Signed in as ${identity.username}.` : value === 'login' ? 'Sign in to use your NEST tools.' : value === 'register-request' ? 'Enter your district email to create an account.' : value === 'register-verify' ? 'Enter the code sent to your district email.' : 'Choose your NEST username and password.';
+    message.textContent = value === 'account' ? `Signed in as ${identity.username}.` : value === 'login' ? 'Sign in to use your NEST tools.' : value === 'register-request' ? 'Enter your district email or approved administrator email to create an account.' : value === 'register-verify' ? 'Enter the code sent to your email.' : 'Choose your NEST username and password.';
   }
   function open(selected = 'login') { mode(identity?.signedIn ? 'account' : selected); if (!dialog.open) dialog.showModal(); }
   dialog.querySelector('.nest-auth-close').addEventListener('click', () => dialog.close());
@@ -76,8 +76,9 @@
       list.querySelectorAll('[data-nest-auth-link]').forEach(item => item.remove());
       if (identity?.signedIn) {
         const label = document.createElement('span'); label.dataset.nestAuthLink = ''; label.className = 'nest-auth-identity'; label.textContent = `NEST: ${identity.username}`;
+        const profile = document.createElement('a');profile.dataset.nestAuthLink = '';profile.href = '/profile';profile.textContent = 'Your NEST profile';
         const out = document.createElement('button'); out.type = 'button'; out.dataset.nestAuthLink = ''; out.textContent = 'Log out of NEST'; out.addEventListener('click', logout);
-        list.append(label, out);
+        list.append(label, profile, out);
       } else {
         const login = document.createElement('button'); login.type = 'button'; login.dataset.nestAuthLink = ''; login.textContent = '🔐 NEST Login'; login.addEventListener('click', () => open()); list.append(login);
       }
