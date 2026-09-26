@@ -7,20 +7,20 @@ import {createHash} from 'node:crypto';
 const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Account.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
 function service() {
-  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false,allowedHeader='',recoveryHeader='';
+  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false,allowedHeader='',recoveryHeader='',linkedHeader='';
   const state=new Map(),store={getProperty:key=>state.get(key)||null,setProperty:(key,value)=>state.set(key,value),deleteProperty:key=>state.delete(key),getProperties:()=>Object.fromEntries(state)};
   const cacheState=new Map(),cache={get:key=>cacheState.get(key)?.expires>now?cacheState.get(key).value:null,put:(key,value,seconds)=>cacheState.set(key,{value,expires:now+seconds*1000}),remove:key=>cacheState.delete(key)};
   const lock={tryLock:()=>true,releaseLock:()=>{}};
   const values={
     get(_id,range){
-      if(range.includes('StudentNESTAccess')&&range.includes('I1'))return {values:allowedHeader?[[allowedHeader,recoveryHeader]]:[]};
+      if(range.includes('StudentNESTAccess')&&range.includes('I1'))return {values:allowedHeader?[[allowedHeader,recoveryHeader,linkedHeader]]:[]};
       if(range.includes('StudentNESTAccess'))return {values:accounts};
       if(range.includes("'Imported'"))return {values:leaders};
       if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
       return {values:[]};
     },
-    update(resource,_id,range){if(range.includes('I1')){allowedHeader=resource.values[0][0];recoveryHeader=resource.values[0][1];return {};}if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
-    batchUpdate(resource){for(const item of resource.data){const match=item.range.match(/!([A-I])(\d+)/),row=accounts[Number(match[2])-2],value=item.values[0];if(match[1]==='A')row[0]=value[0];if(match[1]==='C'){row[2]=value[0];row[3]=value[1];}if(match[1]==='F')row[5]=value[0];}return {};},
+    update(resource,_id,range){if(range.includes('I1')){allowedHeader=resource.values[0][0];recoveryHeader=resource.values[0][1];linkedHeader=resource.values[0][2];return {};}if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
+    batchUpdate(resource){for(const item of resource.data){const match=item.range.match(/!([A-I])(\d+)/),row=accounts[Number(match[2])-2],value=item.values[0];if(match[1]==='A')row[0]=value[0];if(match[1]==='C'){row[2]=value[0];row[3]=value[1];}if(match[1]==='E')row[4]=value[0];if(match[1]==='F')row[5]=value[0];}return {};},
     append(resource){accounts.push(resource.values[0]);return {};}
   };
   const batchUpdate=({requests})=>{for(const request of requests){
@@ -30,7 +30,7 @@ function service() {
   }return {};};
   const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},CacheService:{getScriptCache:()=>cache},LockService:{getScriptLock:()=>lock},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
   vm.runInContext(source,ctx);
-  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,setSortFailure:value=>failSort=value,advance:ms=>now+=ms};
+  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),manager:(identity,period)=>ctx.manager_(identity,period),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,setSortFailure:value=>failSort=value,advance:ms=>now+=ms};
 }
 const challenge='a'.repeat(64),ticket='b'.repeat(64),session='c'.repeat(64),ip='d'.repeat(64),email='student@students.bethelsd.org';
 test('registration requires known district email, verified code, and unique username',()=>{
@@ -128,22 +128,47 @@ test('only an active administrator may create a manual account with scoped perio
   const app=service(),owner='mario@memberhq.net',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
   app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
   assert.equal(app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'}).status,200);
-  const request={action:'auth-admin-create',username:'visitor',recoveryEmail:'',passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),periods:['1']};
+  const request={action:'auth-admin-create',username:'visitor',recoveryEmail:'',passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),period:'1',studentEmail:email};
   assert.equal(app.call({...request,session:studentSession}).status,403);
   assert.equal(app.call({...request,session:ownerSession}).status,200);
   assert.equal(app.call({...request,session:ownerSession}).status,409);
   assert.equal(app.accounts[1][8],'1');
   assert.equal(app.accounts[1][9],'');
+  assert.equal(app.accounts[1][10],email);
   assert.equal(app.call({action:'auth-session',email:'manual:visitor',session:studentSession,duration:'1d'}).status,200);
   assert.equal(app.tool({action:'roster',period:'1',session:studentSession}).status,200);
   assert.equal(app.tool({action:'roster',period:'2',session:studentSession}).status,403);
   assert.equal(app.sent.length,0);
 });
+test('administrator lists, edits, and removes a roster-linked student account',()=>{
+  const app=service(),owner='mario@memberhq.net',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
+  app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
+  app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});
+  assert.equal(app.call({action:'auth-admin-roster',session:studentSession,period:'1'}).status,403);
+  assert.equal(app.call({action:'auth-admin-roster',session:ownerSession,period:'1'}).students[0].email,email);
+  const create={action:'auth-admin-create',session:ownerSession,username:'visitor',period:'1',studentEmail:email,passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32)};
+  assert.equal(app.call(create).status,200);
+  assert.equal(app.call({...create,username:'other'}).status,409);
+  assert.equal(app.call({action:'auth-admin-list',session:ownerSession}).accounts[0].studentName,'Student');
+  app.call({action:'auth-session',email:'manual:visitor',session:studentSession,duration:'1d'});
+  app.setLeaders([['Period 1','','Division Manager','Student',email]]);
+  assert.equal(app.manager('manual:visitor','1'),true);
+  assert.equal(app.manager('manual:visitor','2'),false);
+  app.setLeaders([['Period 1','','Safety Officer','Student',email]]);
+  assert.equal(app.manager('manual:visitor','1'),false);
+  app.setLeaders([['Period 1','','Division Manager','Student',email]]);
+  assert.equal(app.tool({action:'roster',period:'1',session:studentSession}).status,200);
+  assert.equal(app.call({action:'auth-admin-edit',session:ownerSession,currentUsername:'visitor',username:'visitor2',passwordHash:'c'.repeat(64),passwordSalt:'d'.repeat(32)}).status,200);
+  assert.equal(app.call({action:'auth-me',session:studentSession}).status,401);
+  assert.equal(app.call({action:'auth-admin-list',session:ownerSession}).accounts[0].username,'visitor2');
+  assert.equal(app.call({action:'auth-admin-remove',session:ownerSession,currentUsername:'visitor2'}).status,200);
+  assert.equal(app.call({action:'auth-admin-list',session:ownerSession}).accounts.length,0);
+});
 test('profile changes revoke old sessions and recovery email carries banner and username',()=>{
   const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
   app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
   app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});
-  assert.equal(app.call({action:'auth-admin-create',session:ownerSession,username:'visitor',recoveryEmail:owner,passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),periods:[]}).status,200);
+  assert.equal(app.call({action:'auth-admin-create',session:ownerSession,username:'visitor',recoveryEmail:owner,passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32),period:'1',studentEmail:email}).status,200);
   app.call({action:'auth-session',email:'manual:visitor',session:studentSession,duration:'1d'});
   assert.equal(app.call({action:'auth-profile-update',session:studentSession,username:'visitor2'}).status,200);
   assert.equal(app.call({action:'auth-me',session:studentSession}).status,401);

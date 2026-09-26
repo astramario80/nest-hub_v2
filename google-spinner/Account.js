@@ -19,18 +19,52 @@ function databaseEmail_(email) {
   return (Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!F2:F").values||[]).some(row=>email_(row[0])===email);
 }
 function accountDispatch_(r,store,now) {
+  if(/^auth-admin-(roster|list|edit|remove)$/.test(r.action||'')) {
+    const session=authSession_(r.session,store,now);
+    if(!session||!OWNER_EMAILS.includes(session.email))return {status:403};
+    if(r.action==='auth-admin-roster') {
+      if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period))return {status:400};
+      return {status:200,students:rows_(r.period).filter(row=>districtEmail_(row[1])).map(row=>({name:row[0],email:row[1]}))};
+    }
+    if(r.action==='auth-admin-list') {
+      const records=accounts_().filter(account=>account.active&&account.email.startsWith('manual:'));
+      const roster={};
+      records.forEach(account=>account.periods.forEach(period=>{if(!roster[period])roster[period]=rows_(period);}));
+      return {status:200,accounts:records.map(account=>({username:account.username,period:account.periods.length===1?account.periods[0]:'',studentEmail:account.linkedEmail||'',studentName:(roster[account.periods[0]]||[]).find(row=>row[1]===account.linkedEmail)?.[0]||'',recoveryEmail:account.recoveryEmail||''}))};
+    }
+    const current=username_(r.currentUsername);
+    if(!current)return {status:400};
+    return withAuthLock_(()=>{
+      const all=accounts_(),account=all.find(item=>item.username===current&&item.email.startsWith('manual:')&&item.active);
+      if(!account)return {status:404};
+      const prefix="'StudentNESTAccess'!";
+      if(r.action==='auth-admin-remove') {
+        authWrite_([{range:prefix+'E'+account.row,values:[[false]]},{range:prefix+'F'+account.row,values:[[account.version+1]]}]);
+        return {status:200};
+      }
+      const name=username_(r.username);
+      if(!name||((r.passwordHash||r.passwordSalt)&&!authHashFields_(r))||(name===account.username&&!r.passwordHash))return {status:400};
+      if(all.some(item=>item.username===name&&item.email!==account.email))return {status:409};
+      const data=[{range:prefix+'A'+account.row,values:[[name]]},{range:prefix+'F'+account.row,values:[[account.version+1]]}];
+      if(r.passwordHash)data.push({range:prefix+'C'+account.row+':D'+account.row,values:[[r.passwordHash,r.passwordSalt]]});
+      authWrite_(data);
+      return {status:200};
+    });
+  }
   if(r.action==='auth-admin-create') {
     const session=authSession_(r.session,store,now),name=username_(r.username),key='manual:'+name,recoveryEmail=districtEmail_(r.recoveryEmail);
-    const periods=Array.isArray(r.periods)?[...new Set(r.periods)]:[];
+    const period=String(r.period||''),studentEmail=districtEmail_(r.studentEmail);
     if(!session||!OWNER_EMAILS.includes(session.email))return {status:403};
-    if(!name||!authHashFields_(r)||(r.recoveryEmail&&(!recoveryEmail||!databaseEmail_(recoveryEmail)))||periods.length>7||periods.some(value=>!Object.prototype.hasOwnProperty.call(PERIODS,value)))return {status:400};
+    if(!name||!authHashFields_(r)||!Object.prototype.hasOwnProperty.call(PERIODS,period)||!studentEmail||(r.recoveryEmail&&(!recoveryEmail||!databaseEmail_(recoveryEmail))))return {status:400};
     return withAuthLock_(()=>{
       const all=accounts_();
       if(all.some(account=>account.username===name||account.email===key))return {status:409};
-      const header=(Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'StudentNESTAccess'!I1:J1").values||[])[0]||[];
-      if((header[0]&&header[0]!=='Allowed Periods')||(header[1]&&header[1]!=='Recovery Email'))return {status:503};
-      Sheets.Spreadsheets.Values.update({values:[['Allowed Periods','Recovery Email']]},NEST_DATABASE,"'StudentNESTAccess'!I1:J1",{valueInputOption:'RAW'});
-      Sheets.Spreadsheets.Values.append({values:[[name,key,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),'',periods.join(','),recoveryEmail]]},NEST_DATABASE,AUTH_SHEET,{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'});
+      if(all.some(account=>account.active&&account.linkedEmail===studentEmail))return {status:409};
+      if(rows_(period).filter(row=>row[1]===studentEmail).length!==1)return {status:400};
+      const header=(Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'StudentNESTAccess'!I1:K1").values||[])[0]||[];
+      if((header[0]&&header[0]!=='Allowed Periods')||(header[1]&&header[1]!=='Recovery Email')||(header[2]&&header[2]!=='Linked Student Email'))return {status:503};
+      Sheets.Spreadsheets.Values.update({values:[['Allowed Periods','Recovery Email','Linked Student Email']]},NEST_DATABASE,"'StudentNESTAccess'!I1:K1",{valueInputOption:'RAW'});
+      Sheets.Spreadsheets.Values.append({values:[[name,key,r.passwordHash,r.passwordSalt,true,1,new Date(now).toISOString(),'',period,recoveryEmail,studentEmail]]},NEST_DATABASE,AUTH_SHEET,{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'});
       CacheService.getScriptCache().remove('auth-directory-v1');
       return {status:200};
     });

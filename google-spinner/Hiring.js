@@ -4,11 +4,11 @@ function hiringRows_() {return Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABAS
 function hiringPermissions_(email,period,rows) {
   if(OWNER_EMAILS.includes(email_(email)))return {canReview:true,canManage:true};
   rows=rows||hiringRows_();
-  const normalized=email_(email);
+  const normalized=memberEmail_(email,period),ctsoEmail=memberEmail_(email,'CTSO');
   const own=rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&
     /^(division manager|assistant manager)$/i.test(String(row[2]||'').trim())&&email_(row[4])===normalized);
   const executive=rows.some(row=>String(row[0]||'').trim().toUpperCase()==='CTSO'&&
-    /^chief (executive|financial|operations) officer$/i.test(String(row[2]||'').trim())&&email_(row[4])===normalized);
+    /^chief (executive|financial|operations) officer$/i.test(String(row[2]||'').trim())&&email_(row[4])===ctsoEmail);
   return {canReview:own||executive,canManage:own};
 }
 function hiringWorkbook_(period,rows) {

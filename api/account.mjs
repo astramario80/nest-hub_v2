@@ -28,12 +28,36 @@ export default async function handler(req,res) {
       const admin=await current(jar);
       if(!admin||!owners.has(admin.email))return fail(res,403,'Only a NEST administrator can create accounts.');
       const name=username(body.username),recoveryEmail=body.recoveryEmail?districtEmail(body.recoveryEmail):'';
-      const allowed=Array.isArray(body.periods)?[...new Set(body.periods)]:[];
-      if(!name||!passwordValid(body.password)||(body.recoveryEmail&&!recoveryEmail)||allowed.some(value=>!periods.has(value)))return fail(res,400,'Check username, password, district recovery email and divisions. Passwords need at least 12 characters.');
-      const data=await bridge({action:'auth-admin-create',session:jar[COOKIE],username:name,recoveryEmail,periods:allowed,...hashFields(body.password)},30000);
-      if(data.status===409)return fail(res,409,'That username or email already has an account.');
-      if(data.status!==200)return fail(res,data.status===400?400:503,'The account could not be created. The recovery address must be in the NEST database.');
-      return res.status(200).json({username:name,recoveryEmail:recoveryEmail||null,periods:allowed});
+      const studentEmail=districtEmail(body.studentEmail);
+      if(!name||!passwordValid(body.password)||(body.recoveryEmail&&!recoveryEmail)||!periods.has(body.period)||!studentEmail)return fail(res,400,'Choose a student and enter a username and password of at least 12 characters.');
+      const data=await bridge({action:'auth-admin-create',session:jar[COOKIE],username:name,recoveryEmail,period:body.period,studentEmail,...hashFields(body.password)},30000);
+      if(data.status===409)return fail(res,409,'That username or student already has an account.');
+      if(data.status!==200)return fail(res,data.status===400?400:503,'The account could not be created. Check the student roster and recovery address.');
+      return res.status(200).json({username:name,studentEmail,period:body.period});
+    }
+    if(['admin-roster','admin-list','admin-edit','admin-remove'].includes(body.action)) {
+      const admin=await current(jar);
+      if(!admin||!owners.has(admin.email))return fail(res,403,'Only a NEST administrator can manage accounts.');
+      if(body.action==='admin-roster') {
+        if(!periods.has(body.period))return fail(res,400,'Choose a period.');
+        const data=await bridge({action:'auth-admin-roster',session:jar[COOKIE],period:body.period},30000);
+        return data.status===200?res.status(200).json({students:data.students}):fail(res,503,'The student list is unavailable.');
+      }
+      if(body.action==='admin-list') {
+        const data=await bridge({action:'auth-admin-list',session:jar[COOKIE]},30000);
+        return data.status===200?res.status(200).json({accounts:data.accounts}):fail(res,503,'The account list is unavailable.');
+      }
+      const currentUsername=username(body.currentUsername);
+      if(!currentUsername)return fail(res,400,'Choose an account.');
+      if(body.action==='admin-remove') {
+        const data=await bridge({action:'auth-admin-remove',session:jar[COOKIE],currentUsername},30000);
+        return data.status===200?res.status(200).json({message:'Account access removed.'}):fail(res,data.status===404?404:503,'The account could not be removed.');
+      }
+      const name=username(body.username);
+      if(!name||(body.password&&!passwordValid(body.password))||(!body.password&&name===currentUsername))return fail(res,400,'Enter a new username or a password of at least 12 characters.');
+      const data=await bridge({action:'auth-admin-edit',session:jar[COOKIE],currentUsername,username:name,...(body.password?hashFields(body.password):{})},30000);
+      if(data.status===409)return fail(res,409,'That username is already taken.');
+      return data.status===200?res.status(200).json({message:'Account updated. Existing sign-ins were revoked.'}):fail(res,data.status===404?404:503,'The account could not be updated.');
     }
     if(body.action==='admin-reset') {
       const admin=await current(jar),name=username(body.username);

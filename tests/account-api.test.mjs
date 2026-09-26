@@ -20,9 +20,22 @@ test('manual account creation requires an administrator and district recovery ad
     const cookie='__Host-nest-auth='+session;
     res=response();await account(request('admin-create',{username:'student1',password:'twelve characters',recoveryEmail:'outsider@example.org'},cookie),res);
     assert.equal(res.code,400);assert.deepEqual(calls.map(item=>item.action),['auth-me']);
-    res=response();await account(request('admin-create',{username:'student1',password:'twelve characters',recoveryEmail:'mpenalver@bethelsd.org',periods:['1']},cookie),res);
+    res=response();await account(request('admin-create',{username:'student1',password:'twelve characters',recoveryEmail:'mpenalver@bethelsd.org',period:'1',studentEmail:'student@students.bethelsd.org'},cookie),res);
     assert.equal(res.code,200);assert.deepEqual(calls.map(item=>item.action),['auth-me','auth-me','auth-admin-create']);
     assert.equal(calls[2].recoveryEmail,'mpenalver@bethelsd.org');assert.ok(!JSON.stringify(calls[2]).includes('twelve characters'));
+  }finally{restore();}
+});
+test('account listing and edits require an owner and never return password hashes',async()=>{
+  const calls=[];const restore=withBridge(payload=>{calls.push(payload);if(payload.action==='auth-me')return {status:200,email:'mario@memberhq.net'};if(payload.action==='auth-admin-list')return {status:200,accounts:[{username:'student1',studentName:'Test Student',period:'1'}]};return {status:200};});
+  try{
+    const cookie='__Host-nest-auth='+session;
+    let res=response();await account(request('admin-list'),res);assert.equal(res.code,403);
+    res=response();await account(request('admin-list',{},cookie),res);assert.equal(res.code,200);assert.equal(res.data.accounts[0].studentName,'Test Student');
+    res=response();await account(request('admin-edit',{currentUsername:'student1',username:'student2',password:'a long new password'},cookie),res);
+    assert.equal(res.code,200);assert.ok(!JSON.stringify(res.data).includes('passwordHash'));
+    assert.equal(calls.at(-1).action,'auth-admin-edit');assert.ok(!JSON.stringify(calls.at(-1)).includes('a long new password'));
+    res=response();await account(request('admin-remove',{currentUsername:'student2'},cookie),res);assert.equal(res.code,200);
+    assert.equal(calls.at(-1).action,'auth-admin-remove');
   }finally{restore();}
 });
 test('recovery rejects personal addresses and keeps unknown district accounts private',async()=>{

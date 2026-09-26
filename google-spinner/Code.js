@@ -78,6 +78,13 @@ function rows_(period) {
   const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];
   return rows.filter(row=>row[0] && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).map(row=>[String(row[0]).trim(),email_(row[2])]);
 }
+function memberEmail_(identity,period) {
+  const key=email_(identity);
+  if(!key.startsWith('manual:'))return key;
+  const account=accountByEmail_(key);
+  if(!account||!account.active||!account.linkedEmail||!account.periods.includes(period))return key;
+  return rows_(period).some(row=>email_(row[1])===account.linkedEmail)?account.linkedEmail:key;
+}
 function globalAccess_(email) {
   email=email_(email);if(OWNER_EMAILS.includes(email))return true;
   const result=Sheets.Spreadsheets.get(NEST_DATABASE,{ranges:["'Location_Lists_Inventory_OSPI_21stCenturySkills'!T2:T20"],fields:'sheets(data(rowData(values(hyperlink,textFormatRuns,userEnteredValue))))'});
@@ -91,9 +98,9 @@ function globalAccess_(email) {
 function manualPeriodAccess_(email,period) {
   if(typeof accountByEmail_!=='function')return false;
   const account=accountByEmail_(email);
-  return Boolean(account&&account.active&&account.periods.includes(period));
+  return Boolean(account&&account.active&&!account.linkedEmail&&account.periods.includes(period));
 }
-function authorized_(rows,email,period) { return rows.some(row=>email_(row[1])===email_(email)) || globalAccess_(email) || (period && (manualPeriodAccess_(email,period) || manager_(email,period) || Boolean(editorGrant_(email,period)))); }
+function authorized_(rows,email,period) { return rows.some(row=>email_(row[1])===memberEmail_(email,period)) || globalAccess_(email) || (period && (manualPeriodAccess_(email,period) || manager_(email,period) || Boolean(editorGrant_(email,period)))); }
 function read_(store,key,now) {
   const raw=store.getProperty(key); if(!raw) return null;
   const value=JSON.parse(raw); if(value.expires<=now) {store.deleteProperty(key);return null;} return value;

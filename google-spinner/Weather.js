@@ -14,7 +14,7 @@ function weatherRole_(email,period,leaders) {
   if(OWNER_EMAILS.includes(email_(email)))return true;
   leaders=leaders||Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   return leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period.toUpperCase() &&
-    /^(division manager|assistant manager|partner liaison|parnter liaison)$/i.test(String(row[2]||'').trim()) && email_(row[4])===email_(email));
+    /^(division manager|assistant manager|partner liaison|parnter liaison)$/i.test(String(row[2]||'').trim()) && email_(row[4])===memberEmail_(email,period));
 }
 function weatherForMember_(email,period,page) {
   if(period==='mine') {

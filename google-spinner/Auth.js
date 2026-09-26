@@ -1,5 +1,5 @@
 // NEST account records live in StudentNESTAccess. Only salted hashes are stored.
-const AUTH_SHEET = "'StudentNESTAccess'!A2:J";
+const AUTH_SHEET = "'StudentNESTAccess'!A2:K";
 const AUTH_DURATIONS = {session:43200000,'1d':86400000,'7d':604800000,'30d':2592000000};
 // Run once in the school-owned editor after changing the manifest's Sheets scope.
 function authorizeNestAuth() {
@@ -27,7 +27,7 @@ function username_(value) {
 }
 function accounts_() {
   const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,AUTH_SHEET).values||[];
-  return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:accountEmail_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1,periods:String(row[8]||'').split(',').filter(value=>Object.prototype.hasOwnProperty.call(PERIODS,value)),recoveryEmail:districtEmail_(row[9])||(OWNER_EMAILS.includes(email_(row[9]))?email_(row[9]):'')||districtEmail_(row[1])||(OWNER_EMAILS.includes(email_(row[1]))?email_(row[1]):'')})).filter(a=>a.email);
+  return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:accountEmail_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1,periods:String(row[8]||'').split(',').filter(value=>Object.prototype.hasOwnProperty.call(PERIODS,value)),recoveryEmail:districtEmail_(row[9])||(OWNER_EMAILS.includes(email_(row[9]))?email_(row[9]):'')||districtEmail_(row[1])||(OWNER_EMAILS.includes(email_(row[1]))?email_(row[1]):''),linkedEmail:districtEmail_(row[10])})).filter(a=>a.email);
 }
 function accountByEmail_(email) {return accounts_().find(a=>a.email===email_(email));}
 function withAuthLock_(work) {
@@ -81,7 +81,7 @@ function authSession_(raw,store,now) {
 }
 function authDispatch_(r) {
   const store=PropertiesService.getScriptProperties(),now=Date.now();
-  if(/^auth-(admin-create|admin-reset|profile-read|profile-update|recover-request|recover-verify|recover-reset)$/.test(r.action||''))return accountDispatch_(r,store,now);
+  if(/^auth-(admin-create|admin-roster|admin-list|admin-edit|admin-remove|admin-reset|profile-read|profile-update|recover-request|recover-verify|recover-reset)$/.test(r.action||''))return accountDispatch_(r,store,now);
   if(Number(store.getProperty('auth-cleanup')||0)<now-3600000){
     const lock=LockService.getScriptLock();
     if(lock.tryLock(100))try{
@@ -195,7 +195,7 @@ function authDispatch_(r) {
     const session=authSession_(r.session,store,now);
     if(!session)return {status:401};
     const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
-    const technician=leaders.some(row=>email_(row[4])===session.email&&/^software technician$/i.test(String(row[2]||'').trim()));
+    const technician=leaders.some(row=>email_(row[4])===memberEmail_(session.email,String(row[0]||'').replace(/period/ig,'').trim().toUpperCase())&&/^software technician$/i.test(String(row[2]||'').trim()));
     return {status:technician?200:403};
   }
   if(r.action==='auth-logout') {

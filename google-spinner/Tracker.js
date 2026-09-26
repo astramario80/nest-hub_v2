@@ -26,7 +26,7 @@ function trackerSave_(data) {
 const LEADERSHIP_DATABASE = '1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I';
 function manager_(email,period) {
   const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
-  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period && ['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase()) && email_(row[4])===email_(email));
+  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period && ['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase()) && email_(row[4])===memberEmail_(email,period));
 }
 function grantRecord_(store,key,now) {
   const raw=store.getProperty(key);if(!raw)return null;
