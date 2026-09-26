@@ -823,6 +823,21 @@ function parseCSV(str) {
 
 // Mobile Dropdown Logic
 document.addEventListener('DOMContentLoaded', () => {
+    const qr = document.querySelector('.header-qr');
+    if (qr) {
+        const setQrOpen = open => {
+            qr.classList.toggle('is-expanded', open);
+            qr.setAttribute('aria-expanded', String(open));
+            qr.setAttribute('aria-label', open ? 'Collapse QR code' : 'Enlarge QR code');
+        };
+        qr.addEventListener('click', () => setQrOpen(!qr.classList.contains('is-expanded')));
+        document.addEventListener('click', event => {
+            if (!qr.contains(event.target)) setQrOpen(false);
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape') setQrOpen(false);
+        });
+    }
     // Header dropdowns
     const headerBtns = document.querySelectorAll('.dropdown-btn');
     headerBtns.forEach(btn => {

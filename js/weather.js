@@ -58,7 +58,7 @@
   }
   async function load(){
     request++;selected='';allowed=[];section.hidden=true;pages.hidden=true;renderButtons([]);
-    if(!window.NestAuth?.identity?.signedIn){status.replaceChildren('Sign in to view your division’s report data. ');const sign=document.createElement('button');sign.type='button';sign.textContent='NEST sign in';sign.addEventListener('click',()=>window.NestAuth?.open());status.append(sign);return;}
+    if(!window.NestAuth?.identity?.signedIn){status.textContent='Sign in from Quick Links above to view your division’s report data.';return;}
     status.textContent='Checking division access…';
     try{const data=await get('mine');if(!window.NestAuth?.identity?.signedIn)return;allowed=data.periods;renderButtons(allowed);status.textContent=allowed.length?'Choose a division above to view its charts and responses.':'Your NEST account does not have weather report access.';}
     catch(error){status.textContent=error.message;}

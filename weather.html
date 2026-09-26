@@ -4,14 +4,26 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NEST™ Weather Report</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="stylesheet" href="/css/styles.css?v=qr-click-1">
   <link rel="stylesheet" href="/css/nest-auth.css">
   <link rel="stylesheet" href="/css/internal-workspaces.css">
 </head>
 <body>
+  <div class="bg-watermark"></div>
   <header class="internal-header">
-    <a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a>
-    <nav><a href="/">Menu</a></nav>
+    <div class="logo-container"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a></div>
+    <div class="header-right">
+      <div id="today-date" class="date-display">Today is...</div>
+      <div class="header-dropdown">
+        <button class="dropdown-btn" aria-haspopup="true">Quick Links ▾</button>
+        <div class="dropdown-content">
+          <a href="https://portal.bethelsd.org" target="_blank" rel="noopener noreferrer">StudentVue</a>
+          <a href="https://app.smartpass.app/main/passes" target="_blank" rel="noopener noreferrer">SmartPass</a>
+          <a href="/hiring">🚀 Join Us</a>
+        </div>
+      </div>
+      <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false"><img src="/assets/qr-code.png" alt="QR Code"></button>
+    </div>
   </header>
   <main class="internal-page">
     <h1>Weather Report</h1>
@@ -36,7 +48,32 @@
       <p class="internal-muted">If the form does not load, <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank" rel="noopener noreferrer">open it in Google Forms</a>.</p>
     </section>
   </main>
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+      <div class="footer-links">
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help &amp; Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank" rel="noopener noreferrer">💻 Computer Look-up</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank" rel="noopener noreferrer">🎫 Tech Ticket</a>
+            <a href="/weather">🌤️ Weather Report</a>
+          </div>
+        </div>
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mpenalver@bethelsd.org" target="_blank" rel="noopener noreferrer">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
   <script src="/js/nest-auth.js"></script>
+  <script src="/js/main.js"></script>
   <script src="/js/weather.js"></script>
 </body>
 </html>

@@ -1264,22 +1264,28 @@ main.bell-layout {
     justify-content: center;
     cursor: pointer;
     position: relative;
+    flex: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
 }
 
 .header-qr img {
     height: 40px;
     width: 40px;
     border-radius: 4px;
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
+    transform-origin: top right;
     background: white;
     padding: 2px;
 }
 
-.header-qr:hover img {
-    transform: scale(2.5);
-    z-index: 200;
+.header-qr.is-expanded { z-index: 1000; }
+.header-qr.is-expanded img {
+    transform: scale(3.5);
     box-shadow: 0 4px 15px rgba(0,0,0,0.5);
 }
+.header-qr:focus-visible { outline: 2px solid var(--primary-orange); outline-offset: 4px; }
 
 /* ====== FOOTER DROPDOWNS ====== */
 .footer-links {
