@@ -1,6 +1,16 @@
 .header-dropdown .dropdown-content [data-nest-auth-link]{display:block;width:100%;box-sizing:border-box;padding:10px 14px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .header-dropdown .dropdown-content [data-nest-auth-link]:hover{background:rgba(128,160,196,.18)}
 .header-dropdown .dropdown-content .nest-auth-identity{cursor:default;font-weight:700}
+.header-dropdown .dropdown-content .nest-auth-user-menu{border-top:1px solid rgba(255,255,255,.22);padding:0}
+.header-dropdown .dropdown-content .nest-auth-user-toggle{display:block;width:100%;border:0;background:transparent;color:var(--text-light);padding:12px 16px;font:inherit;text-align:left;cursor:pointer}
+.header-dropdown .dropdown-content .nest-auth-user-toggle:hover{background:rgba(128,160,196,.18)}
+.header-dropdown .dropdown-content .nest-auth-user-toggle{font-weight:700}
+.header-dropdown .dropdown-content .nest-auth-user-toggle::after{content:' ▾';float:right}
+.header-dropdown .dropdown-content .nest-auth-user-toggle[aria-expanded=true]::after{content:' ▴'}
+.header-dropdown .dropdown-content .nest-auth-user-options[hidden]{display:none!important}
+.header-dropdown .dropdown-content .nest-auth-user-options{padding-left:12px;background:rgba(255,255,255,.06)}
+.header-dropdown .dropdown-content .nest-auth-user-options a,.header-dropdown .dropdown-content .nest-auth-user-options button{display:block;width:100%;box-sizing:border-box;padding:10px 14px;border:0;background:transparent;color:var(--text-light);font:inherit;text-align:left;text-decoration:none;cursor:pointer}
+.header-dropdown .dropdown-content .nest-auth-user-options a:hover,.header-dropdown .dropdown-content .nest-auth-user-options button:hover{background:rgba(128,160,196,.18)!important;transform:none!important}
 .nest-auth-dialog{width:min(440px,calc(100vw - 30px));max-height:calc(100vh - 30px);border:0;border-radius:18px;padding:0;color:#1a2432;box-shadow:0 20px 70px #0008}
 .nest-auth-dialog::backdrop{background:#0b1c31aa}
 .nest-auth-card{position:relative;padding:28px;overflow:auto;max-height:calc(100vh - 30px)}

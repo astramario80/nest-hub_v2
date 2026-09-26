@@ -1,7 +1,82 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEST™ Profile</title><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/internal-workspaces.css"></head>
-<body><header class="internal-header"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a><nav><a href="/">Menu</a></nav></header>
-<main class="internal-page"><h1>Your NEST profile</h1><p id="profile-status" role="status">Checking your account…</p>
-<section class="internal-card" id="profile-signed-in" hidden><h2>Account details</h2><p id="profile-identity"></p><form id="profile-form" class="internal-form"><label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" required></label><label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label><label>New password (leave blank to keep it)<input name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128"></label><button type="submit">Save profile</button></form><p>Changing your username or password signs out your other sessions.</p><p><a id="profile-admin" href="/admin-accounts" hidden>Manage NEST accounts</a></p></section>
-<section class="internal-card" id="profile-signed-out" hidden><h2>Recover a username or password</h2><p>Enter the district recovery address on your NEST account. The message includes linked usernames and a code to reset one account’s password.</p><form id="recover-request" class="internal-form"><label>District recovery email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Email recovery code</button></form><form id="recover-verify" class="internal-form" hidden><label>Six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label><button type="submit">Verify code</button></form><form id="recover-reset" class="internal-form" hidden><label>Account to reset<select name="username" required></select></label><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button type="submit">Reset password</button></form><p>If your account has no reachable email, ask a NEST administrator to reset it.</p><button type="button" id="profile-login">NEST sign in</button></section>
-</main><script src="/js/nest-auth.js"></script><script src="/js/profile.js"></script></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Your NEST™ Profile</title>
+  <link rel="icon" href="/assets/nest_menu_icon.png" type="image/png">
+  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/internal-workspaces.css">
+</head>
+<body>
+  <div class="bg-watermark"></div>
+  <header class="internal-header">
+    <div class="logo-container"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo"></a></div>
+    <div class="header-right">
+      <div id="today-date" class="date-display">Today is...</div>
+      <div class="header-dropdown"><button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button><div class="dropdown-content">
+        <a href="https://portal.bethelsd.org" target="_blank" rel="noopener noreferrer">StudentVue</a>
+        <a href="https://app.smartpass.app/main/passes" target="_blank" rel="noopener noreferrer">SmartPass</a>
+        <a href="/hiring">🚀 Join Us</a>
+      </div></div>
+      <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false"><img src="/assets/qr-code.png" alt="QR Code"></button>
+    </div>
+  </header>
+  <main class="internal-page">
+    <h1>Your NEST profile</h1><p id="profile-status" role="status">Checking your account…</p>
+    <div id="profile-signed-in" hidden>
+      <nav id="profile-tabs" class="profile-tabs" role="tablist" aria-label="Profile sections">
+        <button type="button" id="profile-details-tab" role="tab" aria-controls="profile-details-panel" aria-selected="true">My profile</button>
+        <button type="button" id="profile-admin-tab" role="tab" aria-controls="profile-admin-panel" aria-selected="false" hidden>Student accounts</button>
+      </nav>
+      <section class="internal-card" id="profile-details-panel" role="tabpanel" aria-labelledby="profile-details-tab">
+        <h2>Change username or password</h2><p id="profile-identity"></p>
+        <form id="profile-form" class="internal-form">
+          <label>Username<input name="username" autocomplete="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" required></label>
+          <label>Current password<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+          <label>New password (leave blank to keep it)<input name="newPassword" type="password" autocomplete="new-password" minlength="12" maxlength="128"></label>
+          <button type="submit">Save profile</button>
+        </form>
+        <p>Changing your username or password signs out your other sessions.</p>
+      </section>
+      <section class="internal-card" id="profile-admin-panel" role="tabpanel" aria-labelledby="profile-admin-tab" hidden>
+        <h2>Student account management</h2><p id="admin-status" role="status">Checking administrator access…</p>
+        <div id="admin-tools" hidden>
+          <section class="account-management-section"><h3>Create a student account</h3><p>Choose a period and a student from the live roster. Their district email and current leadership role determine their NEST access. Give the generated username and password to the student directly. A recovery address is optional; it must be an approved district address, and you may use your own.</p>
+            <form id="admin-create" class="internal-form">
+              <label>Period<select name="period" id="admin-period" required><option value="">Choose a period</option><option value="1">Period 1</option><option value="2">Period 2</option><option value="3">Period 3</option><option value="4">Period 4</option><option value="5">Period 5</option><option value="7">Period 7</option><option value="CTSO">NEST Robotics</option></select></label>
+              <label>Student<select name="studentEmail" id="admin-student" required disabled><option value="">Choose a period first</option></select></label>
+              <label>Student district email<input id="admin-student-email" type="email" readonly aria-label="Student district email"></label>
+              <label>Username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" autocomplete="off" required></label>
+              <label>Temporary password (12 or more characters)<input name="password" type="text" minlength="12" maxlength="128" autocomplete="off" required></label>
+              <button type="button" id="admin-generate">Generate username and password</button>
+              <label>District recovery email, if available<input name="recoveryEmail" type="email" maxlength="254" autocomplete="off"></label>
+              <button type="submit">Create account</button>
+            </form>
+          </section>
+          <section class="account-management-section"><h3>Created accounts</h3><p>Passwords are never displayed again. Editing a username, setting a new password, or removing access signs that account out everywhere.</p><div id="admin-accounts-list" class="account-list" aria-live="polite">Loading accounts…</div></section>
+        </div>
+      </section>
+    </div>
+    <section class="internal-card" id="profile-signed-out" hidden>
+      <h2>Recover a username or password</h2><p>Enter the district recovery address on your NEST account. The message includes linked usernames and a code to reset one account’s password.</p>
+      <form id="recover-request" class="internal-form"><label>District recovery email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Email recovery code</button></form>
+      <form id="recover-verify" class="internal-form" hidden><label>Six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label><button type="submit">Verify code</button></form>
+      <form id="recover-reset" class="internal-form" hidden><label>Account to reset<select name="username" required></select></label><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button type="submit">Reset password</button></form>
+      <p>If your account has no reachable email, ask a NEST administrator to reset it.</p><button type="button" id="profile-login">NEST sign in</button>
+    </section>
+  </main>
+  <footer class="site-footer"><div class="footer-content">
+    <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+    <div class="footer-links"><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">Help &amp; Support ▾</span><div class="footer-dropdown-content">
+      <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank" rel="noopener noreferrer">💻 Computer Look-up</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank" rel="noopener noreferrer">🎫 Tech Ticket</a>
+      <a href="/weather">🌤️ Weather Report</a>
+    </div></div><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span><div class="footer-dropdown-content">
+      <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mpenalver@bethelsd.org" target="_blank" rel="noopener noreferrer">Email me</a>
+      <a href="tel:2538006221">253.800.6221</a>
+      <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+      <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </div></div></div>
+  </div></footer>
+  <script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js"></script>
+</body>
+</html>

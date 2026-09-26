@@ -70,6 +70,6 @@
     try{const result=await request('admin-create',Object.fromEntries(new FormData(create)));status.textContent=`Created ${result.username}. Give the username and password to the student directly.`;create.reset();student.disabled=true;student.replaceChildren(new Option('Choose a period first',''));studentEmail.value='';await refresh();}
     catch(error){message(error);}finally{button.disabled=false;}
   });
-  async function show(){const identity=window.NestAuth?.identity;const allowed=!!identity&&owners.has(String(identity.email).toLowerCase());tools.hidden=!allowed;status.textContent=allowed?'Administrator access confirmed.':'Sign in with a NEST administrator account to manage accounts.';if(allowed&&!loaded){loaded=true;await refresh();}if(!allowed)loaded=false;}
-  document.addEventListener('nest-auth-change',show);window.NestAuth?.ready.then(show);
+  async function show(){const identity=window.NestAuth?.identity;const allowed=!!identity&&owners.has(String(identity.email).toLowerCase());tools.hidden=!allowed;status.textContent=allowed?'Administrator access confirmed.':'Sign in with a NEST administrator account to manage accounts.';if(allowed&&!loaded&&!document.getElementById('profile-admin-panel').hidden){loaded=true;await refresh();}if(!allowed)loaded=false;}
+  document.addEventListener('nest-auth-change',show);document.addEventListener('nest-profile-tab-change',show);window.NestAuth?.ready.then(show);
 })();

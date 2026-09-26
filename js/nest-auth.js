@@ -75,15 +75,26 @@
       if (!list.closest('.header-dropdown')) return;
       list.querySelectorAll('[data-nest-auth-link]').forEach(item => item.remove());
       if (identity?.signedIn) {
-        const label = document.createElement('span'); label.dataset.nestAuthLink = ''; label.className = 'nest-auth-identity'; label.textContent = `NEST: ${identity.username}`;
-        const profile = document.createElement('a');profile.dataset.nestAuthLink = '';profile.href = '/profile';profile.textContent = 'Your NEST profile';
-        const out = document.createElement('button'); out.type = 'button'; out.dataset.nestAuthLink = ''; out.textContent = 'Log out of NEST'; out.addEventListener('click', logout);
-        list.append(label, profile, out);
+        const account = document.createElement('div');account.dataset.nestAuthLink = '';account.className = 'nest-auth-user-menu';
+        const toggle = document.createElement('button');toggle.type = 'button';toggle.className = 'nest-auth-user-toggle';toggle.textContent = identity.username;toggle.setAttribute('aria-expanded','false');toggle.setAttribute('aria-haspopup','true');
+        const options = document.createElement('div');options.className = 'nest-auth-user-options';options.hidden = true;
+        const profile = document.createElement('a');profile.href = '/profile';profile.textContent = 'Profile';
+        const out = document.createElement('button');out.type = 'button';out.textContent = 'Log out';out.addEventListener('click', logout);
+        toggle.addEventListener('click', event => {event.stopPropagation();const open = options.hidden;document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});options.hidden = !open;toggle.setAttribute('aria-expanded',String(open));});
+        account.append(toggle,options);options.append(profile,out);list.append(account);
       } else {
-        const login = document.createElement('button'); login.type = 'button'; login.dataset.nestAuthLink = ''; login.textContent = '🔐 NEST Login'; login.addEventListener('click', () => open()); list.append(login);
+        const login = document.createElement('button'); login.type = 'button'; login.dataset.nestAuthLink = ''; login.textContent = 'Log in'; login.addEventListener('click', () => open()); list.append(login);
       }
     });
   }
+  document.addEventListener('click', event => {
+    if (event.target.closest('.nest-auth-user-menu')) return;
+    document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});
+  });
   async function logout() {
     try { await api('logout'); } catch (error) { alert(error.message); return; }
     identity = null; refreshLinks(); changed();
@@ -96,6 +107,6 @@
     refreshLinks(); changed();
     return identity;
   }
-  const ready = refresh().catch(() => null);
+  const ready = refresh().catch(() => { identity = null; refreshLinks(); changed(); return null; });
   window.NestAuth = { ready, refresh, open, logout, get identity() { return identity; } };
 })();
