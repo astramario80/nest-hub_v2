@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEST™ Computer Lookup</title>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/computer-lookup.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="bg-watermark"></div>
+  <header>
+    <div class="logo-container"><a href="/"><img src="/assets/nest_menu_icon.png" alt="NEST™ home" class="logo" /></a></div>
+    <a class="lookup-home" href="/">Menu</a>
+  </header>
+  <main class="lookup-page">
+    <h1>Computer Lookup</h1>
+    <p class="lookup-intro">Find a computer by station or BSD serial number.</p>
+    <section class="lookup-card" aria-label="Computer lookup filters">
+      <div class="lookup-controls">
+        <label for="station-filter">Station
+          <select id="station-filter" disabled><option value="">All stations</option></select>
+        </label>
+        <label for="serial-filter">BSD serial number
+          <select id="serial-filter" disabled><option value="">All serial numbers</option></select>
+        </label>
+        <button type="button" id="lookup-refresh">↻ Refresh</button>
+      </div>
+      <p id="lookup-status" role="status" aria-live="polite">Loading computers…</p>
+      <div class="lookup-table-wrap">
+        <table aria-label="Matching computers">
+          <thead><tr><th scope="col">Station</th><th scope="col">BSD serial number</th></tr></thead>
+          <tbody id="lookup-results"></tbody>
+        </table>
+      </div>
+      <p class="lookup-source">Source: <a href="https://docs.google.com/spreadsheets/d/1WlFSdQPYNSr6d8ucjFsqL7S0nY9fpia2pRAmcPNKY5A/edit?gid=964034172#gid=964034172" target="_blank" rel="noopener noreferrer">Station Lookup spreadsheet ↗</a></p>
+    </section>
+  </main>
+  <script src="/js/computer-lookup.js"></script>
+</body>
+</html>
