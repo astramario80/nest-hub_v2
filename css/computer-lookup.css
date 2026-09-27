@@ -1,7 +1,6 @@
 .lookup-page{width:min(940px,calc(100% - 32px));margin:48px auto 80px;flex:1;position:relative}
 .lookup-page h1{color:var(--primary-orange);font-size:clamp(2rem,5vw,3rem);margin-bottom:10px}
 .lookup-intro{color:#d3d3d3;line-height:1.5;margin-bottom:26px}
-.lookup-home{color:#fff;font-weight:700;text-decoration:none}
 .lookup-card{background:#2d2d2d;border-top:4px solid var(--primary-orange);border-radius:16px;padding:clamp(18px,4vw,30px);box-shadow:0 8px 24px #0005}
 .lookup-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) auto;gap:16px;align-items:end;margin-bottom:22px}
 .lookup-controls label{display:grid;gap:8px;color:#f5f5f5;font-weight:700}

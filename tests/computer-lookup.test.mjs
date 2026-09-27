@@ -57,3 +57,26 @@ test('station and serial dropdowns filter in place and refresh retains selection
   assert.equal(rows().length, 4);
   window.close();
 });
+
+test('lookup page keeps NEST quick access, footer menus, and current year', () => {
+  const html = readFileSync(new URL('../computer-lookup.html', import.meta.url), 'utf8');
+  const main = readFileSync(new URL('../js/main.js', import.meta.url), 'utf8');
+  const dom = new JSDOM(html, { url: 'https://nest.example/computer-lookup', runScripts: 'dangerously' });
+  const { window } = dom;
+  window.eval(main);
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  assert.equal(window.document.querySelector('#current-year').textContent, String(new Date().getFullYear()));
+  assert.match(window.document.querySelector('#today-date').textContent, /^Today is /);
+  const quick = window.document.querySelector('.dropdown-btn');
+  quick.click();
+  assert.equal(quick.nextElementSibling.classList.contains('show'), true);
+  assert.deepEqual([...quick.nextElementSibling.querySelectorAll('a')].map(a => a.textContent.trim()), ['StudentVue', 'SmartPass', '🚀 Join Us']);
+  const footer = [...window.document.querySelectorAll('.footer-dropdown-title')];
+  assert.deepEqual(footer.map(item => item.textContent.trim()), ['Help & Support ▾', 'About Me ▾']);
+  footer[0].click();
+  assert.equal(footer[0].nextElementSibling.classList.contains('show'), true);
+  assert.equal(quick.nextElementSibling.classList.contains('show'), false);
+  footer[1].click();
+  assert.equal(footer[1].nextElementSibling.classList.contains('show'), true);
+  window.close();
+});
