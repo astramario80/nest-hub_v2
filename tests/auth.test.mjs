@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import auth from '../api/auth.mjs';
 import spinner from '../api/spinner.mjs';
-import { districtEmail, username } from '../lib/nest-auth.mjs';
+import { accountEmail, districtEmail, username } from '../lib/nest-auth.mjs';
 
 const response = () => ({ headers:{}, setHeader(k,v){this.headers[k]=v;}, status(code){this.code=code;return this;}, json(data){this.data=data;return this;} });
 const req = (action, extra={}, cookie='') => ({method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json',cookie},body:{action,...extra}});
@@ -18,6 +18,8 @@ test('district email and username validation reject outsiders and dangerous shee
   assert.equal(districtEmail('A@students.bethelsd.org'),'a@students.bethelsd.org');
   assert.equal(districtEmail('a@other.org'),'');assert.equal(districtEmail('a@bethelsd.org.evil'),'');
   assert.equal(username('Mario.1'),'mario.1');assert.equal(username('=IMPORTXML'),'');
+  assert.equal(accountEmail('astramario@gmail.com'),'');
+  assert.equal(accountEmail('mario@memberhq.net'),'mario@memberhq.net');
 });
 test('registration sends a one-time code and puts only opaque tokens in secure cookies',async()=>{
   const restore=withBridge(payload=>({status:200,email:'student@bethelsd.org'}));

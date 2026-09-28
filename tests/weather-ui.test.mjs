@@ -20,5 +20,7 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   assert.equal(w.document.querySelectorAll('#weather-charts svg').length,3);
   assert.match(w.document.querySelector('#weather-charts').textContent,/3 \/ 5/);
   assert.equal(w.document.querySelector('#weather-data tbody tr td').textContent,'Today');
+  assert.match(w.document.querySelector('#weather-data > h3').textContent,/this trimester/);
+  assert.match(w.document.querySelector('#weather-status').textContent,/current-trimester responses/);
   dom.window.close();
 });

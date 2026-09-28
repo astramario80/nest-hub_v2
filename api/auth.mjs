@@ -6,7 +6,7 @@ const fail = (res, status, message) => res.status(status).json({ error: message 
 const passwordValid = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 && !/[\u0000-\u001f\u007f]/.test(value);
 const hashPassword = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 'hex'), 210000, 32, 'sha256').toString('hex');
 const TECH_TICKET_BACKEND = 'https://docs.google.com/spreadsheets/d/169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg/edit?gid=1649772389#gid=1649772389';
-const NEST_OWNERS = new Set(['astramario@gmail.com', 'mpenalver@bethelsd.org', 'mario@memberhq.net']);
+const NEST_OWNERS = new Set(['mpenalver@bethelsd.org', 'mario@memberhq.net']);
 const ipHash = req => createHmac('sha256', process.env.SPINNER_BRIDGE_TOKEN || '').update(String(req.headers['x-vercel-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()).digest('hex');
 const identityCookie = (session, data) => setCookie(IDENTITY, signedIdentity(session, data), IDENTITY_TTL);
 async function retryableAuthBridge(payload, deadline = Date.now() + 55000) {

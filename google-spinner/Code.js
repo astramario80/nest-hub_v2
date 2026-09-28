@@ -72,7 +72,7 @@ function doPost(e) {
   finally { lock.releaseLock(); }
 }
 const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
-const OWNER_EMAILS = ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net'];
+const OWNER_EMAILS = ['mpenalver@bethelsd.org','mario@memberhq.net'];
 function email_(value) { return String(value||'').trim().toLowerCase(); }
 function rows_(period) {
   const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];

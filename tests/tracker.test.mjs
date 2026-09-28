@@ -19,7 +19,7 @@ function service(){
 const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
 function signIn(s,email=base.email){s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email,expires:1000000000+21600000}));return {status:200};}
 test('one owner or administrator session opens other periods; student sessions remain period-bound',()=>{
-  for(const email of ['astramario@gmail.com','mpenalver@bethelsd.org','mario@memberhq.net','admin@example.org']){
+  for(const email of ['mpenalver@bethelsd.org','mario@memberhq.net','admin@example.org']){
     const s=service();assert.equal(signIn(s,email).status,200);
     assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);
     assert.equal(s.call({...base,period:'2',action:'roster'}).status,200);
@@ -28,6 +28,8 @@ test('one owner or administrator session opens other periods; student sessions r
   const s=service();signIn(s);s.ctx.rows_=period=>period==='1'?[['Student A','student@example.org']]:[];assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
   assert.equal(s.call({...base,action:'tracker'}).status,200);
   assert.equal(s.call({...base,action:'export'}).status,403);
+  const formerOwner=service();signIn(formerOwner,'astramario@gmail.com');
+  assert.equal(formerOwner.call({...base,period:'2',action:'tracker'}).status,403);
 });
 test('administrator emails are read from live rich links and removal revokes later access',()=>{
   const s=service();s.setAdmins([{textFormatRuns:[{format:{link:{uri:'mailto:ADMIN@example.org'}}}]}]);signIn(s,'admin@example.org');
@@ -41,7 +43,7 @@ test('student cannot write or claim administrator permission in request payload'
   assert.equal(s.saves,0);
 });
 test('administrator updates validate score, student and revision; stale edits cannot overwrite',()=>{
-  const s=service();signIn(s,'astramario@gmail.com');const id=s.ctx.hash_('student@example.org');
+  const s=service();signIn(s,'mpenalver@bethelsd.org');const id=s.ctx.hash_('student@example.org');
   const update={...base,action:'tracker-update',revision:1,change:{type:'score',student:id,assignment:'a',score:'4'}};
   assert.equal(s.call({...update,change:{...update.change,score:'5'}}).status,400);
   assert.equal(s.call({...update,change:{...update.change,student:'unknown'}}).status,400);
@@ -50,7 +52,7 @@ test('administrator updates validate score, student and revision; stale edits ca
   assert.equal(s.call({...base,action:'export'}).status,200);
 });
 test('global logout revokes access across tools and periods',()=>{
-  const s=service();signIn(s,'astramario@gmail.com');s.state.delete('authsession:'+s.ctx.hash_(base.session));
+  const s=service();signIn(s,'mpenalver@bethelsd.org');s.state.delete('authsession:'+s.ctx.hash_(base.session));
   assert.equal(s.call({...base,action:'roster'}).status,401);assert.equal(s.call({...base,action:'tracker',period:'2'}).status,401);
 });
 test('tracker output exposes only roster names and emails, never student IDs or absent students',()=>{
@@ -58,7 +60,7 @@ test('tracker output exposes only roster names and emails, never student IDs or 
   assert.ok(!JSON.stringify(result).includes('"ID"'));assert.deepEqual(Object.keys(result.scores),[result.students[0].id]);
 });
 test('tracker includes each roster student’s leadership role from their email and period',()=>{
-  const s=service();signIn(s,'astramario@gmail.com');s.setLeaders([
+  const s=service();signIn(s,'mpenalver@bethelsd.org');s.setLeaders([
     ['Period 1','','Division Manager','Student A','student@example.org'],
     ['Period 1','','Safety Lead','Student A','STUDENT@example.org'],
     ['Period 2','','Other Role','Student A','student@example.org'],
@@ -140,7 +142,7 @@ test('only score 4 is reported as completed; lower scores and legacy Yes remain 
 });
 
 test('score batches validate every edit before writing and advance one revision',()=>{
- const s=service();signIn(s,'astramario@gmail.com');const student=s.ctx.hash_('student@example.org');
+ const s=service();signIn(s,'mpenalver@bethelsd.org');const student=s.ctx.hash_('student@example.org');
  const update={...base,action:'tracker-update',revision:1,change:{type:'scores',edits:[{student,assignment:'a',score:'4'},{student,assignment:'invalid',score:'3'}]}};
  assert.equal(s.call(update).status,400);assert.equal(s.saves,0);
  update.change.edits[1].assignment='a';const result=s.call(update);assert.equal(result.status,200);assert.equal(result.revision,2);assert.equal(result.scores[student].a,'3');assert.equal(s.saves,1);
@@ -148,7 +150,7 @@ test('score batches validate every edit before writing and advance one revision'
 });
 
 test('editors can resize, reorder, rename and delete columns with their scores',()=>{
- const s=service();signIn(s,'astramario@gmail.com');const student=s.ctx.hash_('student@example.org');
+ const s=service();signIn(s,'mpenalver@bethelsd.org');const student=s.ctx.hash_('student@example.org');
  const change=(revision,value)=>s.call({...base,action:'tracker-update',revision,change:value});
  assert.equal(change(1,{type:'resize',assignment:'a',width:119}).status,400);
  assert.equal(change(1,{type:'resize',assignment:'a',width:280}).assignments[0].width,280);

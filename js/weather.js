@@ -39,7 +39,7 @@
   async function get(period,page=0){const response=await fetch('/api/weather?period='+encodeURIComponent(period)+'&page='+page,{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Weather reports unavailable.');return data;}
   function renderButtons(allowed){
     buttons.replaceChildren();
-    divisions.forEach(([period,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=!allowed.includes(period);button.title=button.disabled?'Available to this division’s manager, assistant manager, and partner liaisons':'';button.setAttribute('aria-pressed',String(selected===period));button.addEventListener('click',()=>show(period));buttons.append(button);});
+    divisions.forEach(([period,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=!allowed.includes(period);button.title=button.disabled?'Available to this division’s manager, assistant manager, partner liaison, and CTSO executives':'';button.setAttribute('aria-pressed',String(selected===period));button.addEventListener('click',()=>show(period));buttons.append(button);});
   }
   async function show(period,page=0){
     selected=period;currentPage=page;const current=++request;
@@ -53,7 +53,7 @@
       const body=document.createDocumentFragment();data.rows.forEach(row=>{const tr=document.createElement('tr');data.columns.forEach((_,index)=>{const cell=document.createElement('td');cell.textContent=String(row[index]??'');tr.append(cell);});body.append(tr);});section.querySelector('tbody').replaceChildren(body);
       section.hidden=false;pages.hidden=false;prev.disabled=page===0;next.disabled=!data.hasMore;
       document.getElementById('weather-page-label').textContent='Page '+(page+1);
-      status.textContent=data.rows.length?`${data.rows.length} responses on this page.`:'No responses on this page yet.';
+      status.textContent=data.rows.length?`${data.rows.length} current-trimester responses on this page.`:'No responses this trimester yet.';
     }catch(error){if(current===request)status.textContent=error.message;}
   }
   async function load(){

@@ -1,6 +1,6 @@
 (() => {
   const $=id=>document.getElementById(id),status=$('profile-status');
-  const owners=new Set(['astramario@gmail.com','mario@memberhq.net','mpenalver@bethelsd.org']);
+  const owners=new Set(['mario@memberhq.net','mpenalver@bethelsd.org']);
   function selectTab(name,updateUrl=false) {
     const identity=window.NestAuth?.identity,admin=!!identity&&owners.has(String(identity.email).toLowerCase());
     const accounts=name==='accounts'&&admin;

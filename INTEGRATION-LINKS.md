@@ -19,7 +19,8 @@ The old slide's printer icon points to https://forms.gle/6AVJkCMJJZoa4mky9, whic
 - Weather data workbook: https://docs.google.com/spreadsheets/d/1px1NzRmcf0sSRp0u3SZE4dKlYXbfagyHdRYNYGeNJM8/edit
 - Weather submission form: https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform
 - Live workbook tabs: Advisory, Period 1, Period 2, Period 3, Period 4, Period 5, CTSO. Period 7 is not present.
-- The report headers are on row 9, and report entries start on row 10. The NEST data page presents buttons only for tabs where the current account has a Division Manager, Assistant Manager, or Partner Liaison role in the matching period. The leadership workbook contains the title `Partner Liaison`.
+- The report headers are on row 9, and report entries start on row 10. The NEST data page lists responses dated in the current trimester only, using the district's published 2026–27 calendar (August 31–November 24, November 25–March 10, and March 11–June 15). Update these dates in `google-spinner/Weather.js` for the next school year; outside the configured dates, no responses are listed. Ratings by trimester remain in the summary.
+- Division Manager, Assistant Manager, and Partner Liaison roles can read their matching period's responses. Current CTSO Chief Executive, Financial, and Operations Officers can read all periods. The two NEST owner addresses, `mpenalver@bethelsd.org` and `mario@memberhq.net`, retain administrative access. Roles are checked against the live leadership workbook on each request.
 
 Advisory currently has no corresponding division role in the leadership lookup, so it is excluded from division access pending a role rule.
 
