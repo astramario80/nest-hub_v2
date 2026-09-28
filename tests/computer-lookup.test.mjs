@@ -70,7 +70,8 @@ test('lookup page keeps NEST quick access, footer menus, and current year', () =
   const quick = window.document.querySelector('.dropdown-btn');
   quick.click();
   assert.equal(quick.nextElementSibling.classList.contains('show'), true);
-  assert.deepEqual([...quick.nextElementSibling.querySelectorAll('a')].map(a => a.textContent.trim()), ['StudentVue', 'SmartPass', '🚀 Join Us']);
+  assert.deepEqual([...quick.nextElementSibling.querySelectorAll('a')].map(a => a.textContent.trim()), ['StudentVue', 'SmartPass', '🚀 Join Us', '🌤️ Weather Report']);
+  assert.equal(quick.nextElementSibling.querySelector('a[href="/weather"]').target, '');
   const footer = [...window.document.querySelectorAll('.footer-dropdown-title')];
   assert.deepEqual(footer.map(item => item.textContent.trim()), ['Help & Support ▾', 'About Me ▾']);
   footer[0].click();
