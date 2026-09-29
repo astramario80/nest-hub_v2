@@ -27,7 +27,7 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   const point=angle=>[100+78*Math.cos(angle*Math.PI/180),103-78*Math.sin(angle*Math.PI/180)];
   const arcPath=(from,to)=>{const start=point(from),end=point(to);return `M ${start[0]} ${start[1]} A 78 78 0 0 1 ${end[0]} ${end[1]}`;};
   const paths=gauge=>[...gauge.querySelectorAll('path')].map(path=>path.getAttribute('d'));
-  assert.deepEqual(paths(gauges[0]),[[180,140],[140,100],[100,80],[80,40],[40,0]].map(([from,to])=>arcPath(from,to)));
+  assert.deepEqual(paths(gauges[0]),[[180,150],[150,120],[120,60],[60,30],[30,0]].map(([from,to])=>arcPath(from,to)));
   assert.deepEqual(paths(gauges[1]),paths(gauges[0]));
   assert.deepEqual(paths(gauges[2]),[[180,123.75],[123.75,67.5],[67.5,0]].map(([from,to])=>arcPath(from,to)));
   assert.ok(Math.abs(Number(gauges[0].querySelector('line').getAttribute('x2'))-100)<0.00001);

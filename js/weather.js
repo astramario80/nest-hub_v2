@@ -20,7 +20,7 @@
     if(!valid){const empty=document.createElement('p');empty.textContent='No ratings yet';card.append(empty);return card;}
     const graphic=svg('svg',{viewBox:'0 0 200 132',role:'img','aria-label':`${label}: ${raw} out of 5; best at ${bestAtMiddle?3:5}`});
     const bands=bestAtMiddle
-      ? [[180,140,'#ec7950'],[140,100,'#f6b149'],[100,80,'#65ad6f'],[80,40,'#f6b149'],[40,0,'#ec7950']]
+      ? [[180,150,'#ec7950'],[150,120,'#f6b149'],[120,60,'#65ad6f'],[60,30,'#f6b149'],[30,0,'#ec7950']]
       : [[180,123.75,'#ec7950'],[123.75,67.5,'#f6b149'],[67.5,0,'#65ad6f']];
     graphic.append(...bands.map(([from,to,color])=>arc(from,to,color)));
     const tip=point((5-Math.max(1,number))*45,62);
