@@ -61,3 +61,19 @@ test('player stops and disconnects when access expires or the check fails',async
     assert.equal(calls.includes('clear'),failure===401||failure===403);
   }
 });
+
+test('Spotify login uses the shared Client ID and preserves the Signals redirect',async()=>{
+  const {default:vm}=await import('node:vm');const {readFileSync}=await import('node:fs');const {webcrypto}=await import('node:crypto');
+  const source=readFileSync('lib/signals-player/app.txt','utf8').replace(/initialize\(\);\s*$/,'');
+  const values=new Map();const storage={getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)};
+  const top={location:{}};
+  const ctx=vm.createContext({document:{querySelector:()=>({})},window:{top},localStorage:storage,sessionStorage:storage,crypto:webcrypto,TextEncoder,URLSearchParams,btoa});
+  vm.runInContext(source,ctx);await vm.runInContext('beginSpotifyLogin()',ctx);
+  const url=new URL(top.location.href);
+  assert.equal(url.origin,'https://accounts.spotify.com');
+  assert.equal(url.searchParams.get('client_id'),'e14ed1a76b2f45c8b3485093be6942f1');
+  assert.equal(url.searchParams.get('redirect_uri'),'https://signals.gknest.org/');
+  assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+  assert.ok(url.searchParams.get('state'));
+  assert.doesNotMatch(readFileSync('lib/signals-player/index.txt','utf8'),/id="client-id"/);
+});
