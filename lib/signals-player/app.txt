@@ -1,4 +1,5 @@
 const CONFIG = {
+  spotifyClientId: 'e14ed1a76b2f45c8b3485093be6942f1',
   scheduleUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcUoNGeXSz9DGl2xC0iDY4ZODXPJZ9t5DHsxUeDUHLgdex6kJw0Lg4KKDH_ku0O798h6aKslWiGSCj/pub?gid=1783333707&single=true&output=csv',
   cleanupUri: 'spotify:playlist:1IkWS5ICPcOUKJvXVslYd3',
   quietUri: 'spotify:playlist:1leyIgu6VXG7cpa2HjO9FF',
@@ -45,7 +46,6 @@ const ui = {
   dialog: document.querySelector('#setup-dialog'),
   form: document.querySelector('#setup-form'),
   closeSetup: document.querySelector('#close-setup'),
-  clientId: document.querySelector('#client-id'),
   redirectUri: document.querySelector('#redirect-uri'),
   copyRedirect: document.querySelector('#copy-redirect'),
   spotifyUser: document.querySelector('#spotify-user'),
@@ -341,7 +341,7 @@ function tokenRecord() {
 
 async function refreshToken() {
   const saved = tokenRecord();
-  const clientId = localStorage.getItem(STORAGE.clientId);
+  const clientId = CONFIG.spotifyClientId;
   if (!saved || !saved.refresh_token || !clientId) return '';
   const body = new URLSearchParams({
     client_id: clientId,
@@ -370,8 +370,7 @@ async function accessToken(forceRefresh) {
 }
 
 async function beginSpotifyLogin() {
-  const clientId = ui.clientId.value.trim();
-  if (!clientId) throw new Error('Paste the Spotify Client ID first.');
+  const clientId = CONFIG.spotifyClientId;
   localStorage.setItem(STORAGE.clientId, clientId);
   const verifier = randomString(64);
   const oauthState = randomString(24);
@@ -397,7 +396,7 @@ async function handleSpotifyCallback() {
     throw new Error('Spotify sign-in could not be verified. Please connect again.');
   }
   const verifier = sessionStorage.getItem(STORAGE.verifier);
-  const clientId = localStorage.getItem(STORAGE.clientId);
+  const clientId = CONFIG.spotifyClientId;
   const body = new URLSearchParams({
     client_id: clientId,
     grant_type: 'authorization_code',
@@ -424,7 +423,7 @@ async function handleSpotifyCallback() {
 async function spotifyFetch(path, options, retry) {
   await checkNestAccess();
   const token = await accessToken(false);
-  if (!token) throw new Error('Spotify needs to be connected in Owner setup.');
+  if (!token) throw new Error('Choose Spotify connection to connect an approved Premium account.');
   const request = Object.assign({}, options || {});
   request.headers = Object.assign({}, request.headers || {}, { Authorization: 'Bearer ' + token });
   const response = await fetch('https://api.spotify.com/v1' + path, request);
@@ -654,7 +653,7 @@ async function startSignals() {
     setStatus('working', 'CONNECTING', 'Preparing today’s signals', 'Loading the schedule and classroom Spotify player.');
     if (!tokenRecord()) {
       ui.dialog.showModal();
-      throw new Error('Complete Owner setup to connect Spotify.');
+      throw new Error('Choose Connect Spotify to authorize an approved Premium account.');
     }
     await checkNestAccess(true);
     await loadSchedule();
@@ -738,7 +737,12 @@ async function initialize() {
   displayClock();
   setInterval(displayClock, 1000);
   ui.redirectUri.value = redirectUri();
-  ui.clientId.value = localStorage.getItem(STORAGE.clientId) || '';
+  const previousClientId = localStorage.getItem(STORAGE.clientId);
+  if (previousClientId && previousClientId !== CONFIG.spotifyClientId) {
+    localStorage.removeItem(STORAGE.token);
+    localStorage.setItem(STORAGE.running, 'false');
+  }
+  localStorage.setItem(STORAGE.clientId, CONFIG.spotifyClientId);
 
   ui.setup.addEventListener('click', function () { ui.dialog.showModal(); });
   ui.closeSetup.addEventListener('click', function () { ui.dialog.close(); });
