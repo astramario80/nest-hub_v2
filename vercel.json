@@ -4,10 +4,6 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/lib/signals-player/:path*",
-      "destination": "/api/signals?asset=blocked"
-    },
-    {
       "source": "/favicon.ico",
       "destination": "/assets/nest_menu_icon.png"
     }
@@ -44,5 +40,12 @@
       "maxDuration": 60,
       "includeFiles": "lib/signals-player/**"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/lib/signals-player/:path*",
+      "destination": "/api/signals?asset=blocked",
+      "permanent": false
+    }
+  ]
 }
