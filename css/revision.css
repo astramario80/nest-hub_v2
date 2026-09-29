@@ -69,3 +69,13 @@ button:focus-visible,.gear-links a:focus-visible { outline:3px solid #fff; outli
 .bell-table tr.is-current.passes-locked { background:#fce3e3; box-shadow:inset 4px 0 #a32323; }
 .bell-table tr.is-current.passes-locked td,.bell-table tr.passes-locked .now-marker { color:#842020; }
 .pass-status { display:block; font-size:.7em; line-height:1.4; margin-top:4px; font-weight:700; }
+
+/* Keep the signal player reachable even while schedule data is loading. */
+.bell-signals { display:flex; align-items:center; justify-content:space-between; gap:24px; width:100%; box-sizing:border-box; margin-bottom:24px; padding:24px; border:1px solid rgba(255,255,255,.25); border-radius:16px; background:#172b50; color:#fff; }
+.bell-signals h2 { margin:0 0 8px; font-size:1.4rem; }
+.bell-signals p { margin:0; line-height:1.5; font-size:1rem; }
+.bell-signals .bell-signals-access { margin-top:8px; color:#d1deed; font-size:.875rem; }
+.bell-signals-link { display:inline-flex; flex-shrink:0; align-items:center; justify-content:center; padding:13px 20px; border-radius:8px; background:#ffe486; color:#172b50; font-weight:700; text-decoration:none; }
+.bell-signals-link:hover { background:#fff0b8; }
+.bell-signals-link:focus-visible { outline:3px solid #fff; outline-offset:4px; }
+@media(max-width:700px) { .bell-signals { flex-direction:column; align-items:stretch; gap:16px; padding:20px; } }
