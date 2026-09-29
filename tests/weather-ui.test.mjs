@@ -24,6 +24,14 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   assert.deepEqual(colors(gauges[0]),['#ec7950','#f6b149','#65ad6f','#f6b149','#ec7950']);
   assert.deepEqual(colors(gauges[1]),colors(gauges[0]));
   assert.deepEqual(colors(gauges[2]),['#ec7950','#f6b149','#65ad6f']);
+  const point=angle=>[100+78*Math.cos(angle*Math.PI/180),103-78*Math.sin(angle*Math.PI/180)];
+  const arcPath=(from,to)=>{const start=point(from),end=point(to);return `M ${start[0]} ${start[1]} A 78 78 0 0 1 ${end[0]} ${end[1]}`;};
+  const paths=gauge=>[...gauge.querySelectorAll('path')].map(path=>path.getAttribute('d'));
+  assert.deepEqual(paths(gauges[0]),[[180,140],[140,100],[100,80],[80,40],[40,0]].map(([from,to])=>arcPath(from,to)));
+  assert.deepEqual(paths(gauges[1]),paths(gauges[0]));
+  assert.deepEqual(paths(gauges[2]),[[180,123.75],[123.75,67.5],[67.5,0]].map(([from,to])=>arcPath(from,to)));
+  assert.ok(Math.abs(Number(gauges[0].querySelector('line').getAttribute('x2'))-100)<0.00001);
+  assert.equal(gauges[2].querySelector('line').getAttribute('x2'),'162');
   assert.match(gauges[0].getAttribute('aria-label'),/best at 3/);
   assert.match(gauges[1].getAttribute('aria-label'),/best at 3/);
   assert.match(gauges[2].getAttribute('aria-label'),/best at 5/);

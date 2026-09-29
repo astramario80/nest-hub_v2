@@ -10,7 +10,7 @@
   const next=document.getElementById('weather-next');
   let selected='',currentPage=0,request=0,allowed=[];
   const svgNS='http://www.w3.org/2000/svg';
-  const point=(score,radius)=>{const angle=Math.PI*(1-score/5);return [100+radius*Math.cos(angle),103-radius*Math.sin(angle)];};
+  const point=(angle,radius)=>{const radians=angle*Math.PI/180;return [100+radius*Math.cos(radians),103-radius*Math.sin(radians)];};
   const svg=(tag,attributes)=>{const element=document.createElementNS(svgNS,tag);Object.entries(attributes).forEach(([key,value])=>element.setAttribute(key,String(value)));return element;};
   function arc(from,to,color){const start=point(from,78),end=point(to,78);return svg('path',{d:`M ${start[0]} ${start[1]} A 78 78 0 0 1 ${end[0]} ${end[1]}`,fill:'none',stroke:color,'stroke-width':12,'stroke-linecap':'round'});}
   function gauge(label,raw,bestAtMiddle){
@@ -20,10 +20,10 @@
     if(!valid){const empty=document.createElement('p');empty.textContent='No ratings yet';card.append(empty);return card;}
     const graphic=svg('svg',{viewBox:'0 0 200 132',role:'img','aria-label':`${label}: ${raw} out of 5; best at ${bestAtMiddle?3:5}`});
     const bands=bestAtMiddle
-      ? [[0,1.5,'#ec7950'],[1.5,2.5,'#f6b149'],[2.5,3.5,'#65ad6f'],[3.5,4.5,'#f6b149'],[4.5,5,'#ec7950']]
-      : [[0,2,'#ec7950'],[2,4.5,'#f6b149'],[4.5,5,'#65ad6f']];
+      ? [[180,140,'#ec7950'],[140,100,'#f6b149'],[100,80,'#65ad6f'],[80,40,'#f6b149'],[40,0,'#ec7950']]
+      : [[180,123.75,'#ec7950'],[123.75,67.5,'#f6b149'],[67.5,0,'#65ad6f']];
     graphic.append(...bands.map(([from,to,color])=>arc(from,to,color)));
-    const tip=point(number,62);
+    const tip=point((5-Math.max(1,number))*45,62);
     graphic.append(svg('line',{x1:100,y1:103,x2:tip[0],y2:tip[1],stroke:'#f2f5f7','stroke-width':4,'stroke-linecap':'round'}));
     graphic.append(svg('circle',{cx:100,cy:103,r:6,fill:'#f2f5f7'}));
     const value=svg('text',{x:100,y:127,'text-anchor':'middle',fill:'#fff','font-size':20,'font-weight':700});value.textContent=`${raw} / 5`;graphic.append(value);
