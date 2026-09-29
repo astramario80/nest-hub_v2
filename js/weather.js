@@ -21,7 +21,7 @@
     const graphic=svg('svg',{viewBox:'0 0 200 132',role:'img','aria-label':`${label}: ${raw} out of 5; best at ${bestAtMiddle?3:5}`});
     const bands=bestAtMiddle
       ? [[180,150,'#ec7950'],[150,120,'#f6b149'],[120,60,'#65ad6f'],[60,30,'#f6b149'],[30,0,'#ec7950']]
-      : [[180,123.75,'#ec7950'],[123.75,67.5,'#f6b149'],[67.5,0,'#65ad6f']];
+      : [[180,120,'#ec7950'],[120,60,'#f6b149'],[60,0,'#65ad6f']];
     graphic.append(...bands.map(([from,to,color])=>arc(from,to,color)));
     const tip=point((5-Math.max(1,number))*45,62);
     graphic.append(svg('line',{x1:100,y1:103,x2:tip[0],y2:tip[1],stroke:'#f2f5f7','stroke-width':4,'stroke-linecap':'round'}));

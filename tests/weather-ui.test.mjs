@@ -29,7 +29,7 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   const paths=gauge=>[...gauge.querySelectorAll('path')].map(path=>path.getAttribute('d'));
   assert.deepEqual(paths(gauges[0]),[[180,150],[150,120],[120,60],[60,30],[30,0]].map(([from,to])=>arcPath(from,to)));
   assert.deepEqual(paths(gauges[1]),paths(gauges[0]));
-  assert.deepEqual(paths(gauges[2]),[[180,123.75],[123.75,67.5],[67.5,0]].map(([from,to])=>arcPath(from,to)));
+  assert.deepEqual(paths(gauges[2]),[[180,120],[120,60],[60,0]].map(([from,to])=>arcPath(from,to)));
   assert.ok(Math.abs(Number(gauges[0].querySelector('line').getAttribute('x2'))-100)<0.00001);
   assert.equal(gauges[2].querySelector('line').getAttribute('x2'),'162');
   assert.match(gauges[0].getAttribute('aria-label'),/best at 3/);
