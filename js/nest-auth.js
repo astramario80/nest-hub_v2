@@ -112,7 +112,7 @@
           if (!response.ok) return;
           const permission = await response.json();
           if (permission.allowed !== true || identity !== signedInIdentity || !options.isConnected) return;
-          const signals = document.createElement('a'); signals.href = 'https://signals.gknest.org/'; signals.textContent = 'Signals';
+          const signals = document.createElement('a'); signals.href = '/signals'; signals.textContent = 'Signals';
           options.insertBefore(signals, out);
         }).catch(() => {});
       } else {

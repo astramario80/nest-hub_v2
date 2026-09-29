@@ -416,7 +416,7 @@ async function handleSpotifyCallback() {
   sessionStorage.removeItem(STORAGE.verifier);
   sessionStorage.removeItem(STORAGE.oauthState);
   history.replaceState({}, document.title, '/api/signals?asset=index');
-  window.parent.postMessage({ type: 'nest-signals-callback-complete' }, 'https://signals.gknest.org');
+
   return true;
 }
 

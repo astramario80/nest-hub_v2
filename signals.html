@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+  <title>NEST™ Signals</title>
+  <link rel="icon" href="/assets/nest_menu_icon.png">
+  <link rel="stylesheet" href="/css/nest-auth.css">
+  <style>body{font:18px system-ui;background:#102d47;color:#fff;margin:0}main{max-width:650px;margin:10vh auto;padding:24px}a{color:#9cddff}button{font:inherit;padding:12px 20px;cursor:pointer;border:0;border-radius:8px}button[hidden]{display:none}#signals-status{line-height:1.6}</style>
+</head>
+<body>
+  <main><a href="/">NEST™ home</a><h1>NEST™ Signals</h1>
+    <p id="signals-status" role="status" aria-live="polite">Checking your NEST sign-in…</p>
+    <button id="signals-login" type="button" hidden>Sign in to NEST</button>
+    <button id="signals-retry" type="button" hidden>Check access again</button>
+  </main>
+  <script src="/js/nest-auth.js"></script>
+  <script src="/js/signals-entry.js"></script>
+</body>
+</html>
