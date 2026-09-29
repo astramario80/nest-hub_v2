@@ -107,6 +107,14 @@
         const out = document.createElement('button');out.type = 'button';out.textContent = 'Log out';out.addEventListener('click', logout);
         toggle.addEventListener('click', event => {event.stopPropagation();const open = toggle.getAttribute('aria-expanded') !== 'true';closeOptions();if (open) setOptions(options,true);});
         account.append(toggle,options);options.append(profile,out);list.append(account);
+        const signedInIdentity = identity;
+        fetch('/api/signals?asset=access', { credentials: 'same-origin', cache: 'no-store' }).then(async response => {
+          if (!response.ok) return;
+          const permission = await response.json();
+          if (permission.allowed !== true || identity !== signedInIdentity || !options.isConnected) return;
+          const signals = document.createElement('a'); signals.href = 'https://signals.gknest.org/'; signals.textContent = 'Signals';
+          options.insertBefore(signals, out);
+        }).catch(() => {});
       } else {
         const login = document.createElement('button'); login.type = 'button'; login.dataset.nestAuthLink = ''; login.textContent = 'Log in'; login.addEventListener('click', () => open()); list.append(login);
       }

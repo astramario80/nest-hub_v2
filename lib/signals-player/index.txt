@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#428bca">
+  <meta name="description" content="NEST™ classroom music, cleanup, and transition signals synchronized with the daily bell schedule.">
+  <title>NEST™ Signals</title>
+  <link rel="icon" type="image/png" href="/signals-assets/nest-eagle.png">
+  <link rel="stylesheet" href="/signals-assets/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <img class="brand-eagle" src="/signals-assets/nest-eagle.png" alt="NEST eagle">
+      <div>
+        <p class="eyebrow">NEST™ LAB</p>
+        <h1>NEST™ Signals</h1>
+      </div>
+      <div class="clock" aria-label="Current time">
+        <strong id="clock">--:--</strong>
+        <span id="date">Loading schedule</span>
+      </div>
+    </header>
+
+    <section class="status-panel" aria-labelledby="status-heading">
+      <div class="status-copy">
+        <div class="status-line">
+          <span class="status-light" id="status-light"></span>
+          <p class="eyebrow" id="status-heading">READY FOR SETUP</p>
+        </div>
+        <h2 id="status-title">Signals are not running</h2>
+        <p id="status-detail">Connect Spotify once on the classroom Windows laptop, then start today’s automation.</p>
+      </div>
+      <button class="primary" id="start-button" type="button">Start signals</button>
+    </section>
+
+    <section class="readout-grid" aria-label="Today’s signal status">
+      <article class="readout active-block">
+        <p class="label">Current block</p>
+        <h3 id="current-period">No active block</h3>
+        <p id="current-time">Schedule will appear here</p>
+      </article>
+      <article class="readout next-event">
+        <p class="label">Next signal</p>
+        <h3 id="next-event">Waiting for schedule</h3>
+        <p id="next-event-time">—</p>
+      </article>
+      <article class="readout connection">
+        <p class="label">Audio path</p>
+        <h3 id="audio-status">Spotify not connected</h3>
+        <p>Pyle Bluetooth speaker</p>
+        <button class="text-button" id="open-spotify-button" type="button" aria-describedby="spotify-launch-help">Open Spotify</button>
+        <p id="spotify-launch-help" aria-live="polite">Start signals also opens the Spotify app on this computer. Audio plays through the NEST player in this page.</p>
+      </article>
+    </section>
+
+    <section class="schedule-panel">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">TODAY</p>
+          <h2>Bell schedule</h2>
+        </div>
+        <p class="heartbeat">Last checked <span id="last-check">—</span></p>
+      </div>
+      <div class="schedule-list" id="schedule-list" aria-live="polite">
+        <div class="schedule-empty">The schedule will load when signals start.</div>
+      </div>
+    </section>
+
+    <footer>
+      <button class="text-button" id="setup-button" type="button">Owner setup</button>
+      <button class="text-button" id="stop-button" type="button" disabled>Stop for today</button>
+    </footer>
+  </main>
+
+  <dialog id="setup-dialog" aria-labelledby="setup-title">
+    <form id="setup-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">OWNER ONLY</p>
+          <h2 id="setup-title">Spotify setup</h2>
+        </div>
+        <button class="close-button" id="close-setup" type="button" aria-label="Close setup">×</button>
+      </div>
+      <p class="dialog-copy">This laptop will use the Spotify account you authorize here. Guest teachers will not need to sign in.</p>
+      <label for="client-id">Spotify application Client ID</label>
+      <input id="client-id" name="client-id" autocomplete="off" spellcheck="false" placeholder="Paste the Client ID">
+      <label for="redirect-uri">Spotify redirect address</label>
+      <div class="copy-row">
+        <input id="redirect-uri" readonly>
+        <button class="secondary" id="copy-redirect" type="button">Copy</button>
+      </div>
+      <p class="field-help">Add this exact address to the Redirect URIs in your Spotify developer application.</p>
+      <div class="account-card">
+        <span class="status-light"></span>
+        <div>
+          <strong id="spotify-user">Spotify is not connected</strong>
+          <span id="spotify-account-detail">Premium is required for automatic playback.</span>
+        </div>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary" id="disconnect-button" type="button">Disconnect</button>
+        <button class="primary" type="submit">Save and connect</button>
+      </div>
+    </form>
+  </dialog>
+  <script src="/api/signals?asset=app" defer></script>
+</body>
+</html>

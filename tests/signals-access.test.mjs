@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { leadershipAllowsSignals, signalsAccess, SIGNAL_ROLES } from '../lib/signals-access.mjs';
+import handler from '../api/signals.mjs';
+const email='leader@students.bethelsd.org', session='a'.repeat(64);
+test('only the five requested roles match the signed-in email', () => {
+  for (const position of SIGNAL_ROLES) assert.equal(leadershipAllowsSignals(email,[{email:' LEADER@students.bethelsd.org ',position:' '+position.toUpperCase()+' '}]),true);
+  for (const position of ['Division DJ','Software Technician','Former Division Manager','Assistant Manager trainee','']) assert.equal(leadershipAllowsSignals(email,[{email,position}]),false);
+  assert.equal(leadershipAllowsSignals(email,[{email:'someone@students.bethelsd.org',position:'Division Manager'}]),false);
+});
+test('staff exception requires exact verified district domain',()=>{
+  assert.equal(leadershipAllowsSignals(' Teacher@BETHELSD.ORG ',[]),true);
+  for(const value of ['student@students.bethelsd.org','fake@bethelsd.org.evil.com','@bethelsd.org','a@@bethelsd.org','manual:manager','mario@memberhq.net']) assert.equal(leadershipAllowsSignals(value,[]),false);
+});
+test('invalid, inactive, or expired sessions never reach the directory',async()=>{
+  assert.equal(await signalsAccess('',()=>assert.fail()),401);
+  assert.equal(await signalsAccess(session,async()=>({status:401})),401);
+});
+test('uses verified identity and fresh directory; role removal revokes access',async()=>{
+  let leaders=[{email,position:'Division Manager'}];
+  const request=async body=>body.action==='auth-me'?{status:200,email}:{status:200,leaders};
+  assert.equal(await signalsAccess(session,request),200);
+  leaders=[];
+  assert.equal(await signalsAccess(session,request),403);
+});
+test('staff bypasses roster outages; student lookup fails closed',async()=>{
+  assert.equal(await signalsAccess(session,async body=>{assert.equal(body.action,'auth-me');return {status:200,email:'staff@bethelsd.org'};}),200);
+  assert.equal(await signalsAccess(session,async body=>body.action==='auth-me'?{status:200,email}:{status:503}),503);
+});
+test('direct player and script requests reject unsigned visitors and ignore supplied email',async()=>{
+  for(const asset of ['index','app','access']) {
+    const res={headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},send(value){this.body=value;return this;},json(value){this.body=value;return this;}};
+    await handler({method:'GET',headers:{},query:{asset,email:'staff@bethelsd.org'}},res);
+    assert.equal(res.code,401);assert.match(res.headers['Cache-Control'],/no-store/);
+    assert.doesNotMatch(JSON.stringify(res.body),/spotify-token|scheduleUrl|cleanupUri/);
+  }
+});
+
+test('authorized requests receive player assets; denied role cannot fetch script',async()=>{
+  const original=globalThis.fetch, oldUrl=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+  process.env.SPINNER_BRIDGE_URL='https://example.test/bridge';process.env.SPINNER_BRIDGE_TOKEN='test';
+  let allowed=true;
+  globalThis.fetch=async(_url,options)=>{const body=JSON.parse(options.body);return {ok:true,status:200,json:async()=>body.action==='auth-me'?{status:200,email}:{status:200,leaders:allowed?[{email,position:'Division Manager'}]:[]}};};
+  const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},send(value){this.body=value;return this;},json(value){this.body=value;return this;}});
+  try {
+    let res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{asset:'index'}},res);assert.equal(res.code,200);assert.match(res.body,/api\/signals\?asset=app/);assert.doesNotMatch(res.body,/serviceWorker/);
+    res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{asset:'app'}},res);assert.equal(res.code,200);assert.match(res.body,/checkNestAccess/);
+    allowed=false;res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{asset:'app'}},res);assert.equal(res.code,403);
+  } finally {globalThis.fetch=original;if(oldUrl===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldUrl;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
+
+test('player stops and disconnects when access expires or the check fails',async()=>{
+  const {default:vm}=await import('node:vm');const {readFileSync}=await import('node:fs');
+  const source=readFileSync('lib/signals-player/app.txt','utf8').replace(/initialize\(\);\s*$/,'');
+  for(const failure of [401,403,503,'network']) {
+    const calls=[];const ctx=vm.createContext({document:{querySelector:()=>({})},console,AbortSignal,fetch:async()=>{if(failure==='network')throw new Error('offline');return {ok:false,status:failure};},localStorage:{removeItem:()=>calls.push('clear')}});
+    vm.runInContext(source,ctx);ctx.calls=calls;
+    vm.runInContext("stopSignals = () => calls.push('stop'); state.player = {pause:async()=>calls.push('pause'),disconnect:()=>calls.push('disconnect')};",ctx);
+    await assert.rejects(vm.runInContext('checkNestAccess(true)',ctx));
+    assert.deepEqual(calls.slice(0,3),['stop','pause','disconnect']);
+    assert.equal(calls.includes('clear'),failure===401||failure===403);
+  }
+});
