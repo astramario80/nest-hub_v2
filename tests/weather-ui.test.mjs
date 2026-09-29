@@ -7,7 +7,7 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'});
   const w=dom.window;
   w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};
-  w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1']}:{division:'Period 1',summary:[["Today's Trimester 1",'Pacing','Rigor','Safety'],['',3,2,5],['Trimester 1',3,2,5],['Trimester 2','','',''],['Trimester 3','','','']],columns:['Timestamp','Report'],rows:[['Today','Calm']],hasMore:false}});
+  w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1']}:{division:'Period 1',summary:[["Today's Trimester 1",'Pacing','Rigor','Safety'],['',3,3,5],['Trimester 1',3,3,5],['Trimester 2','','',''],['Trimester 3','','','']],columns:['Timestamp','Report'],rows:[['Today','Calm']],hasMore:false}});
   w.eval(fs.readFileSync('js/weather.js','utf8'));
   await new Promise(resolve=>setImmediate(resolve));
   const buttons=[...w.document.querySelectorAll('#weather-divisions button')];
@@ -19,6 +19,14 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   assert.equal(w.document.querySelector('#weather-data').hidden,false);
   assert.equal(w.document.querySelectorAll('#weather-charts svg').length,3);
   assert.match(w.document.querySelector('#weather-charts').textContent,/3 \/ 5/);
+  const gauges=[...w.document.querySelectorAll('.weather-gauge svg')];
+  const colors=gauge=>[...gauge.querySelectorAll('path')].map(path=>path.getAttribute('stroke'));
+  assert.deepEqual(colors(gauges[0]),['#ec7950','#f6b149','#65ad6f','#f6b149','#ec7950']);
+  assert.deepEqual(colors(gauges[1]),colors(gauges[0]));
+  assert.deepEqual(colors(gauges[2]),['#ec7950','#f6b149','#65ad6f']);
+  assert.match(gauges[0].getAttribute('aria-label'),/best at 3/);
+  assert.match(gauges[1].getAttribute('aria-label'),/best at 3/);
+  assert.match(gauges[2].getAttribute('aria-label'),/best at 5/);
   assert.equal(w.document.querySelector('#weather-data tbody tr td').textContent,'Today');
   assert.match(w.document.querySelector('#weather-data > h3').textContent,/this trimester/);
   assert.match(w.document.querySelector('#weather-status').textContent,/current-trimester responses/);
