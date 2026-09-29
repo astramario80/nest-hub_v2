@@ -77,3 +77,47 @@ test('Spotify login uses the shared Client ID and preserves the Signals redirect
   assert.ok(url.searchParams.get('state'));
   assert.doesNotMatch(readFileSync('lib/signals-player/index.txt','utf8'),/id="client-id"/);
 });
+
+test('temporary bridge failures retry without treating a valid login as signed out',async()=>{
+  let count=0;
+  const status=await signalsAccess(session,async({action})=>{
+    if(action==='auth-me' && ++count===1)throw new Error('temporary timeout');
+    return action==='auth-me'?{status:200,email}:{status:200,leaders:[{email,position:'Division Manager'}]};
+  });
+  assert.equal(status,200);assert.equal(count,2);
+});
+
+test('short player grant is session-bound, tamper resistant, and expires',async()=>{
+  const {issueSignalsGrant,validSignalsGrant}=await import('../lib/signals-grant.mjs');
+  const old=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';
+  try {
+    const now=Date.now(),grant=issueSignalsGrant(session,now);
+    assert.equal(validSignalsGrant(session,grant,now+1000),true);
+    assert.equal(validSignalsGrant('b'.repeat(64),grant,now+1000),false);
+    assert.equal(validSignalsGrant(session,grant+'x',now+1000),false);
+    assert.equal(validSignalsGrant(session,grant,now+60000),false);
+    assert.equal(validSignalsGrant('',grant,now),false);
+  }finally{if(old===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=old;}
+});
+
+test('player files reuse a fresh successful check; periodic checks still reauthorize',async()=>{
+  const {issueSignalsGrant}=await import('../lib/signals-grant.mjs');
+  const old=process.env.SPINNER_BRIDGE_TOKEN,oldUrl=process.env.SPINNER_BRIDGE_URL,original=globalThis.fetch;
+  process.env.SPINNER_BRIDGE_TOKEN='test-secret';process.env.SPINNER_BRIDGE_URL='https://example.test';
+  let calls=0;
+  globalThis.fetch=async()=>{calls++;return {ok:true,status:200,json:async()=>({status:401})};};
+  const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},send(value){this.body=value;return this;},json(value){this.body=value;return this;}});
+  try{
+    const cookie='__Host-nest-auth='+session+'; __Host-nest-signals-grant='+issueSignalsGrant(session);
+    for(const asset of ['index','app']){const res=response();await handler({method:'GET',headers:{cookie},query:{asset}},res);assert.equal(res.code,200);assert.equal(res.headers['Set-Cookie'],undefined);if(asset==='app')assert.match(res.body,/^const NEST_ACCESS_VERIFIED_UNTIL = \d{13};/);}
+    assert.equal(calls,0);
+    const res=response();await handler({method:'GET',headers:{cookie},query:{asset:'access'}},res);assert.equal(res.code,401);assert.equal(calls,1);assert.match(res.headers['Set-Cookie'],/Max-Age=0/);
+  }finally{globalThis.fetch=original;if(old===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=old;if(oldUrl===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldUrl;}
+});
+
+test('temporary service failure shows retry without a sign-in link',async()=>{
+  const old=process.env.SPINNER_BRIDGE_URL;delete process.env.SPINNER_BRIDGE_URL;
+  const res={setHeader(){},status(code){this.code=code;return this;},send(value){this.body=value;return this;},json(value){this.body=value;return this;}};
+  try{await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+session},query:{asset:'index'}},res);assert.equal(res.code,503);assert.match(res.body,/sign-in has not been cleared/);assert.doesNotMatch(res.body,/<a[^>]*.*Sign in/);}
+  finally{if(old!==undefined)process.env.SPINNER_BRIDGE_URL=old;}
+});
