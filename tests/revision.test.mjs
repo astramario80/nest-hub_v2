@@ -23,6 +23,39 @@ test('all homepage links and nested groups remain accessible; touch toggles and 
  const out=new w.Event('pointerleave');Object.defineProperty(out,'pointerType',{value:'mouse'});group.dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),true);panels[3].dispatchEvent(out);finishClose();assert.equal(group.classList.contains('is-open'),false);
  dom.window.close();
 });
+test('switching gear submenus keeps the gear open until the new submenu expands',()=>{
+ const dom=new JSDOM(read('index.html'),{runScripts:'outside-only'}),w=dom.window;
+ w.eval(read('js/disclosures.js'));
+ const gear=w.document.querySelectorAll('.gear-panel')[1],groups=[...gear.querySelectorAll('.gear-group')];
+ gear.querySelector('.gear-trigger').click();
+ const first=groups[0].querySelector('button'),second=groups[1].querySelector('button');
+ first.click();
+ second.dispatchEvent(new w.Event('pointerdown',{bubbles:true}));
+ groups[0].dispatchEvent(new w.FocusEvent('focusout',{bubbles:true,relatedTarget:second}));
+ assert.equal(groups[0].classList.contains('is-open'),true);
+ second.click();
+ assert.equal(gear.classList.contains('is-open'),true);
+ assert.equal(groups[0].classList.contains('is-open'),false);
+ assert.equal(groups[1].classList.contains('is-open'),true);
+ dom.window.close();
+});
+test('bell schedule disclosure animates open and closed when motion is allowed',async()=>{
+ const dom=new JSDOM(read('bell-schedule.html'),{runScripts:'outside-only'}),w=dom.window;
+ w.matchMedia=()=>({matches:false});
+ const content=w.document.querySelector('#upcoming-panel'),calls=[];
+ content.animate=(frames,options)=>{calls.push({frames,options});return {finished:Promise.resolve(),cancel(){}};};
+ w.eval(read('js/disclosures.js'));
+ const trigger=w.document.querySelector('.schedule-trigger');
+ trigger.click();
+ assert.equal(content.hidden,false);
+ assert.equal(calls[0].options.duration,420);
+ await Promise.resolve();
+ trigger.click();
+ assert.equal(content.hidden,false);
+ await Promise.resolve();
+ assert.equal(content.hidden,true);
+ dom.window.close();
+});
 test('Pacific period highlight handles boundaries, PM rollover, passing time, and stale dates on both pages',async()=>{
  for(const html of ['index.html','bell-schedule.html']) {
   const dom=new JSDOM(read(html),{runScripts:'outside-only'});const w=dom.window;

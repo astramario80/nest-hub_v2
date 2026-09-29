@@ -19,11 +19,11 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
     const indicator = button.querySelector('[aria-hidden]');
     if (indicator) indicator.textContent = open ? '−' : '＋';
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (gear && changed && content.animate && !reduced) {
+    if (changed && content.animate && !reduced) {
       content.hidden = false;
       content.inert = !open;
       content.style.overflow = 'hidden';
-      const animation = content.animate([{height:fromHeight+'px',opacity:open?0:1},{height:(open?content.scrollHeight:0)+'px',opacity:open?1:0}],{duration:750,easing:'ease-in-out'});
+      const animation = content.animate([{height:fromHeight+'px',opacity:open?0:1},{height:(open?content.scrollHeight:0)+'px',opacity:open?1:0}],{duration:gear?750:420,easing:'ease-in-out'});
       motion = animation;
       animation.finished.then(() => {
         if (motion !== animation) return;
@@ -39,6 +39,11 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
   button.addEventListener('click', () => {
     pinned = !pinned;
     setOpen(pinned);
+    if (pinned && gear && panel !== gear) {
+      gear.querySelectorAll('.gear-group.disclosure').forEach(sibling => {
+        if (sibling !== panel) sibling.dispatchEvent(new CustomEvent('disclosurecollapse'));
+      });
+    }
     pointerDown = false;
   });
   panel.addEventListener('pointerenter', event => {
@@ -54,7 +59,9 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
   });
   panel.addEventListener('focusin', () => { if (!pointerDown && (!gear || panel === gear)) setOpen(true); });
   panel.addEventListener('focusout', event => {
-    if (!panel.contains(event.relatedTarget)) { pinned = false; setOpen(false); }
+    if (!panel.contains(event.relatedTarget) && !(gear && panel !== gear && gear.contains(event.relatedTarget))) {
+      pinned = false; setOpen(false);
+    }
   });
   panel.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
@@ -65,6 +72,8 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
     }
   });
   document.addEventListener('pointerdown', event => {
-    if (!panel.contains(event.target)) { pinned = false; setOpen(false); }
+    if (!panel.contains(event.target) && !(gear && panel !== gear && gear.contains(event.target))) {
+      pinned = false; setOpen(false);
+    }
   });
 });

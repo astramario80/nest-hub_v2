@@ -838,47 +838,77 @@ document.addEventListener('DOMContentLoaded', () => {
             if (event.key === 'Escape') setQrOpen(false);
         });
     }
-    // Header dropdowns
-    const headerBtns = document.querySelectorAll('.dropdown-btn');
-    headerBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Close all other dropdowns first
-            closeAllDropdowns();
-            const content = btn.nextElementSibling;
-            if (content) content.classList.toggle('show');
+    const menuButtons = document.querySelectorAll('.dropdown-btn, .footer-dropdown-title');
+    menuButtons.forEach(btn => {
+        const wrapper = btn.parentElement;
+        wrapper.addEventListener('pointerenter', () => {
+            if (!wrapper.classList.contains('menu-dismissed')) btn.setAttribute('aria-expanded', 'true');
         });
-    });
-
-    // Footer dropdowns
-    const footerBtns = document.querySelectorAll('.footer-dropdown-title');
-    footerBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            // Close all other dropdowns first
-            closeAllDropdowns();
+        wrapper.addEventListener('pointerleave', () => {
+            wrapper.classList.remove('menu-dismissed');
+            if (!btn.nextElementSibling?.classList.contains('show')) btn.setAttribute('aria-expanded', 'false');
+        });
+        if (!btn.matches('button')) {
+            btn.setAttribute('role', 'button');
+            btn.tabIndex = 0;
+            btn.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); btn.click(); }
+            });
+        }
+        btn.setAttribute('aria-expanded', 'false');
+        btn.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
             const content = btn.nextElementSibling;
-            if (content) content.classList.toggle('show');
+            const open = !content?.classList.contains('show');
+            closeAllDropdowns();
+            wrapper.classList.toggle('menu-dismissed', !open);
+            if (content && open) { content.classList.add('show'); btn.setAttribute('aria-expanded', 'true'); }
         });
     });
 
     // Close dropdowns when clicking anywhere else on the screen
     window.addEventListener('click', (e) => {
-        if (!e.target.matches('.dropdown-btn') && !e.target.matches('.footer-dropdown-title')) {
+        if (!e.target.closest('.header-dropdown, .footer-dropdown')) {
             closeAllDropdowns();
         }
     });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeAllDropdowns();
+    });
 
     function closeAllDropdowns() {
-        const dropdowns = document.querySelectorAll('.dropdown-content, .footer-dropdown-content');
-        dropdowns.forEach(d => {
-            if (d.classList.contains('show')) {
-                d.classList.remove('show');
-            }
+        document.querySelectorAll('.header-dropdown > .dropdown-content.show, .footer-dropdown > .footer-dropdown-content.show').forEach(menu => {
+            menu.classList.remove('show');
+            menu.previousElementSibling?.setAttribute('aria-expanded', 'false');
         });
     }
+});
+
+// Native score and sharing expanders use the same quiet height reveal as the site menus.
+const detailsMotion = new WeakMap();
+document.addEventListener('click', event => {
+    const summary = event.target.closest('summary');
+    const details = summary?.parentElement;
+    if (!details?.matches('details') || !details.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) return;
+    event.preventDefault();
+    const previous = detailsMotion.get(details);
+    const opening = previous ? !previous.opening : !details.open;
+    const from = details.getBoundingClientRect().height;
+    previous?.animation.cancel();
+    if (opening) details.open = true;
+    const to = opening ? details.scrollHeight : summary.getBoundingClientRect().height;
+    details.style.height = `${from}px`;
+    details.style.overflow = 'hidden';
+    const animation = details.animate([{height:`${from}px`},{height:`${to}px`}], {duration:380,easing:'ease-in-out'});
+    detailsMotion.set(details,{animation,opening});
+    animation.finished.then(() => {
+        if (detailsMotion.get(details)?.animation !== animation) return;
+        detailsMotion.delete(details);
+        if (!opening) details.open = false;
+        details.style.height = '';
+        details.style.overflow = '';
+    }).catch(() => {});
 });
 
 // ================================

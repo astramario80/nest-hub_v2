@@ -70,6 +70,31 @@
     } catch (error) { message.textContent = error.message; }
     finally { button.disabled = false; }
   }));
+  const optionMotion = new WeakMap();
+  function setOptions(menu, open) {
+    const toggle = menu.previousElementSibling;
+    const from = menu.hidden ? 0 : menu.getBoundingClientRect().height;
+    optionMotion.get(menu)?.cancel();
+    toggle?.setAttribute('aria-expanded', String(open));
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (!menu.animate || reduced) { menu.hidden = !open; menu.inert = !open; return; }
+    menu.hidden = false;
+    menu.inert = !open;
+    menu.style.overflow = 'hidden';
+    const animation = menu.animate([{height:`${from}px`,opacity:open?0:1},{height:`${open?menu.scrollHeight:0}px`,opacity:open?1:0}],{duration:360,easing:'ease-in-out'});
+    optionMotion.set(menu, animation);
+    animation.finished.then(() => {
+      if (optionMotion.get(menu) !== animation) return;
+      optionMotion.delete(menu);
+      menu.hidden = !open;
+      menu.style.overflow = '';
+    }).catch(() => {});
+  }
+  function closeOptions() {
+    document.querySelectorAll('.nest-auth-user-options').forEach(menu => {
+      if (menu.previousElementSibling?.getAttribute('aria-expanded') === 'true') setOptions(menu, false);
+    });
+  }
   function refreshLinks() {
     document.querySelectorAll('.dropdown-content').forEach(list => {
       if (!list.closest('.header-dropdown')) return;
@@ -80,7 +105,7 @@
         const options = document.createElement('div');options.className = 'nest-auth-user-options';options.hidden = true;
         const profile = document.createElement('a');profile.href = '/profile';profile.textContent = 'Profile';
         const out = document.createElement('button');out.type = 'button';out.textContent = 'Log out';out.addEventListener('click', logout);
-        toggle.addEventListener('click', event => {event.stopPropagation();const open = options.hidden;document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});options.hidden = !open;toggle.setAttribute('aria-expanded',String(open));});
+        toggle.addEventListener('click', event => {event.stopPropagation();const open = toggle.getAttribute('aria-expanded') !== 'true';closeOptions();if (open) setOptions(options,true);});
         account.append(toggle,options);options.append(profile,out);list.append(account);
       } else {
         const login = document.createElement('button'); login.type = 'button'; login.dataset.nestAuthLink = ''; login.textContent = 'Log in'; login.addEventListener('click', () => open()); list.append(login);
@@ -89,11 +114,11 @@
   }
   document.addEventListener('click', event => {
     if (event.target.closest('.nest-auth-user-menu')) return;
-    document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});
+    closeOptions();
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    document.querySelectorAll('.nest-auth-user-options').forEach(menu => {menu.hidden = true;menu.previousElementSibling?.setAttribute('aria-expanded','false');});
+    closeOptions();
   });
   async function logout() {
     try { await api('logout'); } catch (error) { alert(error.message); return; }

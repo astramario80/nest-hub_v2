@@ -70,6 +70,12 @@ test('lookup page keeps NEST quick access, footer menus, and current year', () =
   const quick = window.document.querySelector('.dropdown-btn');
   quick.click();
   assert.equal(quick.nextElementSibling.classList.contains('show'), true);
+  assert.equal(quick.getAttribute('aria-expanded'), 'true');
+  quick.click();
+  assert.equal(quick.nextElementSibling.classList.contains('show'), false);
+  assert.equal(quick.parentElement.classList.contains('menu-dismissed'), true);
+  quick.click();
+  assert.equal(quick.parentElement.classList.contains('menu-dismissed'), false);
   assert.deepEqual([...quick.nextElementSibling.querySelectorAll('a')].map(a => a.textContent.trim()), ['StudentVue', 'SmartPass', '🚀 Join Us', '🌤️ Weather Report']);
   assert.equal(quick.nextElementSibling.querySelector('a[href="/weather"]').target, '');
   const footer = [...window.document.querySelectorAll('.footer-dropdown-title')];
@@ -77,7 +83,11 @@ test('lookup page keeps NEST quick access, footer menus, and current year', () =
   footer[0].click();
   assert.equal(footer[0].nextElementSibling.classList.contains('show'), true);
   assert.equal(quick.nextElementSibling.classList.contains('show'), false);
+  assert.equal(footer[0].getAttribute('role'), 'button');
+  assert.equal(footer[0].tabIndex, 0);
   footer[1].click();
   assert.equal(footer[1].nextElementSibling.classList.contains('show'), true);
+  footer[1].dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  assert.equal(footer[1].nextElementSibling.classList.contains('show'), false);
   window.close();
 });
