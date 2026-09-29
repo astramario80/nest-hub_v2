@@ -577,7 +577,8 @@ async function enforcePeriodVolume(now) {
   recordActivity(volume === 0 ? '2nd-period announcements are quiet.' : 'Period music volume set.');
 }
 
-let accessCheckedAt = 0;
+let accessCheckedAt = typeof NEST_ACCESS_VERIFIED_UNTIL === 'number'
+  ? Math.min(Date.now(), NEST_ACCESS_VERIFIED_UNTIL - 60000) : 0;
 async function checkNestAccess(force) {
   if (!force && Date.now() - accessCheckedAt < 60000) return;
   let response;
@@ -655,7 +656,7 @@ async function startSignals() {
       ui.dialog.showModal();
       throw new Error('Choose Connect Spotify to authorize an approved Premium account.');
     }
-    await checkNestAccess(true);
+    await checkNestAccess();
     await loadSchedule();
     await loadProfile();
     if (state.profile && state.profile.product !== 'premium') {
@@ -767,7 +768,7 @@ async function initialize() {
   registerStatusTool();
 
   try {
-    await checkNestAccess(true);
+    await checkNestAccess();
     await handleSpotifyCallback();
     if (tokenRecord()) {
       await loadProfile();
