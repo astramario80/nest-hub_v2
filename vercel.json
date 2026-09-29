@@ -4,6 +4,10 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/lib/signals-player/:path*",
+      "destination": "/api/signals?asset=blocked"
+    },
+    {
       "source": "/favicon.ico",
       "destination": "/assets/nest_menu_icon.png"
     }
@@ -11,11 +15,15 @@
   "functions": {
     "api/account.mjs": {
       "maxDuration": 60,
-      "regions": ["sfo1"]
+      "regions": [
+        "sfo1"
+      ]
     },
     "api/auth.mjs": {
       "maxDuration": 60,
-      "regions": ["sfo1"]
+      "regions": [
+        "sfo1"
+      ]
     },
     "api/spinner.mjs": {
       "maxDuration": 60
@@ -31,6 +39,10 @@
     },
     "api/hiring.mjs": {
       "maxDuration": 40
+    },
+    "api/signals.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "lib/signals-player/**"
     }
   }
 }

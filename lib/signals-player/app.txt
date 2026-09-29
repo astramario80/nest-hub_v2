@@ -1,0 +1,783 @@
+const CONFIG = {
+  scheduleUrl: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQcUoNGeXSz9DGl2xC0iDY4ZODXPJZ9t5DHsxUeDUHLgdex6kJw0Lg4KKDH_ku0O798h6aKslWiGSCj/pub?gid=1783333707&single=true&output=csv',
+  cleanupUri: 'spotify:playlist:1IkWS5ICPcOUKJvXVslYd3',
+  quietUri: 'spotify:playlist:1leyIgu6VXG7cpa2HjO9FF',
+  flyDayUri: 'spotify:playlist:5RBW2pugP9rvfUpjsPgiYR',
+  ctsoUri: 'spotify:playlist:1p8yWfniqsYOiyyg992D3Q',
+  periodUris: {
+    0: 'spotify:playlist:1OCYow48tjz9v4CU5x7TyJ',
+    1: 'spotify:playlist:1K0glrm9jnPJBa64osGW7v',
+    2: 'spotify:playlist:1ZTICxG3ozlLYqfrqOkpbu',
+    3: 'spotify:playlist:6EexR3hq8ayXBPjTjlzOQL',
+    4: 'spotify:playlist:4mXl8LkAQDMJeuhXc75jnw',
+    5: 'spotify:playlist:6rsF8UXwicG49P40H69gbQ',
+    6: 'spotify:playlist:5xOcZkq1mJfm2LeBXzmx2k',
+    7: 'spotify:playlist:0r6xwWvb7oH117JQRA29kx'
+  },
+  cleanupLeadMs: 6 * 60 * 1000,
+  announcementMs: 10 * 60 * 1000,
+  triggerWindowMs: 45 * 1000,
+  tickMs: 15 * 1000
+};
+
+const STORAGE = {
+  clientId: 'nest-signals-client-id',
+  token: 'nest-signals-spotify-token',
+  verifier: 'nest-signals-pkce-verifier',
+  oauthState: 'nest-signals-oauth-state',
+  schedule: 'nest-signals-schedule',
+  completed: 'nest-signals-completed',
+  running: 'nest-signals-running'
+};
+
+const ui = {
+  clock: document.querySelector('#clock'),
+  date: document.querySelector('#date'),
+  statusLight: document.querySelector('#status-light'),
+  statusHeading: document.querySelector('#status-heading'),
+  statusTitle: document.querySelector('#status-title'),
+  statusDetail: document.querySelector('#status-detail'),
+  start: document.querySelector('#start-button'),
+  stop: document.querySelector('#stop-button'),
+  openSpotify: document.querySelector('#open-spotify-button'),
+  spotifyLaunchHelp: document.querySelector('#spotify-launch-help'),
+  setup: document.querySelector('#setup-button'),
+  dialog: document.querySelector('#setup-dialog'),
+  form: document.querySelector('#setup-form'),
+  closeSetup: document.querySelector('#close-setup'),
+  clientId: document.querySelector('#client-id'),
+  redirectUri: document.querySelector('#redirect-uri'),
+  copyRedirect: document.querySelector('#copy-redirect'),
+  spotifyUser: document.querySelector('#spotify-user'),
+  spotifyAccountDetail: document.querySelector('#spotify-account-detail'),
+  disconnect: document.querySelector('#disconnect-button'),
+  currentPeriod: document.querySelector('#current-period'),
+  currentTime: document.querySelector('#current-time'),
+  nextEvent: document.querySelector('#next-event'),
+  nextEventTime: document.querySelector('#next-event-time'),
+  audioStatus: document.querySelector('#audio-status'),
+  lastCheck: document.querySelector('#last-check'),
+  scheduleList: document.querySelector('#schedule-list')
+};
+
+const state = {
+  running: false,
+  schedule: [],
+  player: null,
+  deviceId: '',
+  spotifyReady: false,
+  profile: null,
+  timer: null,
+  wakeLock: null,
+  busy: false,
+  lastVolumeMode: ''
+};
+
+function redirectUri() {
+  return 'https://signals.gknest.org/';
+}
+
+function displayTime(date) {
+  return new Intl.DateTimeFormat([], { hour: 'numeric', minute: '2-digit' }).format(date);
+}
+
+function displayClock() {
+  const now = new Date();
+  ui.clock.textContent = displayTime(now);
+  ui.date.textContent = new Intl.DateTimeFormat([], {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric'
+  }).format(now);
+}
+
+function dayStamp() {
+  const now = new Date();
+  return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
+}
+
+function setStatus(mode, heading, title, detail) {
+  ui.statusLight.dataset.mode = mode;
+  ui.statusHeading.textContent = heading;
+  ui.statusTitle.textContent = title;
+  ui.statusDetail.textContent = detail;
+}
+
+function recordActivity(message) {
+  const entry = document.createElement('div');
+  entry.className = 'activity';
+  entry.textContent = displayTime(new Date()) + '  ' + message;
+  ui.scheduleList.prepend(entry);
+  while (ui.scheduleList.querySelectorAll('.activity').length > 3) {
+    ui.scheduleList.querySelectorAll('.activity')[3].remove();
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let quoted = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const char = text[i];
+    const next = text[i + 1];
+    if (char === '"' && quoted && next === '"') {
+      field += '"';
+      i += 1;
+    } else if (char === '"') {
+      quoted = !quoted;
+    } else if (char === ',' && !quoted) {
+      row.push(field.trim());
+      field = '';
+    } else if ((char === '\n' || char === '\r') && !quoted) {
+      if (char === '\r' && next === '\n') i += 1;
+      row.push(field.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+  row.push(field.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+function timeToday(value) {
+  const parts = String(value).trim().split(':').map(Number);
+  if (parts.length < 2 || parts.some(Number.isNaN)) return null;
+  const date = new Date();
+  date.setHours(parts[0], parts[1], parts[2] || 0, 0);
+  return date;
+}
+
+function normalizeSchedule(csv) {
+  const rows = parseCsv(csv).map(function (columns) {
+    const label = columns[0] || '';
+    const times = (columns[1] || '').split('-');
+    const start = timeToday(times[0]);
+    const end = timeToday(times[1]);
+    const prep = columns[2] || '';
+    const tag = columns[3] || '';
+    const allText = [label, prep, tag].join(' ').toLowerCase();
+    return {
+      label: label,
+      prep: prep,
+      tag: tag,
+      start: start,
+      end: end,
+      planning: allText.includes('planning'),
+      lunch: allText.includes('lunch'),
+      absent: label.trim().toLowerCase() === 'absent',
+      silentLunch: false
+    };
+  }).filter(function (item) {
+    const heading = item.label.toLowerCase();
+    return item.label && item.start && item.end && heading !== 'period' && heading !== 'label';
+  });
+
+  rows.forEach(function (item, index) {
+    if (!item.lunch) return;
+    const previous = rows[index - 1];
+    const next = rows[index + 1];
+    item.silentLunch = Boolean((previous && previous.planning) || (next && next.planning));
+  });
+  return rows;
+}
+
+async function loadSchedule() {
+  try {
+    const response = await fetch(CONFIG.scheduleUrl, { cache: 'no-store' });
+    if (!response.ok) throw new Error('Schedule returned ' + response.status);
+    const text = await response.text();
+    localStorage.setItem(STORAGE.schedule, text);
+    state.schedule = normalizeSchedule(text);
+  } catch (error) {
+    const cached = localStorage.getItem(STORAGE.schedule);
+    if (!cached) throw error;
+    state.schedule = normalizeSchedule(cached);
+    recordActivity('Using the most recently saved bell schedule.');
+  }
+  renderSchedule();
+  return state.schedule;
+}
+
+function rowIcon(item) {
+  if (item.silentLunch) return '🔇';
+  if (item.planning) return '◌';
+  if (item.lunch) return '◇';
+  return '●';
+}
+
+function renderSchedule() {
+  if (!state.schedule.length) {
+    ui.scheduleList.innerHTML = '<div class="schedule-empty">No schedule is available for today.</div>';
+    return;
+  }
+  ui.scheduleList.innerHTML = state.schedule.map(function (item) {
+    const details = item.silentLunch ? 'Silent lunch · planning period' : (item.prep || item.tag || 'Transition block');
+    return '<article class="schedule-row" data-active="false">' +
+      '<span class="row-icon">' + rowIcon(item) + '</span>' +
+      '<div><strong>' + escapeHtml(item.label) + '</strong><span>' + escapeHtml(details) + '</span></div>' +
+      '<time>' + escapeHtml(displayTime(item.start)) + '–' + escapeHtml(displayTime(item.end)) + '</time>' +
+      '</article>';
+  }).join('');
+}
+
+function completedForToday() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE.completed) || '{}');
+    return saved.date === dayStamp() ? new Set(saved.ids || []) : new Set();
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function markCompleted(id) {
+  const completed = completedForToday();
+  completed.add(id);
+  localStorage.setItem(STORAGE.completed, JSON.stringify({ date: dayStamp(), ids: Array.from(completed) }));
+}
+
+function isCompleted(id) {
+  return completedForToday().has(id);
+}
+
+function inTriggerWindow(target, now) {
+  return Math.abs(now.getTime() - target.getTime()) <= CONFIG.triggerWindowMs;
+}
+
+function isSecondPeriod(item) {
+  const label = item.label.toLowerCase();
+  return label.includes('2nd') || label.includes('period 2');
+}
+
+function playlistFor(item) {
+  const text = [item.label, item.prep, item.tag].join(' ').toLowerCase();
+  if (text.includes('fly day')) return CONFIG.flyDayUri;
+  if (text.includes('planning') || text.includes('lunch') || text.includes('study support') || text.includes('dismissal')) {
+    return CONFIG.quietUri;
+  }
+  if (text.includes('ctso')) return CONFIG.ctsoUri;
+  for (let number = 0; number <= 7; number += 1) {
+    if (new RegExp('(^|\\D)' + number + '(\\D|$)').test(item.label) ||
+        item.label.toLowerCase().includes(number + ordinalSuffix(number))) {
+      return CONFIG.periodUris[number];
+    }
+  }
+  if (text.includes('advisory')) return CONFIG.periodUris[7];
+  return '';
+}
+
+function ordinalSuffix(number) {
+  if (number === 1) return 'st';
+  if (number === 2) return 'nd';
+  if (number === 3) return 'rd';
+  return 'th';
+}
+
+function upcomingEvents(now) {
+  const events = [];
+  state.schedule.forEach(function (item, index) {
+    const cleanup = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
+    if (!item.silentLunch) events.push({ at: cleanup, label: 'Cleanup · ' + item.label });
+    const next = state.schedule[index + 1];
+    if (next && !item.silentLunch && !next.silentLunch && playlistFor(next)) {
+      events.push({ at: item.end, label: 'Transition · ' + next.label });
+    }
+  });
+  return events.filter(function (event) { return event.at >= now; })
+    .sort(function (a, b) { return a.at - b.at; });
+}
+
+function updateReadouts(now) {
+  const current = state.schedule.find(function (item) { return now >= item.start && now < item.end; });
+  const rows = Array.from(ui.scheduleList.querySelectorAll('.schedule-row'));
+  rows.forEach(function (row, index) {
+    row.dataset.active = current === state.schedule[index] ? 'true' : 'false';
+  });
+  if (current) {
+    ui.currentPeriod.textContent = current.label + (current.silentLunch ? ' · silent' : '');
+    ui.currentTime.textContent = displayTime(current.start) + '–' + displayTime(current.end);
+  } else {
+    ui.currentPeriod.textContent = 'No active block';
+    ui.currentTime.textContent = 'Waiting for the next scheduled period';
+  }
+  const next = upcomingEvents(now)[0];
+  ui.nextEvent.textContent = next ? next.label : 'Signals complete';
+  ui.nextEventTime.textContent = next ? displayTime(next.at) : 'No more signals today';
+  ui.lastCheck.textContent = displayTime(now);
+}
+
+function randomString(length) {
+  const values = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(values).map(function (value) { return (value % 36).toString(36); }).join('');
+}
+
+async function challengeFor(verifier) {
+  const bytes = new TextEncoder().encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return btoa(String.fromCharCode.apply(null, new Uint8Array(digest)))
+    .replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+}
+
+function tokenRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE.token) || 'null');
+  } catch (error) {
+    return null;
+  }
+}
+
+async function refreshToken() {
+  const saved = tokenRecord();
+  const clientId = localStorage.getItem(STORAGE.clientId);
+  if (!saved || !saved.refresh_token || !clientId) return '';
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: 'refresh_token',
+    refresh_token: saved.refresh_token
+  });
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  });
+  if (!response.ok) throw new Error('Spotify authorization expired');
+  const updated = await response.json();
+  const record = Object.assign({}, saved, updated, {
+    expires_at: Date.now() + (updated.expires_in * 1000) - 60000
+  });
+  localStorage.setItem(STORAGE.token, JSON.stringify(record));
+  return record.access_token;
+}
+
+async function accessToken(forceRefresh) {
+  const saved = tokenRecord();
+  if (!saved) return '';
+  if (!forceRefresh && saved.access_token && saved.expires_at > Date.now()) return saved.access_token;
+  return refreshToken();
+}
+
+async function beginSpotifyLogin() {
+  const clientId = ui.clientId.value.trim();
+  if (!clientId) throw new Error('Paste the Spotify Client ID first.');
+  localStorage.setItem(STORAGE.clientId, clientId);
+  const verifier = randomString(64);
+  const oauthState = randomString(24);
+  sessionStorage.setItem(STORAGE.verifier, verifier);
+  sessionStorage.setItem(STORAGE.oauthState, oauthState);
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: 'code',
+    redirect_uri: redirectUri(),
+    state: oauthState,
+    scope: 'streaming user-read-private user-read-email user-read-playback-state user-read-currently-playing user-modify-playback-state',
+    code_challenge_method: 'S256',
+    code_challenge: await challengeFor(verifier)
+  });
+  window.top.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+}
+
+async function handleSpotifyCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return false;
+  if (params.get('state') !== sessionStorage.getItem(STORAGE.oauthState)) {
+    throw new Error('Spotify sign-in could not be verified. Please connect again.');
+  }
+  const verifier = sessionStorage.getItem(STORAGE.verifier);
+  const clientId = localStorage.getItem(STORAGE.clientId);
+  const body = new URLSearchParams({
+    client_id: clientId,
+    grant_type: 'authorization_code',
+    code: code,
+    redirect_uri: redirectUri(),
+    code_verifier: verifier
+  });
+  const response = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body
+  });
+  if (!response.ok) throw new Error('Spotify did not complete the connection.');
+  const token = await response.json();
+  token.expires_at = Date.now() + (token.expires_in * 1000) - 60000;
+  localStorage.setItem(STORAGE.token, JSON.stringify(token));
+  sessionStorage.removeItem(STORAGE.verifier);
+  sessionStorage.removeItem(STORAGE.oauthState);
+  history.replaceState({}, document.title, '/api/signals?asset=index');
+  window.parent.postMessage({ type: 'nest-signals-callback-complete' }, 'https://signals.gknest.org');
+  return true;
+}
+
+async function spotifyFetch(path, options, retry) {
+  await checkNestAccess();
+  const token = await accessToken(false);
+  if (!token) throw new Error('Spotify needs to be connected in Owner setup.');
+  const request = Object.assign({}, options || {});
+  request.headers = Object.assign({}, request.headers || {}, { Authorization: 'Bearer ' + token });
+  const response = await fetch('https://api.spotify.com/v1' + path, request);
+  if (response.status === 401 && retry !== false) {
+    await accessToken(true);
+    return spotifyFetch(path, options, false);
+  }
+  if (!response.ok && response.status !== 204) {
+    let detail = '';
+    try { detail = (await response.json()).error.message; } catch (error) { detail = response.statusText; }
+    throw new Error(detail || 'Spotify returned ' + response.status);
+  }
+  return response;
+}
+
+async function loadProfile() {
+  if (!tokenRecord()) return null;
+  const response = await spotifyFetch('/me');
+  state.profile = await response.json();
+  ui.spotifyUser.textContent = state.profile.display_name || state.profile.email || 'Spotify connected';
+  ui.spotifyAccountDetail.textContent = state.profile.product === 'premium'
+    ? 'Premium account ready for classroom playback.'
+    : 'This account is not currently reported as Premium.';
+  return state.profile;
+}
+
+function loadSpotifySdk() {
+  return new Promise(function (resolve, reject) {
+    if (window.Spotify) {
+      resolve();
+      return;
+    }
+    window.onSpotifyWebPlaybackSDKReady = resolve;
+    const existing = document.querySelector('script[data-spotify-sdk]');
+    if (existing) return;
+    const script = document.createElement('script');
+    script.src = 'https://sdk.scdn.co/spotify-player.js';
+    script.dataset.spotifySdk = 'true';
+    script.onerror = function () { reject(new Error('The Spotify player could not load.')); };
+    document.head.appendChild(script);
+  });
+}
+
+async function connectPlayer() {
+  await loadSpotifySdk();
+  if (state.player && state.deviceId) return;
+  state.player = new Spotify.Player({
+    name: 'NEST™ Signals',
+    getOAuthToken: async function (callback) {
+      callback(await accessToken(false));
+    },
+    volume: 0.5
+  });
+  state.player.addListener('ready', function (details) {
+    state.deviceId = details.device_id;
+    state.spotifyReady = true;
+    ui.audioStatus.textContent = 'Spotify · NEST player ready';
+  });
+  state.player.addListener('not_ready', function () {
+    state.spotifyReady = false;
+    ui.audioStatus.textContent = 'Spotify player offline';
+  });
+  state.player.addListener('authentication_error', function () {
+    showError(new Error('Spotify authorization needs to be renewed.'));
+  });
+  state.player.addListener('account_error', function () {
+    showError(new Error('Spotify Premium is required for automatic web playback.'));
+  });
+  const connected = await state.player.connect();
+  if (!connected) throw new Error('Spotify could not connect the classroom player.');
+  const deadline = Date.now() + 12000;
+  while (!state.deviceId && Date.now() < deadline) {
+    await new Promise(function (resolve) { setTimeout(resolve, 200); });
+  }
+  if (!state.deviceId) throw new Error('Spotify did not make the classroom player available.');
+}
+
+async function activatePlayer() {
+  await spotifyFetch('/me/player', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_ids: [state.deviceId], play: false })
+  });
+}
+
+async function setSpotifyVolume(level) {
+  const percent = Math.round(level * 100);
+  if (state.player) await state.player.setVolume(level);
+  if (state.deviceId) {
+    await spotifyFetch('/me/player/volume?volume_percent=' + percent + '&device_id=' + encodeURIComponent(state.deviceId), {
+      method: 'PUT'
+    });
+  }
+}
+
+async function playbackState() {
+  const response = await spotifyFetch('/me/player');
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+async function playContext(uri, volume) {
+  await activatePlayer();
+  await spotifyFetch('/me/player/play?device_id=' + encodeURIComponent(state.deviceId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ context_uri: uri })
+  });
+  await spotifyFetch('/me/player/shuffle?state=true&device_id=' + encodeURIComponent(state.deviceId), {
+    method: 'PUT'
+  });
+  await setSpotifyVolume(volume);
+}
+
+async function runCleanup(item) {
+  const id = 'cleanup:' + item.end.getTime();
+  if (isCompleted(id) || item.silentLunch) return;
+  const playback = await playbackState();
+  if (playback && playback.is_playing && playback.context && playback.context.uri === CONFIG.cleanupUri) {
+    markCompleted(id);
+    recordActivity('Cleanup was already playing, so it was left uninterrupted.');
+    return;
+  }
+  await playContext(CONFIG.cleanupUri, 0.8);
+  markCompleted(id);
+  recordActivity('Cleanup music started for ' + item.label + '.');
+}
+
+async function runTransition(item, next) {
+  const id = 'transition:' + item.end.getTime();
+  if (isCompleted(id) || item.silentLunch || next.silentLunch) return;
+  const uri = playlistFor(next);
+  if (!uri) return;
+  await playContext(uri, 0.8);
+  markCompleted(id);
+  recordActivity('Music changed for ' + next.label + '.');
+}
+
+async function enforcePeriodVolume(now) {
+  const current = state.schedule.find(function (item) { return now >= item.start && now < item.end; });
+  if (!current || current.silentLunch) return;
+  let mode = 'normal:' + current.start.getTime();
+  let volume = 0.5;
+  if (isSecondPeriod(current) && now < new Date(current.start.getTime() + CONFIG.announcementMs)) {
+    mode = 'announcements:' + current.start.getTime();
+    volume = 0;
+  }
+  if (state.lastVolumeMode === mode) return;
+  await setSpotifyVolume(volume);
+  state.lastVolumeMode = mode;
+  recordActivity(volume === 0 ? '2nd-period announcements are quiet.' : 'Period music volume set.');
+}
+
+let accessCheckedAt = 0;
+async function checkNestAccess(force) {
+  if (!force && Date.now() - accessCheckedAt < 60000) return;
+  let response;
+  try {
+    response = await fetch('/api/signals?asset=access', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(55000) });
+  } catch (_) { response = { ok: false, status: 503 }; }
+  if (!response.ok) {
+    stopSignals();
+    if (state.player) { try { await state.player.pause(); } catch (_) {} state.player.disconnect(); }
+    state.player = null; state.deviceId = ''; state.spotifyReady = false;
+    if (response.status === 401 || response.status === 403) localStorage.removeItem(STORAGE.token);
+    throw new Error(response.status === 503 ? 'NEST access could not be checked. Try Start signals again.' : 'NEST access has ended. Sign in to NEST with an authorized school account.');
+  }
+  accessCheckedAt = Date.now();
+}
+
+async function schedulerTick() {
+  if (!state.running || state.busy) return;
+  state.busy = true;
+  const now = new Date();
+  try {
+    await checkNestAccess();
+    updateReadouts(now);
+    if (state.schedule.some(function (item) { return item.absent; })) {
+      setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
+      return;
+    }
+    for (let index = 0; index < state.schedule.length; index += 1) {
+      const item = state.schedule[index];
+      const cleanupTime = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
+      if (inTriggerWindow(cleanupTime, now)) await runCleanup(item);
+      const next = state.schedule[index + 1];
+      if (next && inTriggerWindow(item.end, now)) await runTransition(item, next);
+    }
+    await enforcePeriodVolume(now);
+    setStatus('running', 'SIGNALS ACTIVE', 'Classroom automation is running', 'Leave this window open and keep the Windows laptop plugged in.');
+  } catch (error) {
+    showError(error);
+  } finally {
+    state.busy = false;
+  }
+}
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+  try {
+    state.wakeLock = await navigator.wakeLock.request('screen');
+  } catch (error) {
+    recordActivity('Windows power settings must keep the laptop awake.');
+  }
+}
+
+function openSpotifyApp() {
+  // Request the native app only during a click, before any asynchronous work.
+  // Browsers cannot confirm whether the app opened or the prompt was accepted.
+  ui.spotifyLaunchHelp.textContent = 'Allow your browser to open Spotify. If it does not open, launch the installed Spotify app manually. Keep this page open for signals.';
+  try {
+    window.location.assign('spotify:home');
+  } catch (error) {
+    ui.spotifyLaunchHelp.textContent = 'Open the installed Spotify app manually, then keep this page open for signals.';
+  }
+}
+
+function startSignalsFromClick() {
+  if (state.running || ui.start.disabled) return;
+  if (tokenRecord()) openSpotifyApp();
+  return startSignals();
+}
+
+async function startSignals() {
+  try {
+    ui.start.disabled = true;
+    setStatus('working', 'CONNECTING', 'Preparing today’s signals', 'Loading the schedule and classroom Spotify player.');
+    if (!tokenRecord()) {
+      ui.dialog.showModal();
+      throw new Error('Complete Owner setup to connect Spotify.');
+    }
+    await checkNestAccess(true);
+    await loadSchedule();
+    await loadProfile();
+    if (state.profile && state.profile.product !== 'premium') {
+      throw new Error('The connected Spotify account must be Premium.');
+    }
+    await connectPlayer();
+    await activatePlayer();
+    state.running = true;
+    localStorage.setItem(STORAGE.running, 'true');
+    ui.start.textContent = 'Signals running';
+    ui.start.disabled = true;
+    ui.stop.disabled = false;
+    await requestWakeLock();
+    await schedulerTick();
+    clearInterval(state.timer);
+    state.timer = setInterval(schedulerTick, CONFIG.tickMs);
+  } catch (error) {
+    ui.start.disabled = false;
+    showError(error);
+  }
+}
+
+function stopSignals() {
+  state.running = false;
+  localStorage.setItem(STORAGE.running, 'false');
+  clearInterval(state.timer);
+  state.timer = null;
+  ui.start.textContent = 'Start signals';
+  ui.start.disabled = false;
+  ui.stop.disabled = true;
+  if (state.wakeLock) state.wakeLock.release();
+  setStatus('paused', 'STOPPED', 'Signals are stopped for today', 'Press Start signals whenever the room is ready again.');
+}
+
+function showError(error) {
+  console.error(error);
+  setStatus('error', 'NEEDS ATTENTION', 'Signals need a quick check', error.message || String(error));
+}
+
+function disconnectSpotify() {
+  stopSignals();
+  if (state.player) state.player.disconnect();
+  state.player = null;
+  state.deviceId = '';
+  state.profile = null;
+  localStorage.removeItem(STORAGE.token);
+  ui.spotifyUser.textContent = 'Spotify is not connected';
+  ui.spotifyAccountDetail.textContent = 'Premium is required for automatic playback.';
+  ui.audioStatus.textContent = 'Spotify not connected';
+}
+
+function registerStatusTool() {
+  if (!navigator.modelContext || typeof navigator.modelContext.registerTool !== 'function') return;
+  navigator.modelContext.registerTool({
+    name: 'read_signal_status',
+    description: 'Read today’s classroom signal status without changing playback.',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+    execute: async function () {
+      const now = new Date();
+      const current = state.schedule.find(function (item) { return now >= item.start && now < item.end; });
+      const next = upcomingEvents(now)[0];
+      return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify({
+            running: state.running,
+            currentBlock: current ? current.label : null,
+            nextSignal: next ? next.label : null,
+            nextSignalAt: next ? next.at.toISOString() : null,
+            spotifyReady: state.spotifyReady
+          })
+        }]
+      };
+    }
+  });
+}
+
+async function initialize() {
+  displayClock();
+  setInterval(displayClock, 1000);
+  ui.redirectUri.value = redirectUri();
+  ui.clientId.value = localStorage.getItem(STORAGE.clientId) || '';
+
+  ui.setup.addEventListener('click', function () { ui.dialog.showModal(); });
+  ui.closeSetup.addEventListener('click', function () { ui.dialog.close(); });
+  ui.form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    try { await beginSpotifyLogin(); } catch (error) { showError(error); }
+  });
+  ui.copyRedirect.addEventListener('click', async function () {
+    await navigator.clipboard.writeText(redirectUri());
+    ui.copyRedirect.textContent = 'Copied';
+    setTimeout(function () { ui.copyRedirect.textContent = 'Copy'; }, 1500);
+  });
+  ui.disconnect.addEventListener('click', disconnectSpotify);
+  ui.start.addEventListener('click', startSignalsFromClick);
+  ui.openSpotify.addEventListener('click', openSpotifyApp);
+  ui.stop.addEventListener('click', stopSignals);
+  document.addEventListener('visibilitychange', function () {
+    if (state.running && document.visibilityState === 'visible') requestWakeLock();
+  });
+
+
+  registerStatusTool();
+
+  try {
+    await checkNestAccess(true);
+    await handleSpotifyCallback();
+    if (tokenRecord()) {
+      await loadProfile();
+      ui.audioStatus.textContent = 'Spotify connected';
+      setStatus('ready', 'READY', 'Spotify is connected', 'Confirm the Pyle speaker is selected, then start today’s signals.');
+    }
+    await loadSchedule();
+    updateReadouts(new Date());
+    if (localStorage.getItem(STORAGE.running) === 'true' && tokenRecord()) {
+      await startSignals();
+    }
+  } catch (error) {
+    showError(error);
+  }
+}
+
+initialize();
