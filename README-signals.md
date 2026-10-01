@@ -14,4 +14,4 @@ Start signals activates the prepared Spotify browser audio element synchronously
 
 Before transfer, Signals waits for its exact SDK device ID in Spotify’s available devices and confirms it is active before playback commands. Temporary transfer 404s retry up to three times; failures clear stale connection state for the next Start click. It never falls back to another account device. Volume uses the local SDK instead of another device-targeted API request.
 
-Transitions catch up from the preceding block’s end until the next block’s cleanup begins, with completion markers preventing repeats. Access-check delays use a fresh timestamp. The audio panel records confirmed cleanup/period playback; second-period announcement muting displays its own status and sound-resume time.
+Transitions catch up from the preceding block’s end until the next block’s cleanup begins, with completion markers preventing repeats. Access-check delays use a fresh timestamp. The audio panel records confirmed cleanup/period playback; second-period announcement muting lasts five minutes and displays its own status and sound-resume time.

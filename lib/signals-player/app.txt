@@ -16,7 +16,7 @@ const CONFIG = {
     7: 'spotify:playlist:0r6xwWvb7oH117JQRA29kx'
   },
   cleanupLeadMs: 6 * 60 * 1000,
-  announcementMs: 10 * 60 * 1000,
+  announcementMs: 5 * 60 * 1000,
   tickMs: 15 * 1000
 };
 

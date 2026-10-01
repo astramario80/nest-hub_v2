@@ -162,7 +162,7 @@ test('announcement mute is visible and period volume resumes afterward', async (
   await run('schedulerTick()');
   assert.equal(run('ui.statusHeading.textContent'),'ANNOUNCEMENT QUIET TIME');
   assert.deepEqual(calls,[0]);
-  at=new Date('2026-10-01T09:36:00Z').getTime();
+  at=new Date('2026-10-01T09:31:00Z').getTime();
   await run('schedulerTick()');
   assert.equal(run('ui.statusHeading.textContent'),'SIGNALS ACTIVE');
   assert.deepEqual(calls,[0,0.5]);
