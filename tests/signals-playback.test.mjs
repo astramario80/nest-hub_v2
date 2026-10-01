@@ -167,3 +167,25 @@ test('announcement mute is visible and period volume resumes afterward', async (
   assert.equal(run('ui.statusHeading.textContent'),'SIGNALS ACTIVE');
   assert.deepEqual(calls,[0,0.5]);
 });
+
+test('planning starts Chill Folk after silent lunch, even with completed transition markers', async () => {
+  const { run,ctx,calls }=playerContext();
+  ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-01T11:15:00Z']));}};
+  run(`state.running=true;state.schedule=[{label:'1ST LUNCH',silentLunch:true,start:new Date('2026-10-01T10:27:00Z'),end:new Date('2026-10-01T10:57:00Z')},{label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')}];state.player={getCurrentState:async()=>({paused:true})};checkNestAccess=async()=>{};updateReadouts=()=>{};enforcePeriodVolume=async()=>{};isCompleted=()=>true;playContext=async(uri,volume)=>calls.push([uri,volume]);recordActivity=()=>{};`);
+  await run('schedulerTick()');await run('schedulerTick()');
+  assert.deepEqual(calls.map(entry=>Array.from(entry)),[['spotify:playlist:1leyIgu6VXG7cpa2HjO9FF',0.5]]);
+  assert.match(run('ui.audioStatus.textContent'),/Chill Folk playback confirmed/);
+});
+
+test('planning continues Chill Folk through final six minutes without cleanup or louder volume', async () => {
+  const {run,calls}=playerContext();
+  run(`const item={label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')};state.schedule=[item];isCompleted=()=>false;playbackState=async()=>{throw new Error('cleanup must not run')};setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
+  await run('runCleanup(item)');await run("enforcePeriodVolume(new Date('2026-10-01T12:00:00Z'))");
+  assert.deepEqual(calls,[0.5]);
+});
+
+test('planning recognizes existing local Chill Folk without restarting the playlist', async()=>{
+  const {run,calls}=playerContext();
+  run(`state.player={getCurrentState:async()=>({paused:false,context:{uri:CONFIG.quietUri}})};playContext=async()=>calls.push('restart');recordActivity=()=>{};`);
+  await run('runPlanning({start:new Date()})');assert.deepEqual(calls,[]);
+});

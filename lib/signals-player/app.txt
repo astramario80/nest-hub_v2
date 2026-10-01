@@ -68,7 +68,8 @@ const state = {
   wakeLock: null,
   busy: false,
   lastVolumeMode: '',
-  playbackError: null
+  playbackError: null,
+  planningBlock: ''
 };
 
 function redirectUri() {
@@ -271,6 +272,7 @@ function isSecondPeriod(item) {
 
 function playlistFor(item) {
   const text = [item.label, item.prep, item.tag].join(' ').toLowerCase();
+  if (item.planning) return CONFIG.quietUri;
   if (text.includes('fly day')) return CONFIG.flyDayUri;
   if (text.includes('planning') || text.includes('lunch') || text.includes('study support') || text.includes('dismissal')) {
     return CONFIG.quietUri;
@@ -297,10 +299,10 @@ function upcomingEvents(now) {
   const events = [];
   state.schedule.forEach(function (item, index) {
     const cleanup = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
-    if (!item.silentLunch) events.push({ at: cleanup, label: 'Cleanup · ' + item.label });
+    if (!item.silentLunch && !item.planning) events.push({ at: cleanup, label: 'Cleanup · ' + item.label });
     const next = state.schedule[index + 1];
-    if (next && !item.silentLunch && !next.silentLunch && playlistFor(next)) {
-      events.push({ at: item.end, label: 'Transition · ' + next.label });
+    if (next && !next.silentLunch && playlistFor(next)) {
+      events.push({ at: next.planning ? next.start : item.end, label: 'Transition · ' + next.label });
     }
   });
   return events.filter(function (event) { return event.at >= now; })
@@ -620,7 +622,7 @@ async function playContext(uri, volume) {
 
 async function runCleanup(item) {
   const id = 'cleanup:' + item.end.getTime();
-  if (isCompleted(id) || item.silentLunch) return;
+  if (isCompleted(id) || item.silentLunch || item.planning) return;
   const playback = await playbackState();
   if (playback && playback.is_playing && playback.context && playback.context.uri === CONFIG.cleanupUri && playback.device && playback.device.id === state.deviceId) {
     markCompleted(id);
@@ -633,9 +635,21 @@ async function runCleanup(item) {
   recordActivity('Cleanup music started for ' + item.label + '.');
 }
 
+async function runPlanning(item) {
+  const id = String(item.start.getTime());
+  if (state.planningBlock === id) return;
+  const playback = await state.player.getCurrentState();
+  if (!playback || playback.paused || !playback.context || playback.context.uri !== CONFIG.quietUri) {
+    await playContext(CONFIG.quietUri, 0.5);
+  }
+  state.planningBlock = id;
+  ui.audioStatus.textContent = 'Spotify · J&M Chill Folk playback confirmed';
+  recordActivity('Planning period · J&M Chill Folk.');
+}
+
 async function runTransition(item, next) {
   const id = 'transition:' + item.end.getTime();
-  if (isCompleted(id) || item.silentLunch || next.silentLunch) return;
+  if (isCompleted(id) || next.silentLunch) return;
   const uri = playlistFor(next);
   if (!uri) return;
   await playContext(uri, announcementPeriod(new Date()) ? 0 : 0.8);
@@ -649,7 +663,7 @@ async function enforcePeriodVolume(now) {
   if (!current || current.silentLunch) return;
   let mode = 'normal:' + current.start.getTime();
   let volume = 0.5;
-  if (now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
+  if (!current.planning && now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
     mode = 'cleanup:' + current.end.getTime();
     volume = 0.8;
   }
@@ -693,12 +707,14 @@ async function schedulerTick() {
       setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
       return;
     }
-    for (let index = 0; index < state.schedule.length; index += 1) {
+    const planning = state.schedule.find(function (item) { return item.planning && now >= item.start && now < item.end; });
+    if (planning) await runPlanning(planning);
+    for (let index = 0; !planning && index < state.schedule.length; index += 1) {
       const item = state.schedule[index];
       const cleanupTime = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
       if (now >= item.start && now >= cleanupTime && now < item.end) await runCleanup(item);
       const next = state.schedule[index + 1];
-      if (next && transitionIsDue(item, next, now)) await runTransition(item, next);
+      if (next && !next.planning && transitionIsDue(item, next, now)) await runTransition(item, next);
     }
     await enforcePeriodVolume(now);
     if (!state.running || state.playbackError) return;
@@ -761,6 +777,7 @@ async function startSignals() {
     await connectPlayer();
     await activatePlayer();
     if (state.playbackError) throw state.playbackError;
+    state.planningBlock = '';
     state.running = true;
     localStorage.setItem(STORAGE.running, 'true');
     ui.start.textContent = 'Signals running';
