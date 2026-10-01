@@ -755,23 +755,8 @@ async function enforcePeriodVolume(now) {
   recordActivity(volume === 0 ? '2nd-period announcements are quiet.' : 'Period music volume set.');
 }
 
-let accessCheckedAt = typeof NEST_ACCESS_VERIFIED_UNTIL === 'number'
-  ? Math.min(Date.now(), NEST_ACCESS_VERIFIED_UNTIL - 60000) : 0;
-async function checkNestAccess(force) {
-  if (!force && Date.now() - accessCheckedAt < 60000) return;
-  let response;
-  try {
-    response = await fetch('/api/signals?asset=access', { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(55000) });
-  } catch (_) { response = { ok: false, status: 503 }; }
-  if (!response.ok) {
-    stopSignals();
-    if (state.player) { try { await state.player.pause(); } catch (_) {} state.player.disconnect(); }
-    state.player = null; state.deviceId = ''; state.spotifyReady = false;
-    if (response.status === 401 || response.status === 403) localStorage.removeItem(STORAGE.token);
-    throw new Error(response.status === 503 ? 'NEST access could not be checked. Try Start signals again.' : 'NEST access has ended. Sign in to NEST with an authorized school account.');
-  }
-  accessCheckedAt = Date.now();
-}
+// Signals is public. Retained for compatibility with the playback call sites.
+async function checkNestAccess() {}
 
 async function schedulerTick() {
   if (!state.running || state.busy) return;
