@@ -108,7 +108,7 @@
         </div>
         <button class="close-button" id="close-setup" type="button" aria-label="Close setup">×</button>
       </div>
-      <p class="dialog-copy">The NEST Spotify application is already configured. Connect an approved Spotify Premium account on this classroom computer. NEST sign-in is still required to operate Signals.</p>
+      <p class="dialog-copy">The NEST Spotify application is already configured. Connect an approved Spotify Premium account on this classroom computer. NEST sign-in is not required to operate Signals.</p>
       <details><summary>Application setup reference</summary>
       <label for="redirect-uri">Spotify redirect address</label>
       <div class="copy-row">
