@@ -52,7 +52,13 @@
     if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
     const link=event.target.closest('a[href]');if(!link||link.closest('.resource-viewer')||link.hasAttribute('download')||link.hasAttribute('data-external'))return;
     let target;try{target=resource(link.href);}catch{return;}if(!target)return;
-    event.preventDefault();opener=link;active=target;
+    event.preventDefault();
+    if(target.host==='cad.onshape.com'){
+      window.alert('We are now leaving the NEST™ Universe.');
+      location.assign('https://cad.onshape.com/signin');
+      return;
+    }
+    opener=link;active=target;
     const label=link.textContent.trim()||link.querySelector('img')?.alt||target.host,page=document.querySelector('main h1')?.textContent.trim();
     dialog.querySelector('h2').textContent=target.host==='padlet.com'&&page?page+' — '+label:label;
     dialog.querySelector('[data-provider]').textContent=target.host;dialog.querySelector('[data-original]').href=target.original;
