@@ -70,7 +70,8 @@ const state = {
   timer: null,
   wakeLock: null,
   busy: false,
-  lastVolumeMode: ''
+  lastVolumeMode: '',
+  playbackError: null
 };
 
 function redirectUri() {
@@ -254,7 +255,7 @@ function isCompleted(id) {
 }
 
 function inTriggerWindow(target, now) {
-  return Math.abs(now.getTime() - target.getTime()) <= CONFIG.triggerWindowMs;
+  return now >= target && now.getTime() - target.getTime() <= CONFIG.triggerWindowMs;
 }
 
 function isSecondPeriod(item) {
@@ -467,9 +468,9 @@ function loadSpotifySdk() {
   });
 }
 
-async function connectPlayer() {
-  await loadSpotifySdk();
-  if (state.player && state.deviceId) return;
+function preparePlayer() {
+  if (state.player) return;
+  if (!window.Spotify) throw new Error('The Spotify player is still loading. Try Start signals again.');
   state.player = new Spotify.Player({
     name: 'NEST™ Signals',
     getOAuthToken: async function (callback) {
@@ -483,21 +484,43 @@ async function connectPlayer() {
     ui.audioStatus.textContent = 'Spotify · NEST player ready';
   });
   state.player.addListener('not_ready', function () {
+    state.deviceId = '';
     state.spotifyReady = false;
     ui.audioStatus.textContent = 'Spotify player offline';
   });
   state.player.addListener('authentication_error', function () {
-    showError(new Error('Spotify authorization needs to be renewed.'));
+    playerFailed('Spotify authorization needs to be renewed. Choose Spotify connection to reconnect.');
   });
   state.player.addListener('account_error', function () {
-    showError(new Error('Spotify Premium is required for automatic web playback.'));
+    playerFailed('Spotify Premium is required for automatic web playback.');
   });
+  state.player.addListener('autoplay_failed', function () {
+    playerFailed('Your browser blocked audio. Return to this page and click Start signals to enable sound.');
+  });
+  state.player.addListener('initialization_error', function () {
+    playerFailed('This browser could not create the Spotify audio player. Open Signals in a browser that supports Spotify playback.');
+  });
+  state.player.addListener('playback_error', function (details) {
+    playerFailed('Spotify could not play the music: ' + details.message);
+  });
+}
+
+function playerFailed(message) {
+  state.playbackError = new Error(message);
+  stopSignals();
+  showError(state.playbackError);
+}
+
+async function connectPlayer() {
+  preparePlayer();
+  if (state.deviceId && state.spotifyReady) return;
   const connected = await state.player.connect();
   if (!connected) throw new Error('Spotify could not connect the classroom player.');
   const deadline = Date.now() + 12000;
   while (!state.deviceId && Date.now() < deadline) {
     await new Promise(function (resolve) { setTimeout(resolve, 200); });
   }
+  if (state.playbackError) throw state.playbackError;
   if (!state.deviceId) throw new Error('Spotify did not make the classroom player available.');
 }
 
@@ -527,22 +550,35 @@ async function playbackState() {
 
 async function playContext(uri, volume) {
   await activatePlayer();
+  await setSpotifyVolume(volume);
   await spotifyFetch('/me/player/play?device_id=' + encodeURIComponent(state.deviceId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ context_uri: uri })
   });
-  await spotifyFetch('/me/player/shuffle?state=true&device_id=' + encodeURIComponent(state.deviceId), {
-    method: 'PUT'
-  });
-  await setSpotifyVolume(volume);
+  // A successful API response does not mean browser audio actually started.
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (state.playbackError) throw state.playbackError;
+    if (!state.running) throw new Error('Signals were stopped before playback was confirmed.');
+    const playback = await state.player.getCurrentState();
+    if (playback && !playback.paused && playback.context && playback.context.uri === uri) {
+      try {
+        await spotifyFetch('/me/player/shuffle?state=true&device_id=' + encodeURIComponent(state.deviceId), { method: 'PUT' });
+      } catch (error) {
+        recordActivity('Music is playing, but Spotify could not enable shuffle.');
+      }
+      return;
+    }
+    await new Promise(function (resolve) { setTimeout(resolve, 500); });
+  }
+  throw new Error('Spotify accepted the music request, but the NEST player did not start. Click Start signals to try again and allow audio in this browser.');
 }
 
 async function runCleanup(item) {
   const id = 'cleanup:' + item.end.getTime();
   if (isCompleted(id) || item.silentLunch) return;
   const playback = await playbackState();
-  if (playback && playback.is_playing && playback.context && playback.context.uri === CONFIG.cleanupUri) {
+  if (playback && playback.is_playing && playback.context && playback.context.uri === CONFIG.cleanupUri && playback.device && playback.device.id === state.deviceId) {
     markCompleted(id);
     recordActivity('Cleanup was already playing, so it was left uninterrupted.');
     return;
@@ -567,6 +603,10 @@ async function enforcePeriodVolume(now) {
   if (!current || current.silentLunch) return;
   let mode = 'normal:' + current.start.getTime();
   let volume = 0.5;
+  if (now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
+    mode = 'cleanup:' + current.end.getTime();
+    volume = 0.8;
+  }
   if (isSecondPeriod(current) && now < new Date(current.start.getTime() + CONFIG.announcementMs)) {
     mode = 'announcements:' + current.start.getTime();
     volume = 0;
@@ -601,6 +641,7 @@ async function schedulerTick() {
   const now = new Date();
   try {
     await checkNestAccess();
+    if (!state.running) return;
     updateReadouts(now);
     if (state.schedule.some(function (item) { return item.absent; })) {
       setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
@@ -609,13 +650,15 @@ async function schedulerTick() {
     for (let index = 0; index < state.schedule.length; index += 1) {
       const item = state.schedule[index];
       const cleanupTime = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
-      if (inTriggerWindow(cleanupTime, now)) await runCleanup(item);
+      if (now >= item.start && now >= cleanupTime && now < item.end) await runCleanup(item);
       const next = state.schedule[index + 1];
       if (next && inTriggerWindow(item.end, now)) await runTransition(item, next);
     }
     await enforcePeriodVolume(now);
-    setStatus('running', 'SIGNALS ACTIVE', 'Classroom automation is running', 'Leave this window open and keep the Windows laptop plugged in.');
+    if (!state.running || state.playbackError) return;
+    setStatus('running', 'SIGNALS ACTIVE', 'Classroom automation is running', 'Cleanup plays during the final six minutes of each scheduled period. Keep this page open and the computer awake.');
   } catch (error) {
+    stopSignals();
     showError(error);
   } finally {
     state.busy = false;
@@ -644,8 +687,21 @@ function openSpotifyApp() {
 
 function startSignalsFromClick() {
   if (state.running || ui.start.disabled) return;
-  if (tokenRecord()) openSpotifyApp();
-  return startSignals();
+  if (!tokenRecord()) return startSignals();
+  try {
+    preparePlayer();
+    state.playbackError = null;
+    // Keep audio activation in the click itself, before opening Spotify or awaiting requests.
+    const activation = state.player.activateElement();
+    ui.start.disabled = true;
+    openSpotifyApp();
+    return Promise.resolve(activation).then(startSignals).catch(function (error) {
+      ui.start.disabled = false;
+      showError(error);
+    });
+  } catch (error) {
+    showError(error);
+  }
 }
 
 async function startSignals() {
@@ -664,6 +720,7 @@ async function startSignals() {
     }
     await connectPlayer();
     await activatePlayer();
+    if (state.playbackError) throw state.playbackError;
     state.running = true;
     localStorage.setItem(STORAGE.running, 'true');
     ui.start.textContent = 'Signals running';
@@ -671,10 +728,11 @@ async function startSignals() {
     ui.stop.disabled = false;
     await requestWakeLock();
     await schedulerTick();
+    if (!state.running) return;
     clearInterval(state.timer);
     state.timer = setInterval(schedulerTick, CONFIG.tickMs);
   } catch (error) {
-    ui.start.disabled = false;
+    stopSignals();
     showError(error);
   }
 }
@@ -735,6 +793,7 @@ function registerStatusTool() {
 }
 
 async function initialize() {
+  ui.start.disabled = true;
   displayClock();
   setInterval(displayClock, 1000);
   ui.redirectUri.value = redirectUri();
@@ -771,6 +830,8 @@ async function initialize() {
     await checkNestAccess();
     await handleSpotifyCallback();
     if (tokenRecord()) {
+      await loadSpotifySdk();
+      preparePlayer();
       await loadProfile();
       ui.audioStatus.textContent = 'Spotify connected';
       setStatus('ready', 'READY', 'Spotify is connected', 'Confirm the Pyle speaker is selected, then start today’s signals.');
@@ -778,10 +839,12 @@ async function initialize() {
     await loadSchedule();
     updateReadouts(new Date());
     if (localStorage.getItem(STORAGE.running) === 'true' && tokenRecord()) {
-      await startSignals();
+      setStatus('ready', 'READY', 'Click Start signals to enable audio', 'After reopening this page, a click is needed to enable sound in your browser.');
     }
   } catch (error) {
     showError(error);
+  } finally {
+    ui.start.disabled = false;
   }
 }
 
