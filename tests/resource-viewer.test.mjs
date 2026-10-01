@@ -21,16 +21,47 @@ test('Tech Ticket gear opens the backend only after a technician access check',a
  try{wo.document.querySelector('#source').click();assert.equal(wo.document.querySelector('[data-tech-backend]').hidden,true);}finally{wo.close();}
 });
 
-test('OnShape waits for the leaving notice acknowledgement before navigating to login',()=>{
- const events=[];
- const navigation={href:'https://gknest.org/',assign(url){events.push(['navigate',url]);}};
- const d=page('https://cad.onshape.com/signin?_gl=old#tracking',navigation),w=d.window;
- w.alert=message=>{events.push(['notice',message]);assert.equal(events.length,1);assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelector('dialog').open,false);};
+test('all external Resources links wait for OK and open in a separate tab',()=>{
+ const menu=new JSDOM(fs.readFileSync('index.html','utf8'));
+ const links=[...menu.window.document.querySelectorAll('#gear-2 a[data-resource-exit]')];
+ assert.equal(links.length,7);
+ for(const link of links){
+  const d=page(link.href),w=d.window,opener=w.document.querySelector('#source');
+  opener.setAttribute('data-resource-exit','');
+  try{
+   assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');
+   const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});opener.dispatchEvent(click);
+   const notice=w.document.querySelector('[aria-labelledby="resource-exit-title"]'),ok=notice.querySelector('[data-exit-ok]');
+   assert.equal(click.defaultPrevented,true);assert.equal(notice.open,true);
+   assert.equal(w.document.querySelector('iframe'),null);
+   assert.equal(w.document.querySelector('dialog.resource-viewer').open,false);
+   assert.equal(notice.querySelector('h2').textContent,'We are now leaving the NEST™ Universe.');
+   assert.equal(ok.href,link.href);assert.equal(ok.target,'_blank');assert.equal(ok.rel,'noopener noreferrer');
+   assert.equal(w.document.activeElement,ok);
+   const confirm=new w.MouseEvent('click',{bubbles:true,cancelable:true});ok.dispatchEvent(confirm);
+   assert.equal(confirm.defaultPrevented,false);assert.equal(notice.open,false);
+   assert.equal(w.document.activeElement,opener);assert.equal(w.location.href,'https://gknest.org/billboards');
+  }finally{w.close();}
+ }
+ menu.window.close();
+});
+test('Cancel keeps the resource closed and returns focus to the menu link',()=>{
+ const d=page('https://www.tinkercad.com/login'),w=d.window,opener=w.document.querySelector('#source');
+ opener.setAttribute('data-resource-exit','');
  try{
-  const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});
-  w.document.querySelector('#source').dispatchEvent(click);
-  assert.equal(click.defaultPrevented,true);
-  assert.deepEqual(events,[['notice','We are now leaving the NEST™ Universe.'],['navigate','https://cad.onshape.com/signin']]);
-  assert.equal(w.document.querySelector('iframe'),null);
+  opener.click();w.document.querySelector('[data-exit-cancel]').click();
+  assert.equal(w.document.querySelector('[aria-labelledby="resource-exit-title"]').open,false);
+  assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.activeElement,opener);
  }finally{w.close();}
+});
+test('Thingiverse continues to open inside NEST without a leaving notice',()=>{
+ const menu=new JSDOM(fs.readFileSync('index.html','utf8'));
+ const link=menu.window.document.querySelector('#gear-2 a[href*="thingiverse.com"]');
+ assert.equal(link.hasAttribute('data-resource-exit'),false);
+ const d=page(link.href),w=d.window;
+ try{
+  w.document.querySelector('#source').click();
+  assert.equal(w.document.querySelector('iframe').src,link.href);
+  assert.equal(w.document.querySelector('[aria-labelledby="resource-exit-title"]').open,false);
+ }finally{w.close();menu.window.close();}
 });
