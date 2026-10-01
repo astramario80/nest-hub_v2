@@ -6,7 +6,7 @@
  const label=id=>id.slice(0,8).toUpperCase();
  const signedIn=()=>window.NestAuth?.identity?.signedIn;
  function history(node,updates){node.replaceChildren(...updates.slice().reverse().map(update=>{const li=text('li',update.status+(update.note?' · '+update.note:'')),time=text('time',new Date(update.time).toLocaleString());time.dateTime=update.time;li.append(time);return li;}));}
- function clear(){generation++;rows=[];selected=null;dirty=false;$('list').replaceChildren();if(manage){$('detail').hidden=true;$('fields').replaceChildren();$('requestor').textContent='';$('notes').value='';$('legacy-log').textContent='';$('history').replaceChildren();}$('workspace').hidden=true;}
+ function clear(){generation++;rows=[];selected=null;dirty=false;$('list').replaceChildren();if(manage){$('detail').hidden=true;$('fields').replaceChildren();$('requestor').textContent='';$('email-preview').textContent='';$('notes').value='';$('legacy-log').textContent='';$('history').replaceChildren();}$('workspace').hidden=true;}
  async function request(body){const response=await fetch('/api/fabrication'+(body?'':`?page=${page}${manage?'&manage=1':''}`),{method:body?'POST':'GET',credentials:'same-origin',cache:'no-store',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Requests are unavailable.');return result;}
  function renderList(){
   const query=$('search').value.trim().toLowerCase(),status=$('filter').value;
