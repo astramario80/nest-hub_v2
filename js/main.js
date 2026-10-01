@@ -435,7 +435,7 @@ const sopsData = {
     subtitle: "Authorization, submission, and tracking",
     content: `
       <ul>
-        <li>All prints must be approved by the Division 3D Print Specialist.</li>
+        <li>All prints must be approved by the Fabrication Supervisor.</li>
         <li>Submit files using the NEST™ Print Form.</li>
         <li>Monitor progress using the Printer Queue.</li>
         <li>Retrieve prints promptly when complete.</li>

@@ -39,6 +39,9 @@
     "api/signals.mjs": {
       "maxDuration": 60,
       "includeFiles": "lib/signals-player/**"
+    },
+    "api/fabrication.mjs": {
+      "maxDuration": 60
     }
   },
   "redirects": [
