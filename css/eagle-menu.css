@@ -13,3 +13,8 @@ body>header:has(.eagle-menu){position:relative;z-index:1000001}
 .eagle-gear-links{padding:0 6px 8px 12px}
 .eagle-submenu{padding-left:12px}
 .eagle-menu .menu-ico{width:22px;height:22px;vertical-align:middle;object-fit:contain}
+.eagle-menu{transform-origin:top left}
+.eagle-menu-toggle .logo{transition:transform 240ms ease,filter 240ms ease}
+.logo-container:hover .eagle-menu-toggle .logo,.eagle-menu-toggle[aria-expanded=true] .logo{transform:translateY(-2px);filter:brightness(1.12)}
+.eagle-menu a,.eagle-menu summary{transition:background-color 180ms ease,color 180ms ease}
+@media(prefers-reduced-motion:reduce){.eagle-menu-toggle .logo,.eagle-menu a,.eagle-menu summary{transition:none}.logo-container:hover .eagle-menu-toggle .logo,.eagle-menu-toggle[aria-expanded=true] .logo{transform:none}}
