@@ -27,6 +27,13 @@
   const dialog=document.createElement('dialog');dialog.className='resource-viewer';dialog.setAttribute('aria-labelledby','resource-title');
   dialog.innerHTML='<header class="resource-toolbar"><div><h2 id="resource-title"></h2><p data-provider></p></div><button type="button" data-refresh>Refresh content</button><a data-original target="_blank" rel="noopener noreferrer" data-external>Open in new tab ↗</a><button type="button" data-close aria-label="Close resource viewer">Close ✕</button></header><p class="resource-help" data-help></p><div class="resource-stage"><a class="resource-tech-backend" data-tech-backend data-external target="_blank" rel="noopener noreferrer" aria-label="Open Tech Ticket backend" title="Open Tech Ticket backend" hidden>⚙️</a></div>';
   document.body.append(dialog);
+  const exitNotice=document.createElement('dialog');exitNotice.className='resource-viewer resource-external-only';exitNotice.setAttribute('aria-labelledby','resource-exit-title');exitNotice.setAttribute('aria-describedby','resource-exit-description');
+  exitNotice.innerHTML='<div class="resource-toolbar"><div><h2 id="resource-exit-title">We are now leaving the NEST™ Universe.</h2><p id="resource-exit-description">This resource will open in a new tab. NEST™ will stay open.</p></div><button type="button" data-exit-cancel>Cancel</button><a data-exit-ok data-external target="_blank" rel="noopener noreferrer">OK</a></div>';
+  document.body.append(exitNotice);
+  const exitOK=exitNotice.querySelector('[data-exit-ok]');let exitOpener;
+  exitOK.addEventListener('click',()=>exitNotice.close());
+  exitNotice.querySelector('[data-exit-cancel]').addEventListener('click',()=>exitNotice.close());
+  exitNotice.addEventListener('close',()=>exitOpener?.focus());
   const stage=dialog.querySelector('.resource-stage'),refresh=dialog.querySelector('[data-refresh]'),help=dialog.querySelector('[data-help]'),techBackend=dialog.querySelector('[data-tech-backend]');let opener,active,techRequest=0;
   function checkTechAccess(target){
     const request=++techRequest;techBackend.hidden=true;techBackend.removeAttribute('href');
@@ -53,9 +60,9 @@
     const link=event.target.closest('a[href]');if(!link||link.closest('.resource-viewer')||link.hasAttribute('download')||link.hasAttribute('data-external'))return;
     let target;try{target=resource(link.href);}catch{return;}if(!target)return;
     event.preventDefault();
-    if(target.host==='cad.onshape.com'){
-      window.alert('We are now leaving the NEST™ Universe.');
-      location.assign('https://cad.onshape.com/signin');
+    if(link.hasAttribute('data-resource-exit')){
+      exitOpener=link;exitOK.href=target.original;
+      exitNotice.showModal();exitOK.focus();
       return;
     }
     opener=link;active=target;
