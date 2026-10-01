@@ -17,3 +17,5 @@ Before transfer, Signals waits for its exact SDK device ID in Spotify’s availa
 Transitions catch up from the preceding block’s end until the next block’s cleanup begins, with completion markers preventing repeats. Access-check delays use a fresh timestamp. The audio panel records confirmed cleanup/period playback; second-period announcement muting lasts five minutes and displays its own status and sound-resume time.
 
 An active planning block starts J&M Chill Folk directly, independent of neighboring lunch assignments and persisted transition markers. Starting after a refresh checks local playback and resumes Chill Folk when needed. Planning uses Chill Folk until its final six minutes, when an exit cleanup cue plays if the next block is neither planning nor lunch. Planning followed by lunch, more planning, or no block retains Chill Folk.
+
+Lunch rows adjacent to planning use planning music when Signals starts during them, while suppressing lunch cleanup cues. The interface calls these planning music blocks instead of silent lunch.
