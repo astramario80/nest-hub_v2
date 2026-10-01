@@ -1,3 +1,4 @@
+import { sitePage } from '../lib/site-layout.mjs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { COOKIE, cookies, setCookie } from '../lib/nest-auth.mjs';
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
       ? '<a style="color:#9cddff" href="https://gknest.org/signals" target="_top">Sign in to NEST™ and continue</a>'
       : status === 403 ? '<a style="color:#9cddff" href="https://gknest.org/signals" target="_top">Check your NEST™ account</a>'
       : '<p>Your sign-in has not been cleared. The school service could not finish checking access.</p>';
-    return res.status(status).send(`<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1"><title>NEST Signals access</title><body style="font:18px system-ui;max-width:650px;margin:10vh auto;padding:24px;background:#102d47;color:white"><h1>NEST™ Signals</h1><p>${message}</p>${action}<p><button style="font:inherit;padding:12px" onclick="location.reload()">Try opening Signals again</button></p></body></html>`);
+    return res.status(status).send(await sitePage(`<h1>NEST™ Signals</h1><p>${message}</p>${action}<p><button style="font:inherit;padding:12px" onclick="location.reload()">Try opening Signals again</button></p>`));
   }
   if (asset === 'access') return res.status(200).json({ allowed: true });
   res.setHeader('Content-Type', asset === 'app' ? 'application/javascript; charset=utf-8' : 'text/html; charset=utf-8');
