@@ -1,0 +1,8 @@
+.embedded-resource-page{flex:1;display:flex;flex-direction:column;gap:14px;width:100%;padding:18px 24px;min-height:0}
+.embedded-resource-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.embedded-resource-heading h1{font-size:1.35rem;color:var(--primary-orange);margin:0}
+.embedded-resource-menu{display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid var(--primary-orange);border-radius:8px;color:var(--text-light);text-decoration:none;font-weight:600}
+.embedded-resource-menu:hover{background:var(--primary-orange);color:#111827}
+.embedded-resource-menu:focus-visible{outline:3px solid #ffd498;outline-offset:3px}
+.embedded-resource-page>iframe{display:block;flex:1;width:100%;min-height:65dvh;border:1px solid #52607a;border-radius:10px;background:#fff}
+@media(max-width:600px){.embedded-resource-page{padding:12px;gap:10px}.embedded-resource-heading h1{font-size:1.15rem}}

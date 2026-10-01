@@ -24,7 +24,7 @@ test('Tech Ticket gear opens the backend only after a technician access check',a
 test('all external Resources links wait for OK and open in a separate tab',()=>{
  const menu=new JSDOM(fs.readFileSync('index.html','utf8'));
  const links=[...menu.window.document.querySelectorAll('#gear-2 a[data-resource-exit]')];
- assert.equal(links.length,7);
+ assert.equal(links.length,6);
  for(const link of links){
   const d=page(link.href),w=d.window,opener=w.document.querySelector('#source');
   opener.setAttribute('data-resource-exit','');
@@ -54,14 +54,26 @@ test('Cancel keeps the resource closed and returns focus to the menu link',()=>{
   assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.activeElement,opener);
  }finally{w.close();}
 });
-test('Thingiverse continues to open inside NEST without a leaving notice',()=>{
+test('SolidProfessor and Thingiverse have internal pages with working NEST chrome',()=>{
  const menu=new JSDOM(fs.readFileSync('index.html','utf8'));
- const link=menu.window.document.querySelector('#gear-2 a[href*="thingiverse.com"]');
- assert.equal(link.hasAttribute('data-resource-exit'),false);
- const d=page(link.href),w=d.window;
- try{
-  w.document.querySelector('#source').click();
-  assert.equal(w.document.querySelector('iframe').src,link.href);
-  assert.equal(w.document.querySelector('[aria-labelledby="resource-exit-title"]').open,false);
- }finally{w.close();menu.window.close();}
+ for(const [slug,url] of [['solidprofessor','https://www.solidprofessor.com/account/login'],['thingiverse','https://www.thingiverse.com/education']]){
+  const link=menu.window.document.querySelector(`#gear-2 a[href="/${slug}"]`);
+  assert.ok(link);assert.equal(link.hasAttribute('data-resource-exit'),false);assert.equal(link.target,'');
+  const dom=new JSDOM(fs.readFileSync(slug+'.html','utf8'),{url:`https://gknest.org/${slug}`,runScripts:'outside-only'}),w=dom.window;
+  try{
+   w.eval(fs.readFileSync('js/main.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));
+   assert.equal(w.document.querySelector('main iframe').src,url);
+   assert.equal(w.document.querySelector('.embedded-resource-menu').getAttribute('href'),'/');
+   assert.equal(w.document.querySelector('header .logo-container a').getAttribute('href'),'/');
+   assert.equal(w.document.querySelector('#current-year').textContent,String(new Date().getFullYear()));
+   for(const selector of ['.dropdown-btn','.footer-dropdown-title']){
+    const toggle=w.document.querySelector(selector);toggle.click();
+    assert.equal(toggle.getAttribute('aria-expanded'),'true');assert.ok(toggle.nextElementSibling.classList.contains('show'));
+    w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));
+    assert.equal(toggle.getAttribute('aria-expanded'),'false');
+   }
+   assert.ok(w.document.querySelector('script[src="/js/nest-auth.js"]'));
+  }finally{w.close();}
+ }
+ menu.window.close();
 });
