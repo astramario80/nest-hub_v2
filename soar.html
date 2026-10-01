@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/styles.css?v=qr-click-1" />
   <link rel="stylesheet" href="/css/resource-viewer.css">
   <link rel="stylesheet" href="/css/nest-auth.css">
+  <link rel="stylesheet" href="/css/soar-navigation.css">
 </head>
 
 <body>
@@ -40,14 +41,16 @@
         </div>
     </header>
 
+  <nav class="soar-toolbar" aria-label="SOAR navigation"><a href="/sops">📘 SOPs</a></nav>
+
   <!-- SOAR LAYOUT -->
   <main class="soar-split-layout">
     <!-- LEFT SIDEBAR -->
     <div class="soar-sidebar">
-        <div id="soar-btn-S" class="soar-letter" onmouseover="showSOAR('S')">S</div>
-        <div id="soar-btn-O" class="soar-letter" onmouseover="showSOAR('O')">O</div>
-        <div id="soar-btn-A" class="soar-letter" onmouseover="showSOAR('A')">A</div>
-        <div id="soar-btn-R" class="soar-letter" onmouseover="showSOAR('R')">R</div>
+        <button type="button" id="soar-btn-S" class="soar-letter">S</button>
+        <button type="button" id="soar-btn-O" class="soar-letter">O</button>
+        <button type="button" id="soar-btn-A" class="soar-letter">A</button>
+        <button type="button" id="soar-btn-R" class="soar-letter">R</button>
     </div>
     
     <!-- RIGHT CONTENT AREA -->
