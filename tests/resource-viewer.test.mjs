@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {JSDOM} from 'jsdom';
 const source=fs.readFileSync('js/resource-viewer.js','utf8');
-function page(url){const dom=new JSDOM('<main><h1>Billboards</h1><a id="source">Division 1</a></main>',{url:'https://gknest.org/billboards',runScripts:'outside-only'});const w=dom.window;w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.document.querySelector('a').href=url;w.eval(source);return dom;}
+function page(url,navigation){const dom=new JSDOM('<main><h1>Billboards</h1><a id="source">Division 1</a></main>',{url:'https://gknest.org/billboards',runScripts:'outside-only'});const w=dom.window;w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.document.querySelector('a').href=url;w.eval('(function(location){'+source+'\n})')(navigation||w.location);return dom;}
 test('Padlet opens in a contained viewer; close removes the frame and returns focus',()=>{const d=page('https://padlet.com/astramario/project-billboard_period1-h5lmpj4m7g51sy0v'),w=d.window;w.document.querySelector('#source').click();const f=w.document.querySelector('iframe');assert.equal(f.src,'https://padlet.com/embed/h5lmpj4m7g51sy0v');assert.match(f.title,/Billboards.*Division 1/);assert.equal(f.getAttribute('sandbox'),null);w.document.querySelector('[data-close]').click();assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.activeElement.id,'source');w.close();});
 test('Google views use live originals, forms embed mode, and provider permissions',()=>{for(const [url,expected] of [['https://docs.google.com/document/d/example/edit?tab=t.0','https://docs.google.com/document/d/example/preview'],['https://docs.google.com/forms/d/e/example/viewform','https://docs.google.com/forms/d/e/example/viewform?embedded=true']]){const d=page(url);d.window.document.querySelector('#source').click();assert.equal(d.window.document.querySelector('iframe').src,expected);assert.equal(d.window.document.querySelector('[data-original]').href,new URL(url).href);d.window.close();}});
 test('providers blocking frames show a direct launch option without a broken iframe',()=>{for(const url of ['https://app.smartpass.app/main/passes','https://portal.bethelsd.org']){const d=page(url);d.window.document.querySelector('#source').click();assert.equal(d.window.document.querySelector('iframe'),null);assert.equal(d.window.document.querySelector('[data-original]').href,new URL(url).href);assert.match(d.window.document.querySelector('[data-help]').textContent,/requires its own tab/);d.window.close();}});
@@ -19,4 +19,18 @@ test('Tech Ticket gear opens the backend only after a technician access check',a
  try{wd.document.querySelector('#source').click();await new Promise(resolve=>setImmediate(resolve));assert.equal(wd.document.querySelector('[data-tech-backend]').hidden,true);}finally{wd.close();}
  const other=page('https://docs.google.com/forms/d/e/another/viewform'),wo=other.window;wo.AbortSignal=AbortSignal;wo.fetch=()=>{throw new Error('Other forms must not check tech access');};
  try{wo.document.querySelector('#source').click();assert.equal(wo.document.querySelector('[data-tech-backend]').hidden,true);}finally{wo.close();}
+});
+
+test('OnShape waits for the leaving notice acknowledgement before navigating to login',()=>{
+ const events=[];
+ const navigation={href:'https://gknest.org/',assign(url){events.push(['navigate',url]);}};
+ const d=page('https://cad.onshape.com/signin?_gl=old#tracking',navigation),w=d.window;
+ w.alert=message=>{events.push(['notice',message]);assert.equal(events.length,1);assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelector('dialog').open,false);};
+ try{
+  const click=new w.MouseEvent('click',{bubbles:true,cancelable:true});
+  w.document.querySelector('#source').dispatchEvent(click);
+  assert.equal(click.defaultPrevented,true);
+  assert.deepEqual(events,[['notice','We are now leaving the NEST™ Universe.'],['navigate','https://cad.onshape.com/signin']]);
+  assert.equal(w.document.querySelector('iframe'),null);
+ }finally{w.close();}
 });
