@@ -42,7 +42,7 @@
           <p class="eyebrow" id="status-heading">READY FOR SETUP</p>
         </div>
         <h2 id="status-title">Signals are not running</h2>
-        <p id="status-detail">Connect Spotify once on the classroom Windows laptop, then start today’s automation.</p>
+        <p id="status-detail">Connect Spotify, then start today’s automation. Cleanup plays during the final six minutes of each period.</p>
       </div>
       <button class="primary" id="start-button" type="button">Start signals</button>
     </section>
