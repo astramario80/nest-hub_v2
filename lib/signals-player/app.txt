@@ -16,8 +16,7 @@ const CONFIG = {
     7: 'spotify:playlist:0r6xwWvb7oH117JQRA29kx'
   },
   cleanupLeadMs: 6 * 60 * 1000,
-  announcementMs: 10 * 60 * 1000,
-  triggerWindowMs: 45 * 1000,
+  announcementMs: 5 * 60 * 1000,
   tickMs: 15 * 1000
 };
 
@@ -252,8 +251,17 @@ function isCompleted(id) {
   return completedForToday().has(id);
 }
 
-function inTriggerWindow(target, now) {
-  return now >= target && now.getTime() - target.getTime() <= CONFIG.triggerWindowMs;
+function transitionIsDue(item, next, now) {
+  // Catch a delayed tick while this transition is still relevant, never over cleanup.
+  const until = Math.max(next.start.getTime(), next.end.getTime() - CONFIG.cleanupLeadMs);
+  return now >= item.end && now.getTime() < until;
+}
+
+function announcementPeriod(now) {
+  return state.schedule.find(function (item) {
+    return !item.silentLunch && isSecondPeriod(item) && now >= item.start && now < item.end &&
+      now.getTime() < item.start.getTime() + CONFIG.announcementMs;
+  });
 }
 
 function isSecondPeriod(item) {
@@ -586,6 +594,7 @@ async function playbackState() {
 async function playContext(uri, volume) {
   await activatePlayer();
   await setSpotifyVolume(volume);
+  state.lastVolumeMode = '';
   await spotifyFetch('/me/player/play?device_id=' + encodeURIComponent(state.deviceId), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -620,6 +629,7 @@ async function runCleanup(item) {
   }
   await playContext(CONFIG.cleanupUri, 0.8);
   markCompleted(id);
+  ui.audioStatus.textContent = 'Spotify · Cleanup playback confirmed';
   recordActivity('Cleanup music started for ' + item.label + '.');
 }
 
@@ -628,8 +638,9 @@ async function runTransition(item, next) {
   if (isCompleted(id) || item.silentLunch || next.silentLunch) return;
   const uri = playlistFor(next);
   if (!uri) return;
-  await playContext(uri, 0.8);
+  await playContext(uri, announcementPeriod(new Date()) ? 0 : 0.8);
   markCompleted(id);
+  ui.audioStatus.textContent = 'Spotify · ' + next.label + ' playback confirmed';
   recordActivity('Music changed for ' + next.label + '.');
 }
 
@@ -673,10 +684,10 @@ async function checkNestAccess(force) {
 async function schedulerTick() {
   if (!state.running || state.busy) return;
   state.busy = true;
-  const now = new Date();
   try {
     await checkNestAccess();
     if (!state.running) return;
+    const now = new Date();
     updateReadouts(now);
     if (state.schedule.some(function (item) { return item.absent; })) {
       setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
@@ -687,11 +698,17 @@ async function schedulerTick() {
       const cleanupTime = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
       if (now >= item.start && now >= cleanupTime && now < item.end) await runCleanup(item);
       const next = state.schedule[index + 1];
-      if (next && inTriggerWindow(item.end, now)) await runTransition(item, next);
+      if (next && transitionIsDue(item, next, now)) await runTransition(item, next);
     }
     await enforcePeriodVolume(now);
     if (!state.running || state.playbackError) return;
-    setStatus('running', 'SIGNALS ACTIVE', 'Classroom automation is running', 'Cleanup plays during the final six minutes of each scheduled period. Keep this page open and the computer awake.');
+    const announcements = announcementPeriod(now);
+    if (announcements) {
+      const resumeAt = new Date(Math.min(announcements.end.getTime(), announcements.start.getTime() + CONFIG.announcementMs));
+      setStatus('running', 'ANNOUNCEMENT QUIET TIME', 'Signals are active · music is muted', 'Second-period announcements: sound resumes at ' + displayTime(resumeAt) + '. Keep this page open.');
+    } else {
+      setStatus('running', 'SIGNALS ACTIVE', 'Classroom automation is running', 'Cleanup plays during the final six minutes of each scheduled period. Keep this page open and the computer awake.');
+    }
   } catch (error) {
     stopSignals();
     showError(error);

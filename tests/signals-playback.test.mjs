@@ -133,3 +133,37 @@ test('online Signals never launches the native Spotify app', () => {
   assert.doesNotMatch(source, /spotify:home|openSpotifyApp/);
   assert.doesNotMatch(readFileSync('lib/signals-player/index.txt', 'utf8'), /open-spotify-button/);
 });
+
+test('delayed Division 2 transition catches up after 45 seconds but never interrupts its cleanup', async () => {
+  for (const time of ['09:20:59','09:21:00','09:22:30','09:27:00','10:20:59','10:21:00','10:27:00']) {
+    const { run, ctx, calls } = playerContext();
+    const at = new Date('2026-10-01T'+time+'Z').getTime();
+    ctx.Date = class extends Date {constructor(...args){super(...(args.length?args:[at]));}static now(){return at;}};
+    run(`state.running=true;state.schedule=[{label:'Study Support',start:new Date('2026-10-01T08:51:00Z'),end:new Date('2026-10-01T09:21:00Z')},{label:'2nd Period',start:new Date('2026-10-01T09:26:00Z'),end:new Date('2026-10-01T10:27:00Z')}];checkNestAccess=async()=>{};updateReadouts=()=>{};enforcePeriodVolume=async()=>{};runCleanup=async()=>{};runTransition=async(item,next)=>calls.push(playlistFor(next));`);
+    await run('schedulerTick()');
+    assert.equal(calls.length, time >= '09:21:00' && time < '10:21:00' ? 1 : 0, time);
+    if(calls.length)assert.equal(calls[0],'spotify:playlist:1ZTICxG3ozlLYqfrqOkpbu');
+  }
+});
+
+test('transition completion is recorded after playback and suppresses duplicate ticks', async () => {
+  const { run, calls } = playerContext();
+  run(`const completed=new Set();isCompleted=id=>completed.has(id);markCompleted=id=>completed.add(id);playContext=async uri=>calls.push(uri);recordActivity=()=>{};const item={end:new Date('2026-10-01T09:21:00Z')};const next={label:'2nd Period'};`);
+  await run('runTransition(item,next);');
+  await run('runTransition(item,next);');
+  assert.deepEqual(calls,['spotify:playlist:1ZTICxG3ozlLYqfrqOkpbu']);
+});
+
+test('announcement mute is visible and period volume resumes afterward', async () => {
+  const {run,ctx,calls}=playerContext();
+  let at=new Date('2026-10-01T09:30:00Z').getTime();
+  ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:[at]));}static now(){return at;}};
+  run(`state.running=true;state.schedule=[{label:'2nd Period',start:new Date('2026-10-01T09:26:00Z'),end:new Date('2026-10-01T10:27:00Z')}];checkNestAccess=async()=>{};updateReadouts=()=>{};setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
+  await run('schedulerTick()');
+  assert.equal(run('ui.statusHeading.textContent'),'ANNOUNCEMENT QUIET TIME');
+  assert.deepEqual(calls,[0]);
+  at=new Date('2026-10-01T09:31:00Z').getTime();
+  await run('schedulerTick()');
+  assert.equal(run('ui.statusHeading.textContent'),'SIGNALS ACTIVE');
+  assert.deepEqual(calls,[0,0.5]);
+});
