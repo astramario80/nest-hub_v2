@@ -115,6 +115,11 @@ const sopsSubtitle = document.querySelector(".sops-content .subtitle");
 const sopsPlaceholder = document.querySelector(".sops-content .placeholder");
 
 const sopsData = {
+  "SOAR Matrix": {
+    title: "SOAR Matrix",
+    subtitle: "Safety, Ownership, Attending, Respecting",
+    content: '<iframe class="sops-soar-frame" src="/soar?embed=1" title="Classroom expectations"></iframe>'
+  },
   "Community Agreements": {
     title: "",
     subtitle: "",
@@ -757,11 +762,22 @@ window.showSOAR = function(key) {
         display.innerHTML = soarData[key];
         
         // Update active state on letters
-        document.querySelectorAll('.soar-letter').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.soar-letter').forEach(el => {el.classList.remove('active');el.setAttribute('aria-pressed','false');});
         const activeBtn = document.getElementById('soar-btn-' + key);
-        if(activeBtn) activeBtn.classList.add('active');
+        if(activeBtn) {activeBtn.classList.add('active');activeBtn.setAttribute('aria-pressed','true');}
     }
 };
+
+if (document.getElementById('soar-text-display')) {
+    document.querySelectorAll('.soar-letter').forEach(button => {
+        const select=()=>window.showSOAR(button.id.slice(-1));
+        button.addEventListener('mouseover',select);
+        button.addEventListener('click',select);
+        button.addEventListener('focus',select);
+    });
+    if (new URLSearchParams(location.search).get('embed') === '1') document.body.classList.add('soar-embedded');
+    window.showSOAR('S');
+}
 
 // We remove hideSOAR entirely so the content stays visible when the mouse moves away
 window.hideSOAR = function() {
@@ -945,3 +961,10 @@ document.addEventListener('click', event => {
     });
   });
 })();
+
+// Share the eagle navigation across pages using the standard NEST header.
+if (document.querySelector('header .logo-container') && !document.body.classList.contains('soar-embedded')) {
+  const eagleMenuScript=document.createElement('script');
+  eagleMenuScript.src='/js/eagle-menu.js';
+  document.body.append(eagleMenuScript);
+}
