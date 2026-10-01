@@ -62,8 +62,7 @@
         <p class="label">Audio path</p>
         <h3 id="audio-status">Spotify not connected</h3>
         <p>Pyle Bluetooth speaker</p>
-        <button class="text-button" id="open-spotify-button" type="button" aria-describedby="spotify-launch-help">Open Spotify</button>
-        <p id="spotify-launch-help" aria-live="polite">Start signals also opens the Spotify app on this computer. Audio plays through the NEST player in this page.</p>
+        <p id="spotify-launch-help" aria-live="polite">Music plays online in this page. Click Start signals once to enable audio, then keep this page open. The Spotify desktop app is not needed.</p>
       </article>
     </section>
 
