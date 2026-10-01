@@ -3,9 +3,8 @@
   const wrapper=document.querySelector('header .logo-container'),home=wrapper?.querySelector('a');
   if(!home||wrapper.querySelector('.eagle-menu-toggle'))return;
   const stylesheet=document.createElement('link');stylesheet.rel='stylesheet';stylesheet.href='/css/eagle-menu.css';document.head.append(stylesheet);
-  const button=document.createElement('button');button.type='button';button.className='eagle-menu-toggle';
-  button.setAttribute('aria-label','NEST™ menu');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','eagle-menu');
-  button.append(...home.childNodes);home.replaceWith(button);
+  const button=home;button.href='/';button.classList.add('eagle-menu-toggle');
+  button.setAttribute('aria-label','NEST™ home');button.setAttribute('aria-expanded','false');button.setAttribute('aria-controls','eagle-menu');
   const nav=document.createElement('nav');nav.id='eagle-menu';nav.className='eagle-menu';nav.setAttribute('aria-label','NEST™ gears');nav.hidden=true;
   const returnHome=document.createElement('a');returnHome.href='/';returnHome.className='eagle-menu-home';returnHome.textContent='NEST™ Menu';nav.append(returnHome);
   const gears=document.createElement('div');nav.append(gears);wrapper.append(nav);
@@ -24,7 +23,7 @@
     const motion=nav.animate([from,to],{duration:open?360:280,easing:'cubic-bezier(.22,.61,.36,1)'});menuMotion=motion;
     motion.finished.then(()=>{if(menuMotion!==motion)return;menuMotion=null;nav.hidden=!menuOpen;}).catch(()=>{});
   }
-  button.addEventListener('click',()=>{pinned=!pinned;setOpen(pinned);});
+  nav.addEventListener('click',()=>{pinned=true;});
   wrapper.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')setOpen(true);});
   wrapper.addEventListener('pointerleave',event=>{if(event.pointerType==='mouse'&&!pinned)closeTimer=setTimeout(()=>{if(!pinned)setOpen(false);},250);});
   wrapper.addEventListener('focusin',()=>setOpen(true));
@@ -43,6 +42,7 @@
       if(!motion){content.inert=!details.open;summary.setAttribute('aria-expanded',String(details.open));}
     });
     summary.addEventListener('click',event=>{
+      pinned=true;
       if(!details.animate||reducedMotion())return;
       event.preventDefault();event.stopPropagation();
       opening=motion?!opening:!details.open;

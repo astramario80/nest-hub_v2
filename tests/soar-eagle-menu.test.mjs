@@ -31,13 +31,13 @@ test('SOPs contains SOAR within its content area, while the embedded version sta
  const embedded=page('soar.html','https://gknest.org/soar?embed=1');
  try{embedded.window.eval(read('js/main.js'));assert.ok(embedded.window.document.body.classList.contains('soar-embedded'));assert.match(embedded.window.document.querySelector('#soar-text-display').textContent,/SAFETY/);assert.equal(embedded.window.document.querySelector('script[src="/js/eagle-menu.js"]'),null);}finally{embedded.window.close();}
 });
-test('eagle menu reuses all four gears and their destinations; hover, pin, outside click and Escape work',async()=>{
+test('eagle menu reuses all four gears and their destinations; hover, home click, outside click and Escape work',async()=>{
  for(const file of ['index.html','solidprofessor.html','sops.html']){
   const dom=page(file),w=dom.window;
   w.fetch=async()=>({ok:true,text:async()=>read('index.html')});
   try{
    w.eval(read('js/eagle-menu.js'));await tick();
-   const wrapper=w.document.querySelector('.logo-container'),button=wrapper.querySelector('button'),menu=w.document.querySelector('#eagle-menu');
+   const wrapper=w.document.querySelector('.logo-container'),button=wrapper.querySelector('.eagle-menu-toggle'),menu=w.document.querySelector('#eagle-menu');
    assert.equal(menu.hidden,true);
    assert.deepEqual([...menu.querySelectorAll(':scope > div > details > summary')].map(node=>node.textContent),['⚙️ SOAR','⚙️ Tools','⚙️ Resources','⚙️ Command']);
    assert.ok(menu.querySelector('a[href="/solidprofessor"]'));assert.ok(menu.querySelector('a[href="/thingiverse"]'));
@@ -45,10 +45,10 @@ test('eagle menu reuses all four gears and their destinations; hover, pin, outsi
    assert.equal(menu.querySelectorAll('[id]').length,0);
    const enter=new w.Event('pointerenter');Object.defineProperty(enter,'pointerType',{value:'mouse'});wrapper.dispatchEvent(enter);
    assert.equal(menu.hidden,false);assert.equal(button.getAttribute('aria-expanded'),'true');
-   button.click();const leave=new w.Event('pointerleave');Object.defineProperty(leave,'pointerType',{value:'mouse'});wrapper.dispatchEvent(leave);
+   assert.equal(button.tagName,'A');assert.equal(button.getAttribute('href'),'/');const homeClick=new w.MouseEvent('click',{bubbles:true,cancelable:true});button.dispatchEvent(homeClick);assert.equal(homeClick.defaultPrevented,false);menu.querySelector('summary').click();const leave=new w.Event('pointerleave');Object.defineProperty(leave,'pointerType',{value:'mouse'});wrapper.dispatchEvent(leave);
    assert.equal(menu.hidden,false);
    w.document.body.click();assert.equal(menu.hidden,true);
-   button.click();assert.equal(menu.hidden,false);
+   wrapper.dispatchEvent(enter);assert.equal(menu.hidden,false);
    button.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.equal(menu.hidden,true);
    assert.equal(w.document.activeElement,button);
   }finally{w.close();}
