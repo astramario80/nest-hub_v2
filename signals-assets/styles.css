@@ -127,3 +127,8 @@ dialog input { width: 100%; min-height: 48px; padding: 10px 13px; border: 1px so
 @media (prefers-reduced-motion: no-preference) {
   button { transition: transform .18s ease, filter .18s ease; }
 }
+
+#playback-mode { font: inherit; max-width: 100%; padding: .65rem; margin: .5rem 0 1rem; border-radius: .5rem; }
+#embed-panel iframe { width: 100%; min-height: 352px; border: 0; border-radius: 12px; }
+#embed-panel[hidden] { display: none; }
+#embed-status { font-weight: 600; }
