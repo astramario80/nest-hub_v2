@@ -216,3 +216,33 @@ test('starting during lunch attached to planning plays Chill Folk without lunch 
   run(`state.running=true;state.schedule=[{label:'1ST LUNCH',lunch:true,silentLunch:true,start:new Date('2026-10-01T10:27:00Z'),end:new Date('2026-10-01T10:57:00Z')},{label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')}];checkNestAccess=async()=>{};updateReadouts=()=>{};runPlanning=async()=>calls.push('folk');runCleanup=async()=>calls.push('cleanup');setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
   await run('schedulerTick()');assert.deepEqual(calls,['folk',0.5]);
 });
+
+test('embed selects the cue and requests autoplay without Spotify Web API calls',async()=>{
+  const {run,calls}=playerContext();
+  run(`state.embedded=true;state.embed={loadEntity:uri=>calls.push('load:'+uri),play:()=>calls.push('play'),pause:()=>calls.push('pause')};spotifyFetch=async()=>{throw new Error('Web API should not be called')};`);
+  await run('playContext(CONFIG.cleanupUri,0.8)');
+  assert.deepEqual(calls,['load:spotify:playlist:1IkWS5ICPcOUKJvXVslYd3','play']);
+});
+
+test('embedded announcement pause resumes when quiet time ends and Stop pauses playback',async()=>{
+  const {run,calls}=playerContext();
+  run(`state.embedded=true;state.running=true;state.embed={play:()=>calls.push('play'),pause:()=>calls.push('pause')};`);
+  await run('setSpotifyVolume(0)');await run('setSpotifyVolume(0.5)');run('stopSignals()');
+  assert.deepEqual(calls,['pause','play','pause']);
+});
+
+test('embedded startup works without a developer token or SDK connection',async()=>{
+  const {run,ctx,calls}=playerContext();ctx.setInterval=()=>1;
+  run(`state.embedded=true;state.embed={play:()=>calls.push('play'),loadEntity:()=>{},pause:()=>{}};tokenRecord=()=>null;checkNestAccess=async()=>calls.push('nest-check');loadSchedule=async()=>{};loadProfile=connectPlayer=activatePlayer=async()=>{throw new Error('must not use connected player')};requestWakeLock=async()=>{};schedulerTick=async()=>{};`);
+  await run('startSignals()');
+  assert.equal(run('state.running'),true);assert.deepEqual(calls,['nest-check','play']);
+});
+
+test('embed planning uses the playlist controller and separate completion markers',async()=>{
+  const {run,calls}=playerContext();
+  run(`state.embedded=true;state.embed={play:()=>calls.push('play'),loadEntity:uri=>calls.push(uri)};recordActivity=()=>{};`);
+  await run('runPlanning({start:new Date()})');
+  assert.deepEqual(calls,['spotify:playlist:1leyIgu6VXG7cpa2HjO9FF','play']);
+  run("markCompleted('test')");assert.equal(run("isCompleted('test')"),true);
+  assert.match(run('ui.audioStatus.textContent'),/selected/);
+});

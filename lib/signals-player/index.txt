@@ -42,9 +42,23 @@
           <p class="eyebrow" id="status-heading">READY FOR SETUP</p>
         </div>
         <h2 id="status-title">Signals are not running</h2>
-        <p id="status-detail">Connect Spotify, then start today’s automation. Cleanup plays during the final six minutes of each period.</p>
+        <p id="status-detail">Choose a playback mode, then start today’s automation. Cleanup plays during the final six minutes of each period.</p>
       </div>
       <button class="primary" id="start-button" type="button">Start signals</button>
+    </section>
+
+    <section class="schedule-panel" aria-labelledby="playlist-title">
+      <div class="section-heading"><div><p class="eyebrow">NOW SELECTED</p><h2 id="playlist-title">Scheduled playlist</h2></div></div>
+      <label for="playback-mode">Playback mode</label>
+      <select id="playback-mode">
+        <option value="embed">Embedded playlists · manager test</option>
+        <option value="sdk">Connected Spotify · existing player</option>
+      </select>
+      <div id="embed-panel">
+        <p id="embed-status" role="status">Loading the playlist window…</p>
+        <div id="spotify-embed"></div>
+        <p>Signals requests automatic playback at each cue. If music does not start, press Play inside this window. Spotify may require sign-in or offer previews. Use your computer’s volume controls.</p>
+      </div>
     </section>
 
     <section class="readout-grid" aria-label="Today’s signal status">

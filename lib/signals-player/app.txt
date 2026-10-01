@@ -69,7 +69,12 @@ const state = {
   busy: false,
   lastVolumeMode: '',
   playbackError: null,
-  planningBlock: ''
+  planningBlock: '',
+  embedded: false,
+  embed: null,
+  embedUri: '',
+  embedMuted: false,
+  embedCompleted: new Set()
 };
 
 function redirectUri() {
@@ -234,6 +239,7 @@ function renderSchedule() {
 }
 
 function completedForToday() {
+  if (state.embedded) return state.embedCompleted;
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE.completed) || '{}');
     return saved.date === dayStamp() ? new Set(saved.ids || []) : new Set();
@@ -245,6 +251,7 @@ function completedForToday() {
 function markCompleted(id) {
   const completed = completedForToday();
   completed.add(id);
+  if (state.embedded) return;
   localStorage.setItem(STORAGE.completed, JSON.stringify({ date: dayStamp(), ids: Array.from(completed) }));
 }
 
@@ -590,17 +597,81 @@ async function activatePlayer() {
 }
 
 async function setSpotifyVolume(level) {
+  if (state.embedded) {
+    if (level === 0) { state.embedMuted = true; if (state.embed) state.embed.pause(); }
+    else if (state.embedMuted) { state.embedMuted = false; if (state.embed && state.running) state.embed.play(); }
+    return;
+  }
   // Audio plays in this SDK player; avoid an additional device-targeted API call.
   if (state.player) await state.player.setVolume(level);
 }
 
 async function playbackState() {
+  if (state.embedded) return null;
   const response = await spotifyFetch('/me/player');
   if (response.status === 204) return null;
   return response.json();
 }
 
+function selectedPlaylist(now) {
+  const current = state.schedule.find(item => now >= item.start && now < item.end);
+  if (!current) return CONFIG.quietUri;
+  if (hasCleanup(current) && now.getTime() >= current.end.getTime() - CONFIG.cleanupLeadMs) return CONFIG.cleanupUri;
+  return current.planning || current.silentLunch ? CONFIG.quietUri : playlistFor(current) || CONFIG.quietUri;
+}
+
+function embedMessage(message) {
+  document.querySelector('#embed-status').textContent = message;
+}
+
+function prepareEmbed() {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Spotify’s playlist window did not load. Refresh to retry, or choose Connected Spotify.')), 20000);
+    window.onSpotifyIframeApiReady = api => {
+      state.embedUri = selectedPlaylist(new Date());
+      api.createController(document.querySelector('#spotify-embed'), { uri: state.embedUri, width: '100%', height: 352 }, controller => {
+        state.embed = controller;
+        controller.addListener('ready', () => {
+          clearTimeout(timeout);
+          embedMessage('Playlist ready. Click Start signals to begin.');
+          resolve();
+        });
+        controller.addListener('playback_update', event => {
+          if (!state.running || state.embedMuted) { controller.pause(); return; }
+          if (!event.data.isPaused && !event.data.isBuffering) {
+            embedMessage('Spotify reports playback. Check that full songs are playing during this test.');
+          } else if (event.data.isPaused) {
+            embedMessage('Playlist is paused. Press Play in the window if automatic playback was blocked.');
+          }
+        });
+      });
+    };
+    const script = document.createElement('script');
+    script.src = 'https://open.spotify.com/embed/iframe-api/v1';
+    script.onerror = () => { clearTimeout(timeout); reject(new Error('Spotify’s embedded player could not load.')); };
+    document.head.appendChild(script);
+  });
+}
+
+function playEmbedded(uri) {
+  if (!state.embed) throw new Error('The playlist window is not ready. Refresh and try again.');
+  if (uri !== state.embedUri) {
+    state.embedUri = uri;
+    if (state.embed.loadEntity) state.embed.loadEntity(uri);
+    else state.embed.loadUri(uri);
+  }
+  state.embedMuted = Boolean(announcementPeriod(new Date()));
+  if (state.embedMuted) {
+    state.embed.pause();
+    embedMessage('Playlist selected. Playback is paused for announcements.');
+  } else {
+    state.embed.play();
+    embedMessage('Automatic playback requested. If silent, press Play in the playlist window.');
+  }
+}
+
 async function playContext(uri, volume) {
+  if (state.embedded) { playEmbedded(uri); return; }
   await activatePlayer();
   await setSpotifyVolume(volume);
   state.lastVolumeMode = '';
@@ -638,19 +709,19 @@ async function runCleanup(item) {
   }
   await playContext(CONFIG.cleanupUri, 0.8);
   markCompleted(id);
-  ui.audioStatus.textContent = 'Spotify · Cleanup playback confirmed';
-  recordActivity('Cleanup music started for ' + item.label + '.');
+  ui.audioStatus.textContent = state.embedded ? 'Spotify · Cleanup selected' : 'Spotify · Cleanup playback confirmed';
+  recordActivity((state.embedded ? 'Cleanup playlist selected for ' : 'Cleanup music started for ') + item.label + '.');
 }
 
 async function runPlanning(item) {
   const id = String(item.start.getTime());
   if (state.planningBlock === id) return;
-  const playback = await state.player.getCurrentState();
+  const playback = state.embedded ? null : await state.player.getCurrentState();
   if (!playback || playback.paused || !playback.context || playback.context.uri !== CONFIG.quietUri) {
     await playContext(CONFIG.quietUri, 0.5);
   }
   state.planningBlock = id;
-  ui.audioStatus.textContent = 'Spotify · J&M Chill Folk playback confirmed';
+  ui.audioStatus.textContent = state.embedded ? 'Spotify · J&M Chill Folk selected' : 'Spotify · J&M Chill Folk playback confirmed';
   recordActivity('Planning period · J&M Chill Folk.');
 }
 
@@ -661,7 +732,7 @@ async function runTransition(item, next) {
   if (!uri) return;
   await playContext(uri, announcementPeriod(new Date()) ? 0 : 0.8);
   markCompleted(id);
-  ui.audioStatus.textContent = 'Spotify · ' + next.label + ' playback confirmed';
+  ui.audioStatus.textContent = 'Spotify · ' + next.label + (state.embedded ? ' playlist selected' : ' playback confirmed');
   recordActivity('Music changed for ' + next.label + '.');
 }
 
@@ -757,6 +828,7 @@ async function requestWakeLock() {
 
 function startSignalsFromClick() {
   if (state.running || ui.start.disabled) return;
+  if (state.embedded) return startSignals();
   if (!tokenRecord()) return startSignals();
   try {
     preparePlayer();
@@ -777,18 +849,20 @@ async function startSignals() {
   try {
     ui.start.disabled = true;
     setStatus('working', 'CONNECTING', 'Preparing today’s signals', 'Loading the schedule and classroom Spotify player.');
-    if (!tokenRecord()) {
+    if (!state.embedded && !tokenRecord()) {
       ui.dialog.showModal();
       throw new Error('Choose Connect Spotify to authorize an approved Premium account.');
     }
     await checkNestAccess();
     await loadSchedule();
+    if (!state.embedded) {
     await loadProfile();
     if (state.profile && state.profile.product !== 'premium') {
       throw new Error('The connected Spotify account must be Premium.');
     }
     await connectPlayer();
     await activatePlayer();
+    }
     if (state.playbackError) throw state.playbackError;
     state.planningBlock = '';
     state.running = true;
@@ -796,6 +870,7 @@ async function startSignals() {
     ui.start.textContent = 'Signals running';
     ui.start.disabled = true;
     ui.stop.disabled = false;
+    if (state.embedded) playEmbedded(selectedPlaylist(new Date()));
     await requestWakeLock();
     await schedulerTick();
     if (!state.running) return;
@@ -809,6 +884,7 @@ async function startSignals() {
 
 function stopSignals() {
   state.running = false;
+  if (state.embed) state.embed.pause();
   localStorage.setItem(STORAGE.running, 'false');
   clearInterval(state.timer);
   state.timer = null;
@@ -864,6 +940,17 @@ function registerStatusTool() {
 
 async function initialize() {
   ui.start.disabled = true;
+  const mode = document.querySelector('#playback-mode');
+  mode.value = localStorage.getItem('nest-signals-playback-mode') || 'embed';
+  state.embedded = mode.value === 'embed';
+  document.querySelector('#embed-panel').hidden = !state.embedded;
+  ui.setup.hidden = state.embedded;
+  mode.addEventListener('change', async () => {
+    stopSignals();
+    if (state.player) { try { await state.player.pause(); } catch (_) {} state.player.disconnect(); }
+    localStorage.setItem('nest-signals-playback-mode', mode.value);
+    location.reload();
+  });
   displayClock();
   setInterval(displayClock, 1000);
   ui.redirectUri.value = redirectUri();
@@ -898,7 +985,7 @@ async function initialize() {
   try {
     await checkNestAccess();
     await handleSpotifyCallback();
-    if (tokenRecord()) {
+    if (!state.embedded && tokenRecord()) {
       await loadSpotifySdk();
       preparePlayer();
       await loadProfile();
@@ -906,6 +993,7 @@ async function initialize() {
       setStatus('ready', 'READY', 'Spotify is connected', 'Confirm the Pyle speaker is selected, then start today’s signals.');
     }
     await loadSchedule();
+    if (state.embedded) { await prepareEmbed(); ui.audioStatus.textContent = 'Spotify · embedded playlist test'; setStatus('ready', 'READY', 'Embedded playlists are ready', 'Click Start signals. No developer-app connection is required in this mode.'); }
     updateReadouts(new Date());
     if (localStorage.getItem(STORAGE.running) === 'true' && tokenRecord()) {
       setStatus('ready', 'READY', 'Click Start signals to enable audio', 'After reopening this page, a click is needed to enable sound in your browser.');
