@@ -224,7 +224,7 @@ function renderSchedule() {
     return;
   }
   ui.scheduleList.innerHTML = state.schedule.map(function (item) {
-    const details = item.silentLunch ? 'Silent lunch · planning period' : (item.prep || item.tag || 'Transition block');
+    const details = item.silentLunch ? 'Planning music · no lunch cues' : (item.prep || item.tag || 'Transition block');
     return '<article class="schedule-row" data-active="false">' +
       '<span class="row-icon">' + rowIcon(item) + '</span>' +
       '<div><strong>' + escapeHtml(item.label) + '</strong><span>' + escapeHtml(details) + '</span></div>' +
@@ -323,7 +323,7 @@ function updateReadouts(now) {
     row.dataset.active = current === state.schedule[index] ? 'true' : 'false';
   });
   if (current) {
-    ui.currentPeriod.textContent = current.label + (current.silentLunch ? ' · silent' : '');
+    ui.currentPeriod.textContent = current.label + (current.silentLunch ? ' · planning music' : '');
     ui.currentTime.textContent = displayTime(current.start) + '–' + displayTime(current.end);
   } else {
     ui.currentPeriod.textContent = 'No active block';
@@ -667,7 +667,7 @@ async function runTransition(item, next) {
 
 async function enforcePeriodVolume(now) {
   const current = state.schedule.find(function (item) { return now >= item.start && now < item.end; });
-  if (!current || current.silentLunch) return;
+  if (!current) return;
   let mode = 'normal:' + current.start.getTime();
   let volume = 0.5;
   if (hasCleanup(current) && now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
@@ -714,7 +714,7 @@ async function schedulerTick() {
       setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
       return;
     }
-    const planning = state.schedule.find(function (item) { return item.planning && now >= item.start && now < item.end; });
+    const planning = state.schedule.find(function (item) { return (item.planning || item.silentLunch) && now >= item.start && now < item.end; });
     if (planning) {
       if (hasCleanup(planning) && now.getTime() >= planning.end.getTime() - CONFIG.cleanupLeadMs) {
         await runCleanup(planning);

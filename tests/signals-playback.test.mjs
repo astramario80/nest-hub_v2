@@ -208,3 +208,11 @@ test('planning has no exit cleanup into another planning block or lunch',()=>{
     assert.equal(run('hasCleanup(planning)'),false);
   }
 });
+
+
+test('starting during lunch attached to planning plays Chill Folk without lunch cleanup',async()=>{
+  const {run,ctx,calls}=playerContext();
+  ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-01T10:53:00Z']));}};
+  run(`state.running=true;state.schedule=[{label:'1ST LUNCH',lunch:true,silentLunch:true,start:new Date('2026-10-01T10:27:00Z'),end:new Date('2026-10-01T10:57:00Z')},{label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')}];checkNestAccess=async()=>{};updateReadouts=()=>{};runPlanning=async()=>calls.push('folk');runCleanup=async()=>calls.push('cleanup');setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
+  await run('schedulerTick()');assert.deepEqual(calls,['folk',0.5]);
+});
