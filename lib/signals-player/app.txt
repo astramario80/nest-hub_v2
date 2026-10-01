@@ -295,11 +295,18 @@ function ordinalSuffix(number) {
   return 'th';
 }
 
+function hasCleanup(item) {
+  if (item.silentLunch) return false;
+  if (!item.planning) return true;
+  const next = state.schedule[state.schedule.indexOf(item) + 1];
+  return Boolean(next && !next.planning && !next.lunch && !next.silentLunch);
+}
+
 function upcomingEvents(now) {
   const events = [];
   state.schedule.forEach(function (item, index) {
     const cleanup = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);
-    if (!item.silentLunch && !item.planning) events.push({ at: cleanup, label: 'Cleanup · ' + item.label });
+    if (hasCleanup(item)) events.push({ at: cleanup, label: 'Cleanup · ' + item.label });
     const next = state.schedule[index + 1];
     if (next && !next.silentLunch && playlistFor(next)) {
       events.push({ at: next.planning ? next.start : item.end, label: 'Transition · ' + next.label });
@@ -622,7 +629,7 @@ async function playContext(uri, volume) {
 
 async function runCleanup(item) {
   const id = 'cleanup:' + item.end.getTime();
-  if (isCompleted(id) || item.silentLunch || item.planning) return;
+  if (isCompleted(id) || !hasCleanup(item)) return;
   const playback = await playbackState();
   if (playback && playback.is_playing && playback.context && playback.context.uri === CONFIG.cleanupUri && playback.device && playback.device.id === state.deviceId) {
     markCompleted(id);
@@ -663,7 +670,7 @@ async function enforcePeriodVolume(now) {
   if (!current || current.silentLunch) return;
   let mode = 'normal:' + current.start.getTime();
   let volume = 0.5;
-  if (!current.planning && now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
+  if (hasCleanup(current) && now >= new Date(current.end.getTime() - CONFIG.cleanupLeadMs)) {
     mode = 'cleanup:' + current.end.getTime();
     volume = 0.8;
   }
@@ -708,7 +715,13 @@ async function schedulerTick() {
       return;
     }
     const planning = state.schedule.find(function (item) { return item.planning && now >= item.start && now < item.end; });
-    if (planning) await runPlanning(planning);
+    if (planning) {
+      if (hasCleanup(planning) && now.getTime() >= planning.end.getTime() - CONFIG.cleanupLeadMs) {
+        await runCleanup(planning);
+      } else {
+        await runPlanning(planning);
+      }
+    }
     for (let index = 0; !planning && index < state.schedule.length; index += 1) {
       const item = state.schedule[index];
       const cleanupTime = new Date(item.end.getTime() - CONFIG.cleanupLeadMs);

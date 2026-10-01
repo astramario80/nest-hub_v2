@@ -177,7 +177,7 @@ test('planning starts Chill Folk after silent lunch, even with completed transit
   assert.match(run('ui.audioStatus.textContent'),/Chill Folk playback confirmed/);
 });
 
-test('planning continues Chill Folk through final six minutes without cleanup or louder volume', async () => {
+test('planning without a following block continues Chill Folk without an exit cue', async () => {
   const {run,calls}=playerContext();
   run(`const item={label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')};state.schedule=[item];isCompleted=()=>false;playbackState=async()=>{throw new Error('cleanup must not run')};setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
   await run('runCleanup(item)');await run("enforcePeriodVolume(new Date('2026-10-01T12:00:00Z'))");
@@ -188,4 +188,23 @@ test('planning recognizes existing local Chill Folk without restarting the playl
   const {run,calls}=playerContext();
   run(`state.player={getCurrentState:async()=>({paused:false,context:{uri:CONFIG.quietUri}})};playContext=async()=>calls.push('restart');recordActivity=()=>{};`);
   await run('runPlanning({start:new Date()})');assert.deepEqual(calls,[]);
+});
+
+
+test('planning exit cleanup runs only in the final six minutes and never restores Chill Folk over it', async () => {
+  for (const time of ['11:56:59','11:57:00','12:00:00']) {
+    const {run,ctx,calls}=playerContext();
+    ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-01T'+time+'Z']));}};
+    run(`state.running=true;state.schedule=[{label:'3RD PERIOD',planning:true,start:new Date('2026-10-01T11:02:00Z'),end:new Date('2026-10-01T12:03:00Z')},{label:'4th Period',start:new Date('2026-10-01T12:08:00Z'),end:new Date('2026-10-01T13:09:00Z')}];checkNestAccess=async()=>{};updateReadouts=()=>{};runPlanning=async()=>calls.push('folk');runCleanup=async()=>calls.push('cleanup');setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
+    await run('schedulerTick()');
+    assert.deepEqual(calls,time<'11:57:00'?['folk',0.5]:['cleanup',0.8]);
+  }
+});
+
+test('planning has no exit cleanup into another planning block or lunch',()=>{
+  for(const next of [{planning:true},{lunch:true,silentLunch:true}]){
+    const {run,ctx}=playerContext();ctx.nextBlock=next;
+    run('const planning={planning:true};state.schedule=[planning,nextBlock];');
+    assert.equal(run('hasCleanup(planning)'),false);
+  }
 });
