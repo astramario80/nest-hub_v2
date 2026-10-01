@@ -40,8 +40,6 @@ const ui = {
   statusDetail: document.querySelector('#status-detail'),
   start: document.querySelector('#start-button'),
   stop: document.querySelector('#stop-button'),
-  openSpotify: document.querySelector('#open-spotify-button'),
-  spotifyLaunchHelp: document.querySelector('#spotify-launch-help'),
   setup: document.querySelector('#setup-button'),
   dialog: document.querySelector('#setup-dialog'),
   form: document.querySelector('#setup-form'),
@@ -435,7 +433,10 @@ async function spotifyFetch(path, options, retry) {
   if (!response.ok && response.status !== 204) {
     let detail = '';
     try { detail = (await response.json()).error.message; } catch (error) { detail = response.statusText; }
-    throw new Error(detail || 'Spotify returned ' + response.status);
+    const error = new Error(detail || 'Spotify returned ' + response.status);
+    error.status = response.status;
+    error.spotifyPath = path;
+    throw error;
   }
   return response;
 }
@@ -524,22 +525,56 @@ async function connectPlayer() {
   if (!state.deviceId) throw new Error('Spotify did not make the classroom player available.');
 }
 
+function resetPlayerConnection() {
+  if (state.player) state.player.disconnect();
+  state.deviceId = '';
+  state.spotifyReady = false;
+}
+
+async function waitForSpotifyDevice(active) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    if (state.playbackError) throw state.playbackError;
+    if (!state.deviceId) return false;
+    const response = await spotifyFetch('/me/player/devices');
+    const data = await response.json();
+    const device = (data.devices || []).find(function (entry) { return entry.id === state.deviceId; });
+    if (device && device.is_restricted) throw new Error('Spotify is restricting control of the NEST player. Reconnect through Spotify connection.');
+    if (device && (!active || device.is_active)) return true;
+    await new Promise(function (resolve) { setTimeout(resolve, 500); });
+  }
+  return false;
+}
+
 async function activatePlayer() {
-  await spotifyFetch('/me/player', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ device_ids: [state.deviceId], play: false })
-  });
+  try {
+    // SDK readiness can precede registration with Spotify's playback API.
+    if (!await waitForSpotifyDevice(false)) throw new Error('device-unavailable');
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        await spotifyFetch('/me/player', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ device_ids: [state.deviceId], play: false })
+        });
+        if (await waitForSpotifyDevice(true)) return;
+      } catch (error) {
+        if (error.status !== 404) throw error;
+      }
+      await new Promise(function (resolve) { setTimeout(resolve, 750); });
+    }
+    throw new Error('device-unavailable');
+  } catch (error) {
+    resetPlayerConnection();
+    if (error.message === 'device-unavailable' || error.status === 404) {
+      throw new Error('Spotify could not find or activate this page’s NEST player. Keep this page open and click Start signals to reconnect. If it repeats, use Spotify connection to reconnect your account.');
+    }
+    throw error;
+  }
 }
 
 async function setSpotifyVolume(level) {
-  const percent = Math.round(level * 100);
+  // Audio plays in this SDK player; avoid an additional device-targeted API call.
   if (state.player) await state.player.setVolume(level);
-  if (state.deviceId) {
-    await spotifyFetch('/me/player/volume?volume_percent=' + percent + '&device_id=' + encodeURIComponent(state.deviceId), {
-      method: 'PUT'
-    });
-  }
 }
 
 async function playbackState() {
@@ -674,27 +709,15 @@ async function requestWakeLock() {
   }
 }
 
-function openSpotifyApp() {
-  // Request the native app only during a click, before any asynchronous work.
-  // Browsers cannot confirm whether the app opened or the prompt was accepted.
-  ui.spotifyLaunchHelp.textContent = 'Allow your browser to open Spotify. If it does not open, launch the installed Spotify app manually. Keep this page open for signals.';
-  try {
-    window.location.assign('spotify:home');
-  } catch (error) {
-    ui.spotifyLaunchHelp.textContent = 'Open the installed Spotify app manually, then keep this page open for signals.';
-  }
-}
-
 function startSignalsFromClick() {
   if (state.running || ui.start.disabled) return;
   if (!tokenRecord()) return startSignals();
   try {
     preparePlayer();
     state.playbackError = null;
-    // Keep audio activation in the click itself, before opening Spotify or awaiting requests.
+    // Keep audio activation in the click itself, before awaiting any requests.
     const activation = state.player.activateElement();
     ui.start.disabled = true;
-    openSpotifyApp();
     return Promise.resolve(activation).then(startSignals).catch(function (error) {
       ui.start.disabled = false;
       showError(error);
@@ -817,7 +840,6 @@ async function initialize() {
   });
   ui.disconnect.addEventListener('click', disconnectSpotify);
   ui.start.addEventListener('click', startSignalsFromClick);
-  ui.openSpotify.addEventListener('click', openSpotifyApp);
   ui.stop.addEventListener('click', stopSignals);
   document.addEventListener('visibilitychange', function () {
     if (state.running && document.visibilityState === 'visible') requestWakeLock();

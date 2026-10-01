@@ -17,13 +17,13 @@ function playerContext() {
   return { ctx, calls, run: code => vm.runInContext(code, ctx) };
 }
 
-test('start click activates browser audio before opening Spotify or starting asynchronous setup', async () => {
+test('start click activates online audio before asynchronous setup without opening the desktop app', async () => {
   const { run, calls } = playerContext();
   run(`tokenRecord = () => ({}); state.player = { activateElement: () => { calls.push('activate'); return Promise.resolve(); } }; startSignals = async () => calls.push('start');`);
   const started = run('startSignalsFromClick()');
-  assert.deepEqual(calls, ['activate', 'open-app']);
+  assert.deepEqual(calls, ['activate']);
   await started;
-  assert.deepEqual(calls, ['activate', 'open-app', 'start']);
+  assert.deepEqual(calls, ['activate', 'start']);
 });
 
 test('cleanup catches up throughout its six-minute window, never before or after the period', async () => {
@@ -74,4 +74,62 @@ test('cleanup volume remains at 80 percent during the cleanup interval', async (
   run(`state.schedule=[{label:'Period 1',start:new Date('2026-10-01T09:00:00Z'),end:new Date('2026-10-01T10:06:00Z')}]; setSpotifyVolume=async level=>calls.push(level);recordActivity=()=>{};`);
   await run("enforcePeriodVolume(new Date('2026-10-01T10:02:00Z'))");
   assert.deepEqual(calls, [0.8]);
+});
+
+test('transfer waits for exact SDK device registration and confirmed activation', async () => {
+  const { run, ctx, calls } = playerContext();
+  let listed = 0, transferred = false;
+  ctx.fetchDevice = async (path, options) => {
+    if (options) { calls.push(JSON.parse(options.body).device_ids[0]); transferred = true; return {}; }
+    listed++;
+    return { json: async () => ({ devices: listed === 1 ? [{ id:'other',is_active:true }] : [{id:'nest',is_active:transferred}] }) };
+  };
+  run("state.deviceId='nest'; spotifyFetch=fetchDevice;");
+  await run('activatePlayer()');
+  assert.deepEqual(calls, ['nest']);
+  assert.equal(listed, 3);
+});
+
+test('transient Device Not Found retries the same player', async () => {
+  const { run, ctx } = playerContext();
+  let transfers = 0;
+  ctx.fetchDevice = async (path, options) => {
+    if (options) { if (++transfers === 1) throw Object.assign(new Error('Device Not Found'),{status:404}); return {}; }
+    return {json:async()=>({devices:[{id:'nest',is_active:transfers > 1}]})};
+  };
+  run("state.deviceId='nest'; spotifyFetch=fetchDevice;");
+  await run('activatePlayer()');
+  assert.equal(transfers, 2);
+});
+
+test('missing player never falls back to another device and resets stale connection', async () => {
+  const { run, calls } = playerContext();
+  run("state.deviceId='stale';state.spotifyReady=true;state.player={disconnect:()=>calls.push('disconnect')};spotifyFetch=async(path,options)=>{if(options)calls.push('transfer');return {json:async()=>({devices:[{id:'other',is_active:true}]})};};");
+  await assert.rejects(run('activatePlayer()'), /click Start signals to reconnect/);
+  assert.deepEqual(calls, ['disconnect']);
+  assert.equal(run('state.deviceId'), '');
+  assert.equal(run('state.spotifyReady'), false);
+});
+
+test('permission errors do not trigger device transfer retries', async () => {
+  const { run, ctx, calls } = playerContext();
+  ctx.fetchDevice = async (path, options) => {
+    if(options) { calls.push('transfer'); throw Object.assign(new Error('Forbidden'),{status:403}); }
+    return {json:async()=>({devices:[{id:'nest'}]})};
+  };
+  run("state.deviceId='nest';state.player={disconnect:()=>{}};spotifyFetch=fetchDevice;");
+  await assert.rejects(run('activatePlayer()'), /Forbidden/);
+  assert.deepEqual(calls, ['transfer']);
+});
+
+test('browser volume changes do not send device-targeted Web API requests', async () => {
+  const { run, calls } = playerContext();
+  run("state.deviceId='nest';state.player={setVolume:async value=>calls.push(value)};spotifyFetch=async()=>{throw new Error('unexpected API request')};");
+  await run('setSpotifyVolume(0.8)');
+  assert.deepEqual(calls,[0.8]);
+});
+
+test('online Signals never launches the native Spotify app', () => {
+  assert.doesNotMatch(source, /spotify:home|openSpotifyApp/);
+  assert.doesNotMatch(readFileSync('lib/signals-player/index.txt', 'utf8'), /open-spotify-button/);
 });
