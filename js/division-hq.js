@@ -1,6 +1,6 @@
 (() => {
   const page=document.querySelector('main.division-page');if(!page)return;
-  let active='lookup',initialized=false;
+  let active='tripometer',initialized=false;
   const scripts=new Map(),tabs=[...page.querySelectorAll('[data-hq-tab]')];
   const panel=key=>page.querySelector('#hq-panel-'+key);
   function loadScript(src){
@@ -9,7 +9,7 @@
     scripts.set(src,promise);return promise;
   }
   function startTool(key){
-    const src={lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
+    const src={tripometer:'/js/trip-o-meter.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
     const target=panel(key);target.querySelector('[data-tool-retry]')?.remove();
     loadScript(src).catch(()=>{
       const retry=document.createElement('button');retry.type='button';retry.dataset.toolRetry='';retry.textContent='Could not load this section. Try again';retry.addEventListener('click',()=>startTool(key),{once:true});target.append(retry);
@@ -18,7 +18,7 @@
   function select(key,updateURL=true){
     if(!window.NestDivisionHQ.allowed)return;
     const choice=tabs.find(tab=>tab.dataset.hqTab===key&&!tab.hidden);
-    if(!choice||!panel(key))key='lookup';
+    if(!choice||!panel(key))key='tripometer';
     active=key;
     tabs.forEach(tab=>{const selected=tab.dataset.hqTab===key&&!tab.hidden;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;});
     page.querySelectorAll('[role=tabpanel]').forEach(section=>section.hidden=section!==panel(key));
@@ -36,7 +36,7 @@
       panel('employment').querySelector('iframe').removeAttribute('src');
       document.dispatchEvent(new Event('nest-hq-access-revoked'));return;
     }
-    if(!initialized){active=location.hash.slice(1)||'lookup';if(active==='manager-hiring')active='hiring';initialized=true;}
+    if(!initialized){active=location.hash.slice(1)||'tripometer';if(active==='manager-hiring')active='hiring';initialized=true;}
     select(active,false);
     if(!wasAllowed)document.dispatchEvent(new Event('nest-hq-access-ready'));
   }};

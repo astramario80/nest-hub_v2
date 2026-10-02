@@ -35,7 +35,7 @@ test('assigned leader gets an editor window; other positions open read-only wind
 });
 test('a denied division never loads decks or slide buttons',async()=>{
  const {w}=ui();w.fetch=async()=>({ok:false,status:403,json:async()=>({error:'Only division members can open this window.'})});
- await tick();w.document.querySelector('[data-refresh]').click();await tick();
+ await tick();w.document.querySelector('[data-refresh-division]').click();await tick();
  assert.equal(w.document.querySelector('iframe[src]'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.match(w.document.querySelector('.division-workspace [role=status]').textContent,/division members/);w.close();
 });
 test('ordinary members cannot trigger a slide update',async()=>{
@@ -54,7 +54,7 @@ test('slide update queues once and completion refreshes the manager slideshow',a
 test('refreshing the division page resumes a queued update without starting another',async()=>{
  const {w,calls}=ui();await tick();
  w.fetch=async(url,options)=>{calls.push({url,options});const job=options.method==='POST'?JSON.parse(options.body).job:new URL(url,'https://gknest.org').searchParams.get('job');return {ok:true,json:async()=>job?{job,state:'queued'}:access(true)};};
- const page=w.document.querySelector('.division-page');page.querySelector('[data-load]').click();await tick();page.querySelector('[data-refresh]').click();await tick();
+ const page=w.document.querySelector('.division-page');page.querySelector('[data-load]').click();await tick();page.querySelector('[data-refresh-division]').click();await tick();
  assert.match(page.querySelector('[role=status]').textContent,/queued/);assert.equal(calls.filter(c=>c.options.method==='POST').length,1);w.close();
 });
 const res=()=>({code:200,setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});

@@ -2,7 +2,7 @@
 
 This page describes the current production release before central NEST authentication. For the username/password deployment, see [README-auth.md](README-auth.md).
 
-Live at https://gknest.org/trip-o-meter. Website/API deploy from main through Vercel. School-owned Google service version 6 is deployed as of September 15, 2026. All seven trackers were imported and read back successfully after owner authorization.
+Trip-o-meter is the default tab in each authenticated Division HQ at https://gknest.org/divisions/{division}. The former standalone URL redirects to the HQ chooser. Website/API deploy from main through Vercel. School-owned Google service version 6 is deployed as of September 15, 2026. All seven trackers were imported and read back successfully after owner authorization.
 
 ## Access
 

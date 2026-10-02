@@ -74,6 +74,16 @@
       "source": "/control-center",
       "destination": "/divisions",
       "permanent": false
+    },
+    {
+      "source": "/trip-o-meter",
+      "destination": "/divisions",
+      "permanent": false
+    },
+    {
+      "source": "/trip-o-meter.html",
+      "destination": "/divisions",
+      "permanent": false
     }
   ]
 }
