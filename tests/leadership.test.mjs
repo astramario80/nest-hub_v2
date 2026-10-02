@@ -54,3 +54,22 @@ test('signed-out viewer sees a login prompt and logout removes private details',
  w.NestAuth.identity=null;w.document.dispatchEvent(new w.Event('nest-auth-change'));
  assert.doesNotMatch(w.document.querySelector('main').textContent,/alex@students.bethelsd.org/);assert.equal(w.document.querySelector('.leadership-controls').hidden,true);w.close();
 });
+
+test('teams render before a slow position list and vacancy enrichment preserves the selection',async()=>{
+ const dom=new JSDOM(fs.readFileSync('leadership.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/leadership'}),w=dom.window;
+ let finishPositions,directoryCalls=0;
+ signedIn(w);w.AbortSignal=AbortSignal;
+ w.fetch=async url=>{
+   if(url==='/api/leadership'){directoryCalls++;return {ok:true,text:async()=>JSON.stringify({leaders:[member('Alex')]})};}
+   return new Promise(resolve=>{finishPositions=()=>resolve({ok:true,text:async()=>'Position\nDivision Manager\nAssistant Manager'});});
+ };
+ w.eval(fs.readFileSync('js/leadership.js','utf8'));await new Promise(r=>setTimeout(r,30));
+ const select=w.document.querySelector('#leadership-division');select.value='Division 1';select.dispatchEvent(new w.Event('change'));
+ assert.match(w.document.querySelector('#results-grid').textContent,/Alex Example/);
+ finishPositions();await new Promise(r=>setTimeout(r,30));
+ assert.equal(select.value,'Division 1');assert.match(w.document.querySelector('#missing-list').textContent,/Assistant Manager/);
+ assert.equal(directoryCalls,1);
+ const mode=w.document.querySelector('#leadership-mode');mode.value='position';mode.dispatchEvent(new w.Event('change'));
+ const position=w.document.querySelector('#leadership-position');position.value='Division Manager';position.dispatchEvent(new w.Event('change'));
+ assert.match(w.document.querySelector('#results-grid').textContent,/Alex Example/);w.close();
+});
