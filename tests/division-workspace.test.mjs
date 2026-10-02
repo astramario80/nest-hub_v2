@@ -167,3 +167,13 @@ test('first-time sharing checkpoints each division and resumes after interruptio
  ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);for(let i=0;i<6;i++)ctx.nestContinueDivisionSlideAccess();
  assert.deepEqual(synced,['1','2','3','4','5','7','CTSO']);assert.equal(properties.has('nest-slide-access-pending'),false);assert.equal(triggers.length,0);assert.ok(properties.has('nest-slide-access-completed'));
 });
+test('the live sharing routine includes both division managers on every individual slide',()=>{
+ const applied=[],leaders=[['Period 1','','Division Manager','','manager@school.test'],['Period 1','','Assistant Manager','','assistant@school.test'],['Period 1','','Software Technician','','leader@school.test'],['Period 1','','Software Technician','','outsider@school.test']];
+ const iterator=items=>({hasNext:()=>items.length>0,next:()=>items.shift()});
+ const slide={getId:()=> 'role-slide',getName:()=> 'Division 1_Software Technician',getMimeType:()=> 'application/vnd.google-apps.presentation'},manager={getId:()=> 'manager-slide',getName:()=> 'Division 1 Team_Manager Slides'};
+ const source={getId:()=> 'source-folder',getFiles:()=>iterator([slide])},folder={getId:()=> 'division-folder',getFiles:()=>iterator([manager]),getFoldersByName:()=>iterator([source])};
+ const ctx=vm.createContext({console,DriveApp:{getFolderById:()=>folder},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getRange:()=>({getValues:()=>leaders})})})}});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestSlideRoster_=()=>new Set(['manager@school.test','assistant@school.test','leader@school.test','member@school.test']);ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=(id,editors,viewers)=>applied.push({id,editors:[...editors].sort(),viewers:[...viewers].sort()});
+ ctx.nestSyncDivisionSlideAccess('1');
+ assert.deepEqual(applied.find(p=>p.id==='role-slide').editors,['assistant@school.test','leader@school.test','manager@school.test']);assert.deepEqual(applied.find(p=>p.id==='manager-slide').editors,['assistant@school.test','manager@school.test']);assert.equal(applied.find(p=>p.id==='role-slide').viewers.length,4);
+});
