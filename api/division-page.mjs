@@ -7,7 +7,7 @@ const scriptJSON=value=>JSON.stringify(value).replace(/</g,'\\u003c').replace(/\
 export function renderDivisionPage(period,data,code=200){
  const label=period==='CTSO'?'NEST™ Robotics':'Division '+period;
  const allowed=code===200&&data?.manager&&Array.isArray(data.leaders);
- const icon=`<img class="division-hq-header-icon" src="/assets/division-icons/${period==='CTSO'?'ctso':'division-'+escape(period)}-512.webp" alt="${escape(period==='CTSO'?'CTSO':'Division '+period)} official badge" width="144" height="144">`;
+ const icon=`<img class="division-hq-header-icon" src="/assets/division-icons/${period==='CTSO'?'ctso':'division-'+escape(period)}-512.webp" alt="${escape(period==='CTSO'?'NEST™ Robotics':'Division '+period)} official badge" width="144" height="144">`;
  const content=allowed?`<main class="division-workspace division-page" data-period="${escape(period)}"><div class="division-window-layout">
  <div class="division-page-intro"><div class="division-hq-heading">${icon}<div><p class="division-eyebrow">Division HQ</p><h1>${escape(label)}</h1><p>Your team, meetings, and opportunities in one place.</p></div></div><nav class="division-page-actions" aria-label="Division actions"><a class="division-hq-back" href="/divisions">All divisions</a></nav></div>
  <div class="division-hq-content"><div class="division-hq-tabs" role="tablist" aria-label="${escape(label)} workspace">
