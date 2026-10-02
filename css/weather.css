@@ -1,0 +1,31 @@
+.weather-page { width: calc(100% - 32px); max-width: none; }
+.weather-page .internal-card { min-width: 0; }
+.weather-responses { width: 100%; max-width: 100%; }
+.weather-responses table { table-layout: fixed; width: 100%; }
+.weather-responses th, .weather-responses td {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: .88rem;
+}
+.weather-responses th { padding: 12px; z-index: 1; }
+.weather-responses td { position: relative; padding: 0; }
+.weather-cell { height: 144px; padding: 10px 12px; overflow: auto; }
+.weather-column-resize, .weather-row-resize {
+  display: block;
+  position: absolute;
+  touch-action: none;
+  user-select: none;
+  border-radius: 3px;
+}
+.weather-column-resize { right: 0; top: 0; height: 100%; width: 10px; cursor: col-resize; border-right: 2px solid #8296a8; }
+.weather-row-resize { left: 0; bottom: 0; width: 100%; height: 10px; cursor: row-resize; border-bottom: 2px solid #8296a8; }
+.weather-column-resize:hover, .weather-row-resize:hover,
+.weather-column-resize:focus-visible, .weather-row-resize:focus-visible { background: var(--primary-orange); outline: 2px solid #fff; outline-offset: -2px; }
+.weather-summary-table { table-layout: fixed; }
+.weather-summary-table th, .weather-summary-table td { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .weather-page { width: calc(100% - 16px); }
+  .weather-page .internal-card { padding: 12px; }
+  .weather-responses th { padding: 10px 6px; }
+  .weather-cell { padding: 8px 6px; }
+}
