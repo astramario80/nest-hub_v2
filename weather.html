@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/styles.css?v=qr-click-1">
   <link rel="stylesheet" href="/css/nest-auth.css">
   <link rel="stylesheet" href="/css/internal-workspaces.css">
+  <link rel="stylesheet" href="/css/weather.css">
 </head>
 <body>
   <div class="bg-watermark"></div>
@@ -26,7 +27,7 @@
       <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false"><img src="/assets/qr-code.png" alt="QR Code"></button>
     </div>
   </header>
-  <main class="internal-page">
+  <main class="internal-page weather-page">
     <h1>Weather Report</h1>
     <p>Share how your division is doing. Division leaders can review their own report data and charts here.</p>
     <nav id="weather-divisions" class="internal-actions weather-division-buttons" aria-label="Division weather reports"></nav>
@@ -40,8 +41,11 @@
         <button type="button" id="weather-prev">Previous</button>
         <span id="weather-page-label"></span>
         <button type="button" id="weather-next">Next</button>
+        <button type="button" id="weather-fit">Fit columns to window</button>
+        <button type="button" id="weather-reset-rows">Reset row heights</button>
       </div>
-      <div class="table-scroll"><table><thead></thead><tbody></tbody></table></div>
+      <p class="internal-muted" id="weather-layout-help">Drag the right edge of a column heading to change its width, or the bottom edge of a row’s first cell to change its height. You can also focus a handle and use the arrow keys. Your sizes are remembered on this device.</p>
+      <div class="table-scroll weather-responses" tabindex="0" role="region" aria-label="Weather report responses" aria-describedby="weather-layout-help"><table id="weather-responses"><colgroup></colgroup><thead></thead><tbody></tbody></table></div>
     </section>
     <section class="internal-card" aria-labelledby="weather-form-heading">
       <h2 id="weather-form-heading">Submit a weather report</h2>

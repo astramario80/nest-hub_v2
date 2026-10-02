@@ -8,6 +8,68 @@
   const pages=document.getElementById('weather-pages');
   const prev=document.getElementById('weather-prev');
   const next=document.getElementById('weather-next');
+  const responses=document.getElementById('weather-responses');
+  let layout={},layoutKey='',stopResize;
+  function saveLayout(){try{localStorage.setItem(layoutKey,JSON.stringify(layout));}catch{}}
+  function readLayout(period){
+    layoutKey='nest-weather-layout:'+String(window.NestAuth?.identity?.username||window.NestAuth?.identity?.email||'')+':'+period;
+    try{layout=JSON.parse(localStorage.getItem(layoutKey)||'{}');if(!layout||typeof layout!=='object'||Array.isArray(layout))layout={};}catch{layout={};}
+  }
+  function sizeColumns(){
+    const cols=[...responses.querySelectorAll('col')];
+    if(Array.isArray(layout.widths)&&layout.widths.length===cols.length&&layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500)){
+      cols.forEach((col,i)=>col.style.width=layout.widths[i]+'px');responses.style.width=layout.widths.reduce((a,b)=>a+b,0)+'px';
+    }else{responses.style.width='100%';cols.forEach(col=>col.style.width=(100/cols.length)+'%');}
+  }
+  function resizeHandle(handle,axis,read,write){
+    handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-orientation',axis==='x'?'vertical':'horizontal');
+    handle.setAttribute('aria-valuemin',axis==='x'?'40':'56');handle.setAttribute('aria-valuemax',axis==='x'?'1500':'900');
+    handle.setAttribute('aria-valuenow',String(Math.round(read())));
+    const change=value=>{write(value);handle.setAttribute('aria-valuenow',String(Math.round(read())));};
+    handle.addEventListener('keydown',event=>{
+      const less=axis==='x'?'ArrowLeft':'ArrowUp',more=axis==='x'?'ArrowRight':'ArrowDown';
+      if(event.key!==less&&event.key!==more)return;event.preventDefault();change(read()+(event.key===more?16:-16));saveLayout();
+    });
+    handle.addEventListener('pointerdown',event=>{
+      if(event.button!==0)return;event.preventDefault();stopResize?.();
+      const start=axis==='x'?event.clientX:event.clientY,initial=read(),pointer=event.pointerId;
+      const move=e=>{if(e.pointerId===pointer)change(initial+(axis==='x'?e.clientX:e.clientY)-start);};
+      const stop=e=>{if(e&&e.pointerId!==pointer)return;document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',stop);document.removeEventListener('pointercancel',stop);window.removeEventListener('blur',cancel);stopResize=null;saveLayout();};
+      const cancel=()=>stop();stopResize=cancel;
+      document.addEventListener('pointermove',move);document.addEventListener('pointerup',stop);document.addEventListener('pointercancel',stop);window.addEventListener('blur',cancel);
+    });
+  }
+  function renderResponses(data,period,page){
+    stopResize?.();readLayout(period);
+    if(!Array.isArray(layout.widths)||layout.widths.length!==data.columns.length||!layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500))delete layout.widths;
+    const head=document.createElement('tr');
+    responses.querySelector('colgroup').replaceChildren(...data.columns.map(()=>document.createElement('col')));
+    data.columns.forEach(value=>{const cell=document.createElement('th');cell.scope='col';cell.textContent=String(value);head.append(cell);});
+    responses.querySelector('thead').replaceChildren(head);sizeColumns();
+    [...head.children].forEach((th,index)=>{
+      const handle=document.createElement('span');handle.className='weather-column-resize';handle.setAttribute('aria-label','Resize '+data.columns[index]+' column');
+      resizeHandle(handle,'x',()=>Array.isArray(layout.widths)?layout.widths[index]:Math.max(40,th.getBoundingClientRect().width||120),value=>{
+        if(!Array.isArray(layout.widths)||layout.widths.length!==data.columns.length||!layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500))layout.widths=[...head.children].map(cell=>Math.max(40,Math.min(1500,cell.getBoundingClientRect().width||120)));
+        layout.widths[index]=Math.max(40,Math.min(1500,value));sizeColumns();
+      });th.append(handle);
+    });
+    const body=document.createDocumentFragment();
+    data.rows.forEach((row,index)=>{
+      const tr=document.createElement('tr'),key=page+':'+index,height=layout.heights?.[key];
+      data.columns.forEach((_,col)=>{const td=document.createElement('td'),box=document.createElement('div');box.className='weather-cell';box.textContent=String(row[col]??'');box.style.height=(Number.isFinite(height)?Math.max(56,Math.min(900,height)):144)+'px';td.append(box);tr.append(td);});
+      if(tr.firstElementChild){
+        const handle=document.createElement('span');handle.className='weather-row-resize';handle.setAttribute('aria-label','Resize response row '+(index+1));
+        resizeHandle(handle,'y',()=>parseInt(tr.querySelector('.weather-cell').style.height)||144,value=>{
+          const bounded=Math.max(56,Math.min(900,value));tr.querySelectorAll('.weather-cell').forEach(box=>box.style.height=bounded+'px');
+          if(!layout.heights||typeof layout.heights!=='object'||Array.isArray(layout.heights))layout.heights={};layout.heights[key]=bounded;
+        });tr.firstElementChild.append(handle);
+      }
+      body.append(tr);
+    });responses.querySelector('tbody').replaceChildren(body);
+  }
+  document.getElementById('weather-fit').addEventListener('click',()=>{stopResize?.();delete layout.widths;sizeColumns();responses.querySelectorAll('.weather-column-resize').forEach(handle=>handle.setAttribute('aria-valuenow',String(Math.round(handle.parentElement.getBoundingClientRect().width))));saveLayout();});
+  document.getElementById('weather-reset-rows').addEventListener('click',()=>{stopResize?.();delete layout.heights;responses.querySelectorAll('.weather-cell').forEach(box=>box.style.height='144px');responses.querySelectorAll('.weather-row-resize').forEach(handle=>handle.setAttribute('aria-valuenow','144'));saveLayout();});
+  window.addEventListener('pagehide',()=>stopResize?.());
   let selected='',currentPage=0,request=0,allowed=[];
   const svgNS='http://www.w3.org/2000/svg';
   const point=(angle,radius)=>{const radians=angle*Math.PI/180;return [100+radius*Math.cos(radians),103-radius*Math.sin(radians)];};
@@ -52,14 +114,14 @@
       const data=await get(period,page);if(current!==request)return;
       document.getElementById('weather-title').textContent=data.division;
       showSummary(data.summary);
-      const head=document.createElement('tr');data.columns.forEach(value=>{const cell=document.createElement('th');cell.textContent=String(value);head.append(cell);});section.querySelector('thead').replaceChildren(head);
-      const body=document.createDocumentFragment();data.rows.forEach(row=>{const tr=document.createElement('tr');data.columns.forEach((_,index)=>{const cell=document.createElement('td');cell.textContent=String(row[index]??'');tr.append(cell);});body.append(tr);});section.querySelector('tbody').replaceChildren(body);
+      section.hidden=false;renderResponses(data,period,page);
       section.hidden=false;pages.hidden=false;prev.disabled=page===0;next.disabled=!data.hasMore;
       document.getElementById('weather-page-label').textContent='Page '+(page+1);
       status.textContent=data.rows.length?`${data.rows.length} current-trimester responses on this page.`:'No responses this trimester yet.';
     }catch(error){if(current===request)status.textContent=error.message;}
   }
   async function load(){
+    stopResize?.();
     request++;selected='';allowed=[];section.hidden=true;pages.hidden=true;renderButtons([]);
     if(!window.NestAuth?.identity?.signedIn){status.textContent='Sign in from Quick Access above to view your division’s report data.';return;}
     status.textContent='Checking division access…';
