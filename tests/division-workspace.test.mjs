@@ -10,32 +10,33 @@ import {LEADER_SLIDES} from '../lib/division-slides.mjs';
 const tick=()=>new Promise(r=>setTimeout(r,25));
 const id='12345678-1234-1234-1234-123456789abc';
 const access=(canManage=true)=>({team:[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}],canManage,manager:{id:DIVISIONS['1'].slides,role:'Manager Slideshow',canEdit:canManage},leaders:LEADER_SLIDES['1'].map(slide=>({...slide,canEdit:canManage||slide.role==='Software Technician'}))});
-function ui(canManage=true){
- const dom=new JSDOM(renderDivisionPage('1',access(canManage)),{runScripts:'outside-only',url:'https://gknest.org/divisions/1'}),w=dom.window,calls=[];
+function ui(canManage=true,hash="meetings"){
+ const dom=new JSDOM(renderDivisionPage('1',access(canManage)),{runScripts:'outside-only',url:'https://gknest.org/divisions/1'+(hash?'#'+hash:'')}),w=dom.window,calls=[];
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  w.AbortSignal=AbortSignal;w.NestAuth={identity:{signedIn:true,email:'manager@students.bethelsd.org'},ready:Promise.resolve(),open(){}};
  w.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>access(canManage)};};
+ w.eval(fs.readFileSync('js/division-hq.js','utf8'));
  w.eval(fs.readFileSync('js/division-workspace.js','utf8'));
  return {dom,w,calls};
 }
 test('division page shows the current team and leadership buttons above the manager deck',async()=>{
  const {w,calls}=ui();await tick();const dialog=w.document.querySelector('.division-workspace');
- assert.equal(dialog.open,true);assert.match(dialog.querySelector('iframe').src,new RegExp(DIVISIONS['1'].slides));
+ assert.equal(dialog.open,true);assert.match(dialog.querySelector('iframe[src]').src,new RegExp(DIVISIONS['1'].slides));
  assert.equal(dialog.querySelectorAll('.division-window-positions button').length,9);
  assert.equal(dialog.querySelector('[data-load]').disabled,false);assert.equal(calls.length,0);assert.match(dialog.textContent,/Morgan Manager/);assert.match(dialog.textContent,/Taylor Technician/);assert.equal(dialog.tagName,'MAIN');
- w.dispatchEvent(new w.Event('pagehide'));assert.equal(dialog.querySelector('iframe'),null);w.close();
+ w.dispatchEvent(new w.Event('pagehide'));assert.equal(dialog.querySelector('iframe[src]'),null);w.close();
 });
 test('assigned leader gets an editor window; other positions open read-only windows',async()=>{
  const {w,calls}=ui(false);await tick();const dialog=w.document.querySelector('.division-workspace'),individual=w.document.querySelector('.division-individual');
  const buttons=[...dialog.querySelectorAll('.division-window-positions button')];buttons.find(button=>button.textContent.includes('Software Technician')).click();
- assert.equal(individual.querySelector('iframe'),null);await tick();assert.match(individual.querySelector('iframe').src,/\/edit$/);
- individual.querySelector('[data-back]').click();assert.equal(individual.querySelector('iframe'),null);
- buttons.find(button=>button.textContent.includes('Safety Officer')).click();await tick();assert.match(individual.querySelector('iframe').src,/\/embed\?/);assert.equal(calls.length,2);w.close();
+ assert.equal(individual.querySelector('iframe[src]'),null);await tick();assert.match(individual.querySelector('iframe[src]').src,/\/edit$/);
+ individual.querySelector('[data-back]').click();assert.equal(individual.querySelector('iframe[src]'),null);
+ buttons.find(button=>button.textContent.includes('Safety Officer')).click();await tick();assert.match(individual.querySelector('iframe[src]').src,/\/embed\?/);assert.equal(calls.length,2);w.close();
 });
 test('a denied division never loads decks or slide buttons',async()=>{
  const {w}=ui();w.fetch=async()=>({ok:false,status:403,json:async()=>({error:'Only division members can open this window.'})});
  await tick();w.document.querySelector('[data-refresh]').click();await tick();
- assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.match(w.document.querySelector('.division-workspace [role=status]').textContent,/division members/);w.close();
+ assert.equal(w.document.querySelector('iframe[src]'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.match(w.document.querySelector('.division-workspace [role=status]').textContent,/division members/);w.close();
 });
 test('ordinary members cannot trigger a slide update',async()=>{
  const {w,calls}=ui(false);await tick();const button=w.document.querySelector('[data-load]');assert.equal(button.disabled,true);button.click();assert.equal(calls.length,0);assert.equal(w.document.querySelector('[data-hiring]').hidden,true);w.close();
@@ -44,11 +45,11 @@ test('slide update queues once and completion refreshes the manager slideshow',a
  const {w,calls}=ui();await tick();let state='queued',pollTimer;
  w.setTimeout=callback=>{pollTimer=callback;return 1;};w.clearTimeout=()=>{};
  w.fetch=async(url,options)=>{calls.push({url,options});const job=options.method==='POST'?JSON.parse(options.body).job:new URL(url,'https://gknest.org').searchParams.get('job');return {ok:true,json:async()=>({job,state})};};
- const dialog=w.document.querySelector('.division-workspace');const oldFrame=dialog.querySelector('iframe');
+ const dialog=w.document.querySelector('.division-workspace');const oldFrame=dialog.querySelector('iframe[src]');
  const button=dialog.querySelector('[data-load]');button.click();button.click();await tick();
  assert.equal(calls.filter(c=>c.options.method==='POST').length,1);assert.match(dialog.querySelector('[role=status]').textContent,/queued/);
  state='completed';pollTimer();await tick();assert.match(dialog.querySelector('[role=status]').textContent,/updated/);
- assert.notEqual(oldFrame,dialog.querySelector('iframe'));assert.equal(button.disabled,false);w.close();
+ assert.notEqual(oldFrame,dialog.querySelector('iframe[src]'));assert.equal(button.disabled,false);w.close();
 });
 test('refreshing the division page resumes a queued update without starting another',async()=>{
  const {w,calls}=ui();await tick();
@@ -202,7 +203,7 @@ test('division pages deny unsigned and nonmember requests before returning team 
 test('division bootstrap escapes script-breaking team names and pages do not intercept division navigation',()=>{
  const data=access();data.team[0].name='</script><img onerror=alert(1)>';
  const html=renderDivisionPage('1',data);assert.doesNotMatch(html,/<img onerror/);assert.match(html,/\\u003c/);
- const {w}=ui();assert.equal(w.document.querySelector('[data-hiring]').hidden,false);assert.equal(w.document.querySelector('[data-hiring]').getAttribute('href'),'/hiring?period=1#manager-hiring');assert.equal(w.document.querySelector('.division-page-actions a[href^="/leadership-application"]').getAttribute('href'),'/leadership-application?division=1');w.close();
+ const {w}=ui();assert.equal(w.document.querySelector('[data-hiring]').hidden,false);assert.equal(w.document.querySelector('[data-hiring]').getAttribute('role'),'tab');assert.equal(w.document.querySelector('.division-page-actions a[href^="/leadership-application"]'),null);w.close();
 });
 test('the school bridge returns only the selected division current members and reads leadership once',()=>{
  let reads=0;const rows=[['Period 1','','Division Manager','Manager, Morgan','manager@school.test'],['Period 1','','Software Technician','Technician, Taylor','member@school.test'],['Period 1','','Safety Officer','Former, Leader','former@school.test'],['Period 2','','Division Manager','Other, Division','other@school.test']];
@@ -212,7 +213,7 @@ test('the school bridge returns only the selected division current members and r
 
 test('signing out clears the protected team, slide frames and manager actions immediately',async()=>{
  const {w}=ui();await tick();w.NestAuth.identity=null;w.fetch=async()=>({ok:false,status:401,json:async()=>({error:'Sign in to NEST.'})});w.document.dispatchEvent(new w.Event('nest-auth-change'));
- assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.equal(w.document.querySelector('[data-team-summary]').textContent,'');assert.equal(w.document.querySelector('[data-hiring]').hidden,true);await tick();w.close();
+ assert.equal(w.document.querySelector('iframe[src]'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.equal(w.document.querySelector('[data-team-summary]').textContent,'');assert.equal(w.document.querySelector('[data-hiring]').hidden,true);await tick();w.close();
 });
 test('the application page contains the form without loading manager hiring data',()=>{
  const html=fs.readFileSync('leadership-application.html','utf8');assert.match(html,/NEST leadership application/);assert.doesNotMatch(html,/manager-hiring|js\/hiring\.js/);

@@ -2,7 +2,7 @@
   const status=document.getElementById('hiring-status'),buttons=document.getElementById('hiring-divisions'),data=document.getElementById('hiring-data');
   const team=document.getElementById('hiring-team'),apps=document.getElementById('hiring-applications');
   const prev=document.getElementById('hiring-prev'),next=document.getElementById('hiring-next'),pageLabel=document.getElementById('hiring-page-label');
-  const selectedFromLink=new URLSearchParams(location.search).get('period');
+  const selectedFromLink=document.querySelector('[data-hiring-period]')?.dataset.hiringPeriod||new URLSearchParams(location.search).get('period');
   let selected='',request=0,page=0,activeIdentity=Symbol('initial');
   const linkedPeriod=/^(1|2|3|4|5|7|CTSO)$/.test(selectedFromLink||'')?selectedFromLink:'';
   const label=period=>period==='CTSO'?'NEST Robotics':'Division '+period;
@@ -58,6 +58,7 @@
       try{
         const result=await saveChange(partner?{action:'partner',period,position,studentEmail:select.value}:{action:'assign',period,row:index+3,position,expectedName:currentName,expectedEmail:currentEmail,studentEmail:select.value});
         if(generation!==viewGeneration)return;
+        document.dispatchEvent(new Event('nest-hiring-team-change'));
         await show(period,page);status.textContent=result.sharingQueued===false?'Team saved. Slide access will be refreshed by the daily sharing update.':'Team saved. Slide access is updating in the background.';
       }catch(error){if(generation===viewGeneration){status.textContent=error.message;save.disabled=false;}}
     });action.append(select,save);tr.append(action);return tr;
@@ -152,7 +153,7 @@
     status.textContent='Loading '+label(period)+'…';data.hidden=true;
     try{
       const result=(pageNumber===0?window.NestAuth?.takeHiringView?.(period):null)||await get(period,pageNumber);
-      if(current!==request||!window.NestAuth?.identity?.signedIn)return;
+      if(current!==request||!window.NestAuth?.identity?.signedIn||(window.NestDivisionHQ&&!window.NestDivisionHQ.allowed))return;
       document.getElementById('hiring-division').textContent=result.division;
       team.hidden=!result.canManage;
       const teamRows=[];
@@ -167,6 +168,7 @@
   }
   async function load(){
     clear();
+    if(window.NestDivisionHQ&&!window.NestDivisionHQ.allowed)return;
     if(!window.NestAuth?.identity?.signedIn){
       status.replaceChildren('Sign in to review applications. ');
       const sign=document.createElement('button');sign.type='button';sign.textContent='NEST sign in';
@@ -200,5 +202,7 @@
   window.addEventListener('pagehide',clear);
   window.addEventListener('pageshow',event=>{if(event.persisted)load();});
   document.addEventListener('nest-auth-change',authChanged);
+  document.addEventListener('nest-hq-access-revoked',clear);
+  document.addEventListener('nest-hq-access-ready',load);
   window.NestAuth?.ready.then(authChanged);
 })();

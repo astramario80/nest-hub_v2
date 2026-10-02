@@ -27,8 +27,9 @@
     const iframe=document.createElement('iframe');iframe.title=(period==='CTSO'?'NEST Robotics':'Division '+period)+' — '+slide.role+(edit?' editor':' slideshow');
     iframe.src='https://docs.google.com/presentation/d/'+slide.id+(edit?'/edit':'/embed?start=false&loop=false');iframe.allowFullscreen=true;iframe.referrerPolicy='strict-origin-when-cross-origin';return iframe;
   }
-  function render(){if(config)stage.replaceChildren(frame(config.manager));}
+  function render(){if(config&&(!window.NestDivisionHQ||window.NestDivisionHQ.active==='meetings'))stage.replaceChildren(frame(config.manager));}
   function clearAccess(){
+    window.NestDivisionHQ?.setAccess(false);
     config=null;canManage=false;setBusy(false);positions.replaceChildren();dialog.querySelector('[data-team-summary]').replaceChildren();dialog.querySelector('[data-hiring]').hidden=true;stage.replaceChildren();
     dialog.querySelector('.division-window-controls').hidden=true;dialog.querySelector('.division-window-footer').hidden=true;
     if(individual.open)individual.close();
@@ -38,7 +39,7 @@
     config=result;canManage=result.canManage===true;positions.replaceChildren();
     const team=Array.isArray(result.team)?result.team:[];
     const roleKey=role=>String(role||'').trim().toLowerCase().replace(/^3d print specialist$/,'fabrication supervisor');
-    const management=team.filter(person=>!result.leaders.some(slide=>roleKey(slide.role)===roleKey(person.position)));
+    const management=team;
     const summary=dialog.querySelector('[data-team-summary]');summary.replaceChildren();
     for(const person of management){const item=document.createElement('p'),role=document.createElement('strong');role.textContent=person.position+': ';item.append(role,person.name);summary.append(item);}
     if(!team.length){const empty=document.createElement('p');empty.textContent='No leadership assignments yet. Apply for an open position.';summary.append(empty);}
@@ -51,7 +52,7 @@
     dialog.querySelector('.division-window-controls').hidden=false;loadButton.hidden=!canManage;
     dialog.querySelector('.division-window-controls p').textContent=canManage?'Update the manager slideshow with this division’s latest leadership slides.':'You can view all leadership slides in your division. Only your assigned positions allow editing.';
     dialog.querySelector('[data-edit-manager]').hidden=!result.manager.canEdit;
-    dialog.querySelector('.division-window-footer').hidden=false;render();
+    dialog.querySelector('.division-window-footer').hidden=false;window.NestDivisionHQ?.setAccess(true,canManage);if(!window.NestDivisionHQ)render();
   }
   async function openSlide(id,button){
     const own=++slideGeneration,current=generation;slideOpener=button;
@@ -108,6 +109,9 @@
   dialog.querySelector('[data-load]').addEventListener('click',start);
   dialog.querySelector('[data-edit-manager]').addEventListener('click',event=>{if(config?.manager.canEdit)openSlide(config.manager.id,event.target);});
   dialog.querySelector('[data-refresh]').addEventListener('click',checkAccess);
+  let teamNeedsRefresh=false;
+  document.addEventListener('nest-hiring-team-change',()=>{teamNeedsRefresh=true;});
+  document.addEventListener('nest-hq-tab-change',event=>{if(event.detail.tab==='meetings'){if(teamNeedsRefresh){teamNeedsRefresh=false;checkAccess();}else if(!stage.querySelector('iframe'))render();}});
   window.addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
   window.addEventListener('pagehide',()=>{dialog.open=false;generation++;clearTimeout(timer);clearAccess();});
   individual.querySelector('[data-back]').addEventListener('click',()=>individual.close());

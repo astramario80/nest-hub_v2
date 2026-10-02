@@ -9,8 +9,8 @@
   const LEADERS_URL = '/api/leadership';
   const POSITIONS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSY1bNOarIMZn_xl2Qf8xY8zHVJJfgTyNiK0FzNtlYP7Hg0uGqISVnlBAhFw6JZGf6J9KDt3k8frUT9/pub?gid=1215972243&single=true&output=csv';
 
-  const JOBS_PAGE = '/leadership-jobs';
-  const HIRING_GIF_SRC = 'assets/hiring.gif';
+  const JOBS_PAGE = document.querySelector('main.division-page') ? '#employment' : '/leadership-jobs';
+  const HIRING_GIF_SRC = '/assets/hiring.gif';
 
   const EXEC_TITLES = new Set([
     'chief executive officer',
@@ -221,7 +221,7 @@
     // The destination checks the current manager role before any private data is shown.
     const period = dataDivision === 'NEST Robotics' ? 'CTSO' : dataDivision.replace('Period ', '');
     els.divisionHiringLink.href = '/hiring?period=' + encodeURIComponent(period) + '#manager-hiring';
-    if (els.managerTools) els.managerTools.style.display = 'block';
+    if (els.managerTools&&!els.managerTools.hasAttribute('data-hq-hide')) els.managerTools.style.display = 'block';
 
     if (!rows.length){
       els.resultsGrid.innerHTML = '<div class="results-empty">No leaders found for this division yet.</div>';
@@ -322,6 +322,8 @@
     els.divisionWrap = q('leadership-division-wrap');
     els.positionWrap = q('leadership-position-wrap');
     els.managerTools = q('manager-tools');
+    const hqPeriod=document.querySelector('[data-hq-lookup]')?.dataset.hqLookup;
+    if(hqPeriod)els.divisionSelect.value=hqPeriod==='CTSO'?'NEST™ Robotics':'Division '+hqPeriod;
 
     const controls = document.querySelector('.leadership-controls');
     const executives = document.querySelector('.leadership-exec');
@@ -357,6 +359,7 @@
     }
 
     async function load(){
+      if(window.NestDivisionHQ&&!window.NestDivisionHQ.allowed)return;
       const own = ++generation;
       els.resultsTitle.textContent = 'Loading leadership teams…';
       els.resultsGrid.replaceChildren();
@@ -366,7 +369,7 @@
         const positionsRequest = fetchText(POSITIONS_CSV_URL, 10000).catch(() => null);
         const directory = JSON.parse(await fetchText(LEADERS_URL, 45000));
         if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
-        if (own !== generation || !window.NestAuth?.identity) return;
+        if (own !== generation || !window.NestAuth?.identity || (window.NestDivisionHQ&&!window.NestDivisionHQ.allowed)) return;
         state.leaders = directory.leaders;
         state.positions = [...new Set(state.leaders.map(l => l.position))];
         state.ready = true;
@@ -408,6 +411,7 @@
     });
     function authChanged(){
       const identity = window.NestAuth?.identity;
+      if(window.NestDivisionHQ&&!window.NestDivisionHQ.allowed){signedOut('Checking division membership…');return;}
       if (!identity?.signedIn) { signedOut(); return; }
       if (activeEmail === identity.email) return;
       activeEmail = identity.email;
@@ -417,8 +421,10 @@
     }
     signedOut();
     document.addEventListener('nest-auth-change', authChanged);
+    document.addEventListener('nest-hq-access-revoked',()=>signedOut('Checking division membership…'));
+    document.addEventListener('nest-hq-access-ready',authChanged);
     window.NestAuth?.ready.then(authChanged);
   }
 
-  document.addEventListener('DOMContentLoaded', init);
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

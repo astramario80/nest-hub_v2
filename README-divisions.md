@@ -29,3 +29,17 @@ Column and row resize handles support pointer dragging and arrow keys. Fit colum
 Read-only division, hiring and directory requests fetch the current account/roster cells together and fetch leadership cells in parallel. These values are reused only inside that one school request, then discarded. No cross-request membership or role cache is introduced; writes continue to read current permissions. A failed parallel read falls back to live Sheets reads. Division HTML initializes NEST identity from its authorized bootstrap. Direct division hiring links initialize identity and the first applications page from a single authorized response, then consume that data once. Reloads and later actions still reach the server. School-read timing is available through Server-Timing and server logs without names, emails, sessions or application content.
 
 The top-left eagle menu contains the current Command → Division HQ destination and the existing Leadership & Management and Robotics utilities. It initializes from the small generated public navigation embedded in `js/eagle-menu.js`, without fetching the entire homepage first. Run `node scripts/sync-eagle-menu.mjs` after changing the homepage's gear links. Tests compare every corner-menu destination with the homepage and reject obsolete Control Center/Division Folders entries.
+# Division HQ tabs
+
+Each authenticated division page has a connected Team Lookup, Meetings and
+Employment tab bar. Authorized division managers also receive the Hiring tab.
+The lookup starts on the current division and retains searches across all teams.
+Meetings loads the manager deck on first opening; Employment loads the existing
+Google application only when opened. Hiring mounts the existing hiring script
+and tables directly in the page, preserving partner assignments, notes, scores,
+pagination and saved table sizes. Switching tabs retains unfinished reviews.
+Access loss clears the protected tools and frames.
+
+`node scripts/sync-division-hq.mjs` regenerates the shared HQ fragments from
+`leadership.html`, `leadership-jobs.html` and `hiring.html` after their markup or
+job descriptions change. The generated module is bundled with the page handler.
