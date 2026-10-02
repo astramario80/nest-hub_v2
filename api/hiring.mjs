@@ -26,7 +26,7 @@ export default async function handler(req,res) {
   if(!validToken(session))return res.status(401).json({error:'Sign in to NEST to review applications.'});
   if(!periods.has(period)||!Number.isInteger(page)||page<0||page>10)return res.status(400).json({error:'Invalid division or page.'});
   try {
-    const data=await bridge({action:'auth-hiring-view',session,period,page},30000);
+    const data=await bridge({action:'auth-hiring-view',session,period,page},45000);
     if([401,403,404].includes(data.status))return res.status(data.status).json({error:data.status===403?'You do not have hiring access for this division.':data.status===404?'This division’s hiring workbook is not connected.':'Your sign-in has expired.'});
     if(period==='mine') {
       if(data.status!==200||!Array.isArray(data.periods)||!data.periods.every(value=>periods.has(value)&&value!=='mine'))throw new Error('Invalid hiring access list');

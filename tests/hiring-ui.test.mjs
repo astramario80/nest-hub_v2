@@ -42,7 +42,7 @@ test('division link opens directly and auth event plus ready starts only one req
 test('stalled access request times out with a retry that can recover',async()=>{
  const dom=workspace('https://gknest.org/hiring'),w=dom.window;
  let timer,signal,calls=0;
- w.setTimeout=(callback,delay)=>{assert.equal(delay,45000);timer=callback;return 1;};w.clearTimeout=()=>{};
+ w.setTimeout=(callback,delay)=>{assert.equal(delay,60000);timer=callback;return 1;};w.clearTimeout=()=>{};
  w.fetch=async (_url,options)=>{signal=options.signal;return ++calls===1?new Promise(()=>{}):response({periods:['1']});};
  w.eval(fs.readFileSync('js/hiring.js','utf8'));await tick();
  timer();await tick();
