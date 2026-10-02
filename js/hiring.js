@@ -151,7 +151,7 @@
     const current=++request;
     status.textContent='Loading '+label(period)+'…';data.hidden=true;
     try{
-      const result=await get(period,pageNumber);
+      const result=(pageNumber===0?window.NestAuth?.takeHiringView?.(period):null)||await get(period,pageNumber);
       if(current!==request||!window.NestAuth?.identity?.signedIn)return;
       document.getElementById('hiring-division').textContent=result.division;
       team.hidden=!result.canManage;

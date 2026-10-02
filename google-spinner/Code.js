@@ -16,6 +16,9 @@ function doPost(e) {
   let r;
   try { r=JSON.parse(e.postData.contents); } catch (_) { return json_({status:400}); }
   if(typeof r.token!=='string' || hash_(r.token)!==BRIDGE_DIGEST) return json_({status:401});
+  return withNestReadContext_(r,()=>nestRequest_(r));
+}
+function nestRequest_(r){
   if(r.action==='signals-classes') {
     try { return json_(signalsClasses_()); } catch(_) { return json_({status:503}); }
   }
@@ -49,7 +52,10 @@ function doPost(e) {
   if(r.action==='auth-hiring-view') {
     try {
       const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
-      return json_(session?hiringView_(session.email,r.period,r.page):{status:401});
+      if(!session)return json_({status:401});
+      const result=hiringView_(session.email,r.period,r.page);
+      if(result.status===200)result.identity=nestSessionIdentity_(session);
+      return json_(result);
     } catch(error){console.error('Hiring view failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
   }
   if(['auth-hiring-assign','auth-hiring-partner','auth-hiring-review'].includes(r.action)) {
@@ -83,11 +89,47 @@ function doPost(e) {
   }
   finally { lock.releaseLock(); }
 }
+// Fresh request-scoped reads only. Never reuse membership or roles across requests.
+let NEST_ACCESS_READS=null;
+function nestAccessValues_(id,range){
+ const key=id+':'+range;
+ if(NEST_ACCESS_READS&&NEST_ACCESS_READS.has(key))return {values:NEST_ACCESS_READS.get(key)};
+ const result=Sheets.Spreadsheets.Values.get(id,range);
+ if(NEST_ACCESS_READS)NEST_ACCESS_READS.set(key,result.values||[]);
+ return result;
+}
+function withNestReadContext_(r,work){
+ const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory';
+ if(!readonly)return work();
+ const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
+ try{
+  const store=PropertiesService.getScriptProperties(),session=/^[a-f0-9]{64}$/.test(r.session||'')?read_(store,'authsession:'+hash_(r.session),Date.now()):null;
+  if(session){
+   const ranges=[AUTH_SHEET];
+   if(Object.prototype.hasOwnProperty.call(PERIODS,r.period))ranges.push("'"+(r.period==='CTSO'?'CTSO':'Period '+r.period)+"'!A2:C1000");
+   if(r.action==='auth-hiring-view'&&r.period!=='CTSO')ranges.push("'CTSO'!A2:C1000");
+   const groups=[{id:NEST_DATABASE,ranges:[...new Set(ranges)]},{id:LEADERSHIP_DATABASE,ranges:["'Imported'!B2:F"]}];
+   try{
+    const bearer=ScriptApp.getOAuthToken();
+    const responses=UrlFetchApp.fetchAll(groups.map(group=>({url:'https://sheets.googleapis.com/v4/spreadsheets/'+group.id+'/values:batchGet?'+group.ranges.map(range=>'ranges='+encodeURIComponent(range)).join('&')+'&valueRenderOption=FORMATTED_VALUE&fields=valueRanges(values)',headers:{Authorization:'Bearer '+bearer},muteHttpExceptions:true})));
+    responses.forEach((response,index)=>{
+     if(response.getResponseCode()!==200)return;
+     const data=JSON.parse(response.getContentText()),group=groups[index];
+     if(!Array.isArray(data.valueRanges)||data.valueRanges.length!==group.ranges.length)return;
+     if(!data.valueRanges.every(range=>range&&(!range.values||Array.isArray(range.values)&&range.values.every(Array.isArray))))return;
+     group.ranges.forEach((range,i)=>NEST_ACCESS_READS.set(group.id+':'+range,data.valueRanges[i].values||[]));
+    });
+   }catch(error){console.warn('Parallel access read unavailable; using live Sheets reads.');}
+  }
+  return work();
+ }finally{NEST_ACCESS_READS=previous;}
+}
+function nestSessionIdentity_(session){return {signedIn:true,email:session.email,username:session.username,expires:session.expires};}
 const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
 const OWNER_EMAILS = ['mpenalver@bethelsd.org','mario@memberhq.net'];
 function email_(value) { return String(value||'').trim().toLowerCase(); }
 function rows_(period) {
-  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];
+  const rows=nestAccessValues_(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];
   return rows.filter(row=>row[0] && /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).map(row=>[String(row[0]).trim(),email_(row[2])]);
 }
 function memberEmail_(identity,period) {
@@ -209,7 +251,7 @@ function leadershipDirectory_() {
   return {status:200,leaders};
 }
 function memberLeadershipDirectory_() {
-  const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+  const rows=nestAccessValues_(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   const leaders=rows.map(row=>{
     const period=String(row[0]||'').replace(/period/ig,'').trim().toUpperCase();
     const name=String(row[3]||'').trim(),comma=name.indexOf(',');

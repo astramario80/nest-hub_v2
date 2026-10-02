@@ -1,5 +1,5 @@
 (() => {
-  let identity = null;
+  let identity = null,hiringView=null;
   const usernameRule = 'Username must start with a letter and be 3–32 characters. Use letters, numbers, periods, underscores, or hyphens.';
   const usernameIdeas = email => {
     const parts = String(email || '').split('@')[0].toLowerCase().match(/[a-z]{3,}/g) || [];
@@ -129,10 +129,12 @@
     closeOptions();
   });
   async function logout() {
+    hiringView=null;
     try { await api('logout'); } catch (error) { alert(error.message); return; }
     identity = null; refreshLinks(); changed();
   }
-  async function refresh() {
+  async function refresh(preserveWorkspace=false) {
+    if(preserveWorkspace!==true)hiringView=null;
     const response = await fetch('/api/auth?action=me', { credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) throw new Error('NEST sign-in is temporarily unavailable.');
     const data = await response.json();
@@ -140,6 +142,30 @@
     refreshLinks(); changed();
     return identity;
   }
-  const ready = refresh().catch(() => { identity = null; refreshLinks(); changed(); return null; });
-  window.NestAuth = { ready, refresh, open, logout, get identity() { return identity; } };
+  function usableIdentity(value){return value?.signedIn===true&&typeof value.username==='string'&&typeof value.email==='string'&&Number.isFinite(value.expires)&&value.expires>Date.now();}
+  async function initialize(){
+    const bootstrap=document.getElementById('nest-auth-bootstrap');
+    if(bootstrap){
+      let value;try{value=JSON.parse(bootstrap.textContent);}catch{}bootstrap.remove();
+      if(usableIdentity(value)){identity=value;refreshLinks();changed();return identity;}
+    }
+    const workspace=document.getElementById('nest-auth-workspace');
+    let config;try{config=workspace&&JSON.parse(workspace.textContent);}catch{}workspace?.remove();
+    const period=new URLSearchParams(location.search).get('period');
+    if(config?.type==='hiring'&&/^(1|2|3|4|5|7|CTSO)$/.test(period||'')){
+      try{
+        const response=await fetch('/api/hiring?period='+encodeURIComponent(period)+'&page=0',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(60000)});
+        const data=await response.json();
+        if(response.ok&&usableIdentity(data.identity)){
+          hiringView={period,data};identity=data.identity;refreshLinks();changed();return identity;
+        }
+        if(response.status===401){identity=null;refreshLinks();changed();return null;}
+        if(!response.ok)hiringView={period,error:data.error||'Hiring is temporarily unavailable. Please try again.'};
+      }catch{hiringView={period,error:'Hiring took too long to load. Please try again.'};}
+    }
+    return refresh(Boolean(hiringView?.error));
+  }
+  function takeHiringView(period){const value=hiringView;hiringView=null;if(value?.period!==period)return null;if(value.error)throw new Error(value.error);return value.data;}
+  const ready = Promise.resolve().then(initialize).catch(() => { identity = null;hiringView=null; refreshLinks(); changed(); return null; });
+  window.NestAuth = { ready, refresh, open, logout, takeHiringView, get identity() { return identity; } };
 })();
