@@ -344,6 +344,18 @@
       els.resultsGrid.replaceChildren(login);
     }
 
+    function renderPositionOptions(){
+      const selected = els.positionSelect.value;
+      els.positionSelect.innerHTML = '<option value="">Choose a position…</option>';
+      state.positions.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        els.positionSelect.appendChild(opt);
+      });
+      els.positionSelect.value = selected;
+    }
+
     async function load(){
       const own = ++generation;
       els.resultsTitle.textContent = 'Loading leadership teams…';
@@ -354,26 +366,24 @@
         const positionsRequest = fetchText(POSITIONS_CSV_URL, 10000).catch(() => null);
         const directory = JSON.parse(await fetchText(LEADERS_URL, 45000));
         if (!Array.isArray(directory.leaders)) throw new Error('Invalid leadership data.');
-        const positionsCsv = await positionsRequest;
         if (own !== generation || !window.NestAuth?.identity) return;
-        let listedPositions = [];
-        if (positionsCsv) {
-          try { listedPositions = toPositions(parseCSV(positionsCsv)); } catch (_) { /* Keep current team roles available. */ }
-        }
-
         state.leaders = directory.leaders;
-        state.positions = [...new Set([...listedPositions, ...state.leaders.map(l => l.position)])];
+        state.positions = [...new Set(state.leaders.map(l => l.position))];
         state.ready = true;
         renderExecStrip();
 
-        els.positionSelect.innerHTML = '<option value="">Choose a position…</option>';
-        state.positions.forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p;
-          opt.textContent = p;
-          els.positionSelect.appendChild(opt);
-        });
+        renderPositionOptions();
         updateMode();
+        // Vacancies enrich the directory later; a slow public sheet must never
+        // hold up the authenticated team data or the selected division.
+        positionsRequest.then(positionsCsv => {
+          if (own !== generation || !window.NestAuth?.identity || !positionsCsv) return;
+          try {
+            state.positions = [...new Set([...toPositions(parseCSV(positionsCsv)), ...state.leaders.map(l => l.position)])];
+            renderPositionOptions();
+            updateMode();
+          } catch (_) { /* Current team roles remain available. */ }
+        });
       } catch (error){
         if (own !== generation || !window.NestAuth?.identity) return;
         if (error.status === 401) { signedOut('Your sign-in has expired. Sign in again to view the directory.'); return; }
