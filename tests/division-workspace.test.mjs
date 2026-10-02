@@ -87,7 +87,7 @@ test('worker checks the live manager role again before changing slides',()=>{
 test('all divisions have verified server-side slide catalogs and public links stay inside NEST',()=>{
  assert.deepEqual(Object.keys(LEADER_SLIDES),Object.keys(DIVISIONS));
  assert.doesNotMatch(fs.readFileSync('js/division-workspace.js','utf8'),new RegExp(DIVISIONS['1'].slides));
- for(const name of ['index.html','control-center.html']){
+ for(const name of ['divisions.html']){
   const dom=new JSDOM(fs.readFileSync(name,'utf8'));
   const links=[...dom.window.document.querySelectorAll('[data-division-workspace]')];
   assert.deepEqual(links.map(a=>a.dataset.divisionWorkspace),Object.keys(DIVISIONS));assert.ok(links.every(a=>a.getAttribute('href').startsWith('/divisions/')));dom.window.close();
@@ -202,7 +202,7 @@ test('division pages deny unsigned and nonmember requests before returning team 
 test('division bootstrap escapes script-breaking team names and pages do not intercept division navigation',()=>{
  const data=access();data.team[0].name='</script><img onerror=alert(1)>';
  const html=renderDivisionPage('1',data);assert.doesNotMatch(html,/<img onerror/);assert.match(html,/\\u003c/);
- const {w}=ui();assert.equal(w.document.querySelector('[data-hiring]').hidden,false);assert.equal(w.document.querySelector('[data-hiring]').getAttribute('href'),'/hiring?period=1#manager-hiring');assert.equal(w.document.querySelector('.division-page-actions a').getAttribute('href'),'/leadership-application?division=1');w.close();
+ const {w}=ui();assert.equal(w.document.querySelector('[data-hiring]').hidden,false);assert.equal(w.document.querySelector('[data-hiring]').getAttribute('href'),'/hiring?period=1#manager-hiring');assert.equal(w.document.querySelector('.division-page-actions a[href^="/leadership-application"]').getAttribute('href'),'/leadership-application?division=1');w.close();
 });
 test('the school bridge returns only the selected division current members and reads leadership once',()=>{
  let reads=0;const rows=[['Period 1','','Division Manager','Manager, Morgan','manager@school.test'],['Period 1','','Software Technician','Technician, Taylor','member@school.test'],['Period 1','','Safety Officer','Former, Leader','former@school.test'],['Period 2','','Division Manager','Other, Division','other@school.test']];
@@ -222,4 +222,13 @@ test('division page preserves native request header getters during its access ch
  const req=Object.create({get headers(){return {};}});req.method='GET';req.query={period:'1'};
  const r={code:200,setHeader(){},status(code){this.code=code;return this;},send(html){this.html=html;return this;}};
  await pageHandler(req,r);assert.equal(r.code,401);assert.match(r.html,/data-sign-in/);
+});
+
+test('Command has one Division HQ entry and the chooser lists every division',()=>{
+ const dom=new JSDOM(fs.readFileSync('index.html','utf8'));const command=dom.window.document.querySelector('#gear-3');const links=[...command.querySelectorAll('a')].filter(a=>a.getAttribute('href').startsWith('/divisions'));assert.equal(links.length,1);assert.match(links[0].textContent,/Division HQ/);assert.equal(command.querySelector('[data-division-workspace]'),null);assert.doesNotMatch(command.textContent,/Control Center|Division Folders/);dom.window.close();assert.equal(fs.existsSync('control-center.html'),false);
+});
+test('allowed and locked division pages both contain the full NEST header and footer',()=>{
+ for(const html of [renderDivisionPage('1',access()),renderDivisionPage('1',{error:'Sign in.'},401)]){
+  const dom=new JSDOM(html),doc=dom.window.document;assert.ok(doc.querySelector('header .logo-container'));assert.ok(doc.querySelector('#today-date'));assert.ok(doc.querySelector('.header-dropdown'));assert.ok(doc.querySelector('.header-qr'));assert.ok(doc.querySelector('#current-year'));assert.match(doc.querySelector('footer').textContent,/Help & Support/);assert.match(doc.querySelector('footer').textContent,/About Me/);assert.ok(doc.querySelector('script[src="/js/main.js"]'));dom.window.close();
+ }
 });
