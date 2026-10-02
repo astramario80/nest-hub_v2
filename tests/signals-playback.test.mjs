@@ -246,3 +246,21 @@ test('embed planning uses the playlist controller and separate completion marker
   run("markCompleted('test')");assert.equal(run("isCompleted('test')"),true);
   assert.match(run('ui.audioStatus.textContent'),/selected/);
 });
+
+test('database enrollment overrides division playlists for zero or absent classes',()=>{
+ const {run}=playerContext();
+ run(`state.schedule=[{label:'0 Hour'},{label:'1st Period'},{label:'2nd Period'},{label:'3RD PERIOD',planning:true},{label:'Period 7'},{label:'CTSO'},{label:'Study Support'}];applyClassEnrollment({'1':true,'2':false,'3':false,'7':true,CTSO:true});`);
+ assert.equal(run('playlistFor(state.schedule[0])'),run('CONFIG.quietUri'));
+ assert.equal(run('playlistFor(state.schedule[1])'),run('CONFIG.periodUris[1]'));
+ assert.equal(run('playlistFor(state.schedule[2])'),run('CONFIG.quietUri'));
+ assert.equal(run('playlistFor(state.schedule[3])'),run('CONFIG.quietUri'));
+ assert.equal(run('playlistFor(state.schedule[4])'),run('CONFIG.periodUris[7]'));
+ assert.equal(run('playlistFor(state.schedule[5])'),run('CONFIG.ctsoUri'));
+ assert.equal(run('state.schedule[6].noStudents'),false);
+});
+
+test('starting connected playback mid Period 0 selects Chill Folk without a previous transition',async()=>{
+ const {run,ctx,calls}=playerContext();ctx.Date=class extends Date{constructor(...args){super(...(args.length?args:['2026-10-02T07:00:00Z']));}};
+ run(`state.running=true;state.schedule=[{label:'0 Hour',noStudents:true,start:new Date('2026-10-02T06:55:00Z'),end:new Date('2026-10-02T07:40:00Z')}];state.player={getCurrentState:async()=>null};checkNestAccess=async()=>{};updateReadouts=()=>{};enforcePeriodVolume=async()=>{};playContext=async uri=>calls.push(uri);recordActivity=()=>{};`);
+ await run('schedulerTick()');assert.deepEqual(calls,['spotify:playlist:1leyIgu6VXG7cpa2HjO9FF']);
+});

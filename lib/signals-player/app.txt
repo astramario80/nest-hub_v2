@@ -199,6 +199,21 @@ function normalizeSchedule(csv) {
   return rows;
 }
 
+function classKey(label) {
+  const text = String(label || '').trim().toLowerCase();
+  if (text === 'ctso') return 'CTSO';
+  if (text === 'advisory') return '7';
+  const match = /^(?:period\s+([0-7])|([0-7])(?:st|nd|rd|th)?\s+(?:period|hour))$/.exec(text);
+  return match ? match[1] || match[2] : '';
+}
+
+function applyClassEnrollment(classes) {
+  state.schedule.forEach(function(item) {
+    const key = classKey(item.label);
+    item.noStudents = Boolean(key && classes[key] !== true);
+  });
+}
+
 async function loadSchedule() {
   try {
     const response = await fetch(CONFIG.scheduleUrl, { cache: 'no-store' });
@@ -212,6 +227,11 @@ async function loadSchedule() {
     state.schedule = normalizeSchedule(cached);
     recordActivity('Using the most recently saved bell schedule.');
   }
+  const enrollment = await fetch('/api/signals?asset=classes', { cache: 'no-store', signal: AbortSignal.timeout(55000) });
+  if (!enrollment.ok) throw new Error('Class enrollment could not be loaded. Try Start signals again.');
+  const data = await enrollment.json();
+  if (!data.classes || !Object.keys(data.classes).length) throw new Error('Class enrollment is unavailable. Try again.');
+  applyClassEnrollment(data.classes);
   renderSchedule();
   return state.schedule;
 }
@@ -229,7 +249,7 @@ function renderSchedule() {
     return;
   }
   ui.scheduleList.innerHTML = state.schedule.map(function (item) {
-    const details = item.silentLunch ? 'Planning music · no lunch cues' : (item.prep || item.tag || 'Transition block');
+    const details = item.noStudents && !item.planning ? 'No enrolled class · J&M Chill Folk' : item.silentLunch ? 'Planning music · no lunch cues' : (item.prep || item.tag || 'Transition block');
     return '<article class="schedule-row" data-active="false">' +
       '<span class="row-icon">' + rowIcon(item) + '</span>' +
       '<div><strong>' + escapeHtml(item.label) + '</strong><span>' + escapeHtml(details) + '</span></div>' +
@@ -279,7 +299,7 @@ function isSecondPeriod(item) {
 
 function playlistFor(item) {
   const text = [item.label, item.prep, item.tag].join(' ').toLowerCase();
-  if (item.planning) return CONFIG.quietUri;
+  if (item.planning || item.noStudents) return CONFIG.quietUri;
   if (text.includes('fly day')) return CONFIG.flyDayUri;
   if (text.includes('planning') || text.includes('lunch') || text.includes('study support') || text.includes('dismissal')) {
     return CONFIG.quietUri;
@@ -617,7 +637,7 @@ function selectedPlaylist(now) {
   const current = state.schedule.find(item => now >= item.start && now < item.end);
   if (!current) return CONFIG.quietUri;
   if (hasCleanup(current) && now.getTime() >= current.end.getTime() - CONFIG.cleanupLeadMs) return CONFIG.cleanupUri;
-  return current.planning || current.silentLunch ? CONFIG.quietUri : playlistFor(current) || CONFIG.quietUri;
+  return current.planning || current.silentLunch || current.noStudents ? CONFIG.quietUri : playlistFor(current) || CONFIG.quietUri;
 }
 
 function embedMessage(message) {
@@ -722,7 +742,7 @@ async function runPlanning(item) {
   }
   state.planningBlock = id;
   ui.audioStatus.textContent = state.embedded ? 'Spotify · J&M Chill Folk selected' : 'Spotify · J&M Chill Folk playback confirmed';
-  recordActivity('Planning period · J&M Chill Folk.');
+  recordActivity((item.noStudents && !item.planning ? 'No enrolled class' : 'Planning period') + ' · J&M Chill Folk.');
 }
 
 async function runTransition(item, next) {
@@ -770,7 +790,7 @@ async function schedulerTick() {
       setStatus('paused', 'ABSENT MODE', 'Signals are paused', 'The schedule contains an Absent row, so no music will be changed.');
       return;
     }
-    const planning = state.schedule.find(function (item) { return (item.planning || item.silentLunch) && now >= item.start && now < item.end; });
+    const planning = state.schedule.find(function (item) { return (item.planning || item.silentLunch || item.noStudents) && now >= item.start && now < item.end; });
     if (planning) {
       if (hasCleanup(planning) && now.getTime() >= planning.end.getTime() - CONFIG.cleanupLeadMs) {
         await runCleanup(planning);
