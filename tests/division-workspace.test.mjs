@@ -148,3 +148,10 @@ test('unexpected inherited access fails the sharing audit',()=>{
  const ctx=vm.createContext({console,Drive:{Permissions:{list:()=>({items:[{id:'wide',type:'anyone',role:'reader'}]}),remove:()=>{throw new Error('Inherited permission');},insert(){}}}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);assert.throws(()=>ctx.nestSlidePermissions_('deck',new Set(),new Set()),/Unexpected inherited/);
 });
+test('limited-access folders verify their boundary and ignore metadata-only parent visibility',()=>{
+ const patches=[];
+ const ctx=vm.createContext({console,Drive:{Files:{patch:(value,id)=>patches.push({value,id}),get:()=>({inheritedPermissionsDisabled:true})},Permissions:{list:()=>({items:[{id:'parent',type:'user',role:'reader',view:'metadata'}]}),remove:()=>{throw new Error('Metadata permission should not be changed');},insert(){}}}});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestSlideLimitFolder_('folder');ctx.nestSlidePermissions_('folder',new Set(),new Set());
+ assert.equal(patches[0].value.inheritedPermissionsDisabled,true);assert.equal(patches[0].id,'folder');
+ ctx.Drive.Files.get=()=>({inheritedPermissionsDisabled:false});assert.throws(()=>ctx.nestSlideLimitFolder_('folder'),/Could not isolate/);
+});
