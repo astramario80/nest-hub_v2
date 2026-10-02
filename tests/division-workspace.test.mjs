@@ -217,3 +217,9 @@ test('signing out clears the protected team, slide frames and manager actions im
 test('the application page contains the form without loading manager hiring data',()=>{
  const html=fs.readFileSync('leadership-application.html','utf8');assert.match(html,/NEST leadership application/);assert.doesNotMatch(html,/manager-hiring|js\/hiring\.js/);
 });
+
+test('division page preserves native request header getters during its access check',async()=>{
+ const req=Object.create({get headers(){return {};}});req.method='GET';req.query={period:'1'};
+ const r={code:200,setHeader(){},status(code){this.code=code;return this;},send(html){this.html=html;return this;}};
+ await pageHandler(req,r);assert.equal(r.code,401);assert.match(r.html,/data-sign-in/);
+});
