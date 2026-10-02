@@ -346,6 +346,3 @@ function nestUpdateManagerSlides_(divisionName) {
 
   Logger.log(`✅ Finished updating manager slideshow for ${divisionName}`);
 }
-
-
-
