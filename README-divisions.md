@@ -1,0 +1,13 @@
+# Division folder windows
+
+Division Folders in Command and the Control Center cards open the same NEST window. Folder, Manager Slideshow, and Control Center are separate screens. Embedded Google resources retain their original sharing; an Open in Google link remains available.
+
+Load division slides uses the existing Control Center routine, not a spreadsheet cell edit. Google does not fire installable edit triggers for API writes. The routine preserves the title slide, loads leadership decks in position order, copies missing templates, and applies its existing sharing rules. Managers and assistants can run their own division. CTSO CEO and Executive Vice-President can run CTSO; NEST owners retain administrative access. Both the school bridge and Control Center recheck live roles, including a second check when queued work starts. Manual accounts are resolved to their roster-linked district email by the school bridge.
+
+The existing school bridge uses the new `google-spinner/DivisionSlides.js` handler. The Control Center script is `1J2LMHfxCPpTwXR5rzmcpF9dZtU1ymE94N1gjC8u_aD-ICHvCtYkbIosx`; add `google-control-center/NestDivisionWeb.js` there and update its existing `SlideshowUpdates` file from the tracked source. Keep CalendarShare, Formatting, Triggers, and their existing triggers. The original slide routine is wrapped with a script lock to prevent sheet and website updates colliding.
+
+`authorizeNestDivisionWeb` installs one minute-based worker after owner authorization. It does not modify slides or sharing. The protected web-app deployment executes as the school owner and checks the existing bridge-token digest before any read or write. Never store or expose the token in the website. Its URL is configured only in the school bridge source. Deploy the Control Center first, then the school bridge, then the website.
+
+Jobs are idempotent by UUID. A second simultaneous job for the same division is rejected. The website polls progress while its window is open and remembers the job ID in session storage so reopening resumes progress. Closing the window does not cancel queued work. Jobs left running after a terminated Google execution become failed after ten minutes. Completed job records older than 24 hours are pruned when new work starts. The sheet's B2 changes to Slides Updated on successful completion.
+
+Validation: `npm test` includes mocked window flows, duplicate clicks, close/reopen recovery, API request validation, live-role revocation before execution, and the original update routine invocation. Production deployment verification does not rebuild real division decks just to test the button.

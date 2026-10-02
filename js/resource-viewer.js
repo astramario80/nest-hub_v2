@@ -57,7 +57,7 @@
   refresh.addEventListener('click',frame);
   document.addEventListener('click',event=>{
     if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-    const link=event.target.closest('a[href]');if(!link||link.closest('.resource-viewer')||link.hasAttribute('download')||link.hasAttribute('data-external'))return;
+    const link=event.target.closest('a[href]');if(!link||link.closest('.resource-viewer')||link.hasAttribute('data-division-workspace')||link.hasAttribute('download')||link.hasAttribute('data-external'))return;
     let target;try{target=resource(link.href);}catch{return;}if(!target)return;
     event.preventDefault();
     if(link.hasAttribute('data-resource-exit')){

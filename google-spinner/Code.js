@@ -23,6 +23,9 @@ function doPost(e) {
   if(['fabrication-public','auth-fabrication-view','auth-fabrication-update','auth-fabrication-email'].includes(r.action)){
     try{return json_(fabDispatch_(r));}catch(error){console.error('Fabrication action failed',r.action);return json_({status:503});}
   }
+  if(r.action==='auth-division-slides') {
+    try{return json_(divisionSlidesDispatch_(r));}catch(_){return json_({status:503});}
+  }
   if(r.action==='auth-leadership-directory') {
     try {
       const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());

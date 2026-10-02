@@ -42,6 +42,9 @@
     },
     "api/fabrication.mjs": {
       "maxDuration": 60
+    },
+    "api/division.mjs": {
+      "maxDuration": 60
     }
   },
   "redirects": [
