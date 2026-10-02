@@ -66,7 +66,7 @@ function queue(){
  const properties=new Map(),setups=[],updates=[];
  const store={getProperty:k=>properties.get(k),setProperty:(k,v)=>properties.set(k,v),deleteProperty:k=>properties.delete(k),getProperties:()=>Object.fromEntries(properties)};
  let allowed=true;
- const ctx=vm.createContext({console,Date,ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>JSON.parse(text)})},Utilities:{DigestAlgorithm:{SHA_256:'sha'},computeDigest:()=>Array.from(Buffer.from('fa73c87e353c83d23f5a447adf018eda6be9a8096a6d84e03318eb8833f984cf','hex'))},PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>[{getHandlerFunction:()=> 'nestDivisionSlidesWorker'}]},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getRange:range=>range==='B2:F99'?{getValues:()=>allowed?[['Period 1','','Division Manager','','manager@students.bethelsd.org']]:[]}:{setValue:value=>setups.push(value)}})})},updateManagerSlides:(division,locked)=>updates.push({division,locked})});
+ const ctx=vm.createContext({console,Date,ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>JSON.parse(text)})},Utilities:{getUuid:()=> 'revision-'+Date.now(),DigestAlgorithm:{SHA_256:'sha'},computeDigest:()=>Array.from(Buffer.from('fa73c87e353c83d23f5a447adf018eda6be9a8096a6d84e03318eb8833f984cf','hex'))},PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>[{getHandlerFunction:()=> 'nestDivisionSlidesWorker'}]},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>100,getRange:range=>typeof range==='number'?{getValues:()=>allowed?[['Period 1','','Division Manager','','manager@students.bethelsd.org']]:[]}:{setValue:value=>setups.push(value)}})})},updateManagerSlides:(division,locked)=>updates.push({division,locked})});
  vm.runInContext(fs.readFileSync('google-control-center/NestDivisionWeb.js','utf8'),ctx);
  ctx.nestSlideRoster_=()=>new Set(['manager@students.bethelsd.org']);
  const call=r=>ctx.doPost({postData:{contents:JSON.stringify({token:'test',period:'1',email:'manager@students.bethelsd.org',job:id,...r})}});
@@ -172,7 +172,7 @@ test('the live sharing routine includes both division managers on every individu
  const iterator=items=>({hasNext:()=>items.length>0,next:()=>items.shift()});
  const slide={getId:()=> 'role-slide',getName:()=> 'Division 1_Software Technician',getMimeType:()=> 'application/vnd.google-apps.presentation'},manager={getId:()=> 'manager-slide',getName:()=> 'Division 1 Team_Manager Slides'};
  const source={getId:()=> 'source-folder',getFiles:()=>iterator([slide])},folder={getId:()=> 'division-folder',getFiles:()=>iterator([manager]),getFoldersByName:()=>iterator([source])};
- const ctx=vm.createContext({console,DriveApp:{getFolderById:()=>folder},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getRange:()=>({getValues:()=>leaders})})})}});
+ const ctx=vm.createContext({console,DriveApp:{getFolderById:()=>folder},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>leaders.length+1,getRange:()=>({getValues:()=>leaders})})})}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestSlideRoster_=()=>new Set(['manager@school.test','assistant@school.test','leader@school.test','member@school.test']);ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=(id,editors,viewers)=>applied.push({id,editors:[...editors].sort(),viewers:[...viewers].sort()});
  ctx.nestSyncDivisionSlideAccess('1');
  assert.deepEqual(applied.find(p=>p.id==='role-slide').editors,['assistant@school.test','leader@school.test','manager@school.test']);assert.deepEqual(applied.find(p=>p.id==='manager-slide').editors,['assistant@school.test','manager@school.test']);assert.equal(applied.find(p=>p.id==='role-slide').viewers.length,4);
@@ -231,4 +231,10 @@ test('allowed and locked division pages both contain the full NEST header and fo
  for(const html of [renderDivisionPage('1',access()),renderDivisionPage('1',{error:'Sign in.'},401)]){
   const dom=new JSDOM(html),doc=dom.window.document;assert.ok(doc.querySelector('header .logo-container'));assert.ok(doc.querySelector('#today-date'));assert.ok(doc.querySelector('.header-dropdown'));assert.ok(doc.querySelector('.header-qr'));assert.ok(doc.querySelector('#current-year'));assert.match(doc.querySelector('footer').textContent,/Help & Support/);assert.match(doc.querySelector('footer').textContent,/About Me/);assert.ok(doc.querySelector('script[src="/js/main.js"]'));dom.window.close();
  }
+});
+
+test('partner hires queue a sharing refresh on the permanent worker without rebuilding a deck',()=>{
+ const q=queue(),synced=[];q.ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);
+ assert.equal(q.call({operation:'sync-access',job:undefined,email:undefined}).status,200);
+ q.ctx.nestDivisionSlidesWorker();assert.deepEqual(synced,['1']);assert.equal(q.properties.has('nest-hiring-access:1'),false);assert.equal(q.updates.length,0);
 });

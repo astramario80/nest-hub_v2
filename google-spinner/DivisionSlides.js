@@ -4,7 +4,7 @@ const DIVISION_SLIDES_WEBAPP = 'https://script.google.com/macros/s/AKfycbwRXV7QL
 function divisionSlidesPermissions_(identity,period,leaders){
  if(OWNER_EMAILS.includes(email_(identity)))return true;
  const email=memberEmail_(identity,period);
- const rows=leaders||(Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[]);
+ const rows=leaders||(Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[]);
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===email&&
   (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));
 }
@@ -15,7 +15,7 @@ function divisionSlidesDispatch_(r){
  const email=memberEmail_(session.email,r.period),isOwner=OWNER_EMAILS.includes(email_(session.email));
  const roster=rows_(r.period),members=new Set(roster.map(row=>email_(row[1])));
  if(!isOwner&&!members.has(email))return {status:403};
- const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];
+ const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
  const canManage=divisionSlidesPermissions_(session.email,r.period,leaders);
  if(r.operation==='access'){
   const roles=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&email_(row[4])===email).map(row=>String(row[2]||'').trim());
@@ -41,4 +41,16 @@ function divisionSlidesDispatch_(r){
  }
  if(response.getResponseCode()!==200)return {status:503};
  return JSON.parse(response.getContentText());
+}
+
+function hiringQueueSlideAccess_(r){
+ try{
+  let response=UrlFetchApp.fetch(DIVISION_SLIDES_WEBAPP,{method:'post',contentType:'application/json',payload:JSON.stringify({token:r.token,operation:'sync-access',period:r.period}),muteHttpExceptions:true,followRedirects:false});
+  if([301,302,303].includes(response.getResponseCode())){
+   const headers=response.getAllHeaders(),target=String(headers.Location||headers.location||'');
+   if(!/^https:\/\/script\.googleusercontent\.com\//.test(target))return false;
+   response=UrlFetchApp.fetch(target,{muteHttpExceptions:true,followRedirects:false});
+  }
+  return response.getResponseCode()===200&&JSON.parse(response.getContentText()).status===200;
+ }catch(error){console.error('Hiring slide access queue unavailable');return false;}
 }

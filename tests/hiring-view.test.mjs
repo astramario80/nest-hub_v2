@@ -2,9 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import {createHash} from 'node:crypto';
 function setup(canManage=true){
  const calls=[];
- const ctx=vm.createContext({console,Sheets:{Spreadsheets:{get:()=>({sheets:[{properties:{title:'Applications',gridProperties:{rowCount:250}}},{properties:{title:'Division Team'}}]}),Values:{batchGet:(_id,options)=>{calls.push(options.ranges);return {valueRanges:options.ranges.map(range=>({values:range.includes('A1:H1')?[['Timestamp','Name','Period']]:range.includes('Division Team')?[['Assistant Manager','Current member','member@students.bethelsd.org']]:[['Today','Applicant','Period 2'],['Today','Other','Period 1']] }))};}}}}});
+ const ctx=vm.createContext({console,Utilities:{DigestAlgorithm:{SHA_256:'sha'},computeDigest:(_,value)=>[...createHash('sha256').update(value).digest()]},Sheets:{Spreadsheets:{get:()=>({sheets:[{properties:{title:'Applications',gridProperties:{rowCount:250}}},{properties:{title:'Division Team',gridProperties:{rowCount:20}}}]}),Values:{batchGet:(_id,options)=>{calls.push(options.ranges);return {valueRanges:options.ranges.map(range=>({values:range.includes('A1:H1')?[['Timestamp','Name','Period']]:range.includes('Division Team')?[['Assistant Manager','Current member','member@students.bethelsd.org']]:[['Today','Applicant','Period 2'],['Today','Other','Period 1']] }))};}}}}});
  vm.runInContext(fs.readFileSync('google-spinner/Hiring.js','utf8'),ctx);ctx.hiringRows_=()=>[];ctx.hiringPermissions_=()=>({canReview:true,canManage});ctx.hiringWorkbook_=()=> 'workbook';ctx.rows_=()=>[['Current member','member@students.bethelsd.org']];ctx.districtEmail_=x=>x;
  return {ctx,calls};
 }

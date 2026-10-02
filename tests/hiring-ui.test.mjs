@@ -72,3 +72,33 @@ test('old access responses cannot replace a new account or restore details after
  assert.match(w.document.querySelector('#hiring-status').textContent,/Sign in/);
  assert.equal(w.document.querySelector('#hiring-divisions').children.length,0);w.close();
 });
+
+test('Add partner preserves the existing assignment and submits a role-scoped roster selection',async()=>{
+ const dom=workspace(),w=dom.window,posts=[];
+ w.fetch=async (_url,options={})=>options.method==='POST'?(posts.push(JSON.parse(options.body)),response({sharingQueued:true})):response({...view,candidates:[{name:'Partner','email':'partner@students.bethelsd.org'}]});
+ w.eval(fs.readFileSync('js/hiring.js','utf8'));await tick();
+ const button=[...w.document.querySelectorAll('#hiring-team button')].find(b=>b.textContent==='Add partner');
+ assert.ok(button);button.closest('tr').querySelector('select').value='partner@students.bethelsd.org';button.click();await tick();
+ assert.deepEqual(posts,[{action:'partner',period:'1',position:'Assistant Manager',studentEmail:'partner@students.bethelsd.org'}]);
+ assert.match(w.document.querySelector('#hiring-team tbody').textContent,/Example/);w.close();
+});
+test('notes and four interview ratings save together; unsaved changes protect pagination and layout supports keyboard resizing',async()=>{
+ const dom=workspace(),w=dom.window,posts=[];
+ const key='a'.repeat(64),revision='b'.repeat(64);
+ w.fetch=async (_url,options={})=>options.method==='POST'?(posts.push(JSON.parse(options.body)),response({revision:'c'.repeat(64)})):response({...view,columns:['Timestamp','Applicant','Division'],applications:[['Today','Applicant','Period 1']],reviews:[{key,revision,notes:'Existing note',scores:[null,null,null,null]}],hasMore:true});
+ w.eval(fs.readFileSync('js/hiring.js','utf8'));await tick();
+ const tr=w.document.querySelector('#hiring-applications tbody tr'),notes=tr.querySelector('textarea'),selects=[...tr.querySelectorAll('select')];
+ notes.value='Interview discussion';notes.dispatchEvent(new w.Event('input'));
+ selects.forEach((s,i)=>{s.value=String(i+1);s.dispatchEvent(new w.Event('change'));});
+ assert.equal(w.document.querySelector('#hiring-next').disabled,true);assert.match(tr.textContent,/10\/16/);
+ tr.querySelector('button').click();await tick();
+ assert.deepEqual(posts,[{action:'review',period:'1',key,revision,notes:'Interview discussion',scores:[1,2,3,4]}]);assert.equal(w.document.querySelector('#hiring-next').disabled,false);assert.match(tr.textContent,/Saved/);
+ const col=w.document.querySelector('.application-column-resize');col.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));assert.equal(w.document.querySelector('#hiring-applications col').style.width,'136px');
+ const row=tr.querySelector('.application-row-resize');row.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}));assert.equal(tr.querySelector('.application-cell').style.height,'196px');
+ w.document.querySelector('#hiring-fit').click();assert.equal(w.document.querySelector('#hiring-applications').style.width,'100%');
+ const stored=JSON.parse(w.localStorage.getItem('nest-hiring-layout:manager@students.bethelsd.org:1'));assert.equal(stored.heights['0:0'],196);assert.equal(stored.widths,undefined);assert.doesNotMatch(JSON.stringify(stored),/Interview discussion/);w.close();
+});
+test('review-only access exposes ratings and notes without edit actions',async()=>{
+ const dom=workspace(),w=dom.window;w.fetch=async()=>response({...view,canManage:false,applications:[['Today','Applicant','Period 1','Position']],reviews:[{key:'a'.repeat(64),revision:'b'.repeat(64),notes:'Saved note',scores:[1,2,3,4]}]});
+ w.eval(fs.readFileSync('js/hiring.js','utf8'));await tick();assert.equal(w.document.querySelector('#hiring-team').hidden,true);assert.equal(w.document.querySelector('#hiring-applications textarea').disabled,true);assert.equal(w.document.querySelector('#hiring-applications tbody button'),null);assert.match(w.document.querySelector('#hiring-applications tbody').textContent,/10\/16/);w.close();
+});

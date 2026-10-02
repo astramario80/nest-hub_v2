@@ -74,7 +74,8 @@ for(const [name,handler] of [['weather',weatherHandler],['hiring',hiringHandler]
 test('hiring workbook is resolved only from the matching period and managers cannot review another period',()=>{
  const {ctx}=context();
  const rows=[['Period 1','https://docs.google.com/spreadsheets/d/one/edit','Division Manager','','manager@students.bethelsd.org'],['Period 2','https://docs.google.com/spreadsheets/d/two/edit','Partner Liaison','','liaison@students.bethelsd.org']];
- assert.equal(ctx.hiringWorkbook_('1',rows),'one');
+ assert.equal(ctx.hiringWorkbook_('1',rows),'1Ut9K28LgaYbNHJRw6cn1l48wD_aaO484ZMjJi8zcIxo');
+ ctx.rows_=()=>[['Manager','manager@students.bethelsd.org'],['Executive','exec@students.bethelsd.org']];
  assert.equal(ctx.hiringPermissions_('manager@students.bethelsd.org','1',rows).canManage,true);
  assert.equal(ctx.hiringPermissions_('manager@students.bethelsd.org','2',rows).canReview,false);
  assert.equal(ctx.hiringPermissions_('liaison@students.bethelsd.org','2',rows).canReview,false);

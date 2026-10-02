@@ -54,7 +54,7 @@ function fabEvents_(request,events){return events.filter(e=>e[1]===request.id&&e
 function fabPublic_(request,events){return {id:request.id,status:request.status,machine:request.machine,updates:fabEvents_(request,events)};}
 function fabView_(email,page){
  const privateView=Boolean(email);
- if(privateView&&!fabAllowed_(email,Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[]))return {status:403};
+ if(privateView&&!fabAllowed_(email,Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[]))return {status:403};
  if(!Number.isInteger(page)||page<0||page>100)return {status:400};
  const state=fabRead_();
  const all=state.requests.filter(r=>state.requests.filter(other=>other.id===r.id).length===1);
@@ -79,7 +79,7 @@ function fabEnsureLog_(state){
 function fabCell_(value){return {userEnteredValue:{stringValue:String(value??'')}};}
 function fabAppendRequest_(logTab,values){return {appendCells:{sheetId:logTab.sheetId,rows:[{values:values.map(fabCell_)}],fields:'userEnteredValue'}};}
 function fabWrite_(email,r){
- if(!fabAllowed_(email,Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[]))return {status:403};
+ if(!fabAllowed_(email,Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[]))return {status:403};
  if(!/^[a-f0-9]{64}$/.test(r.id||'')||!/^[a-f0-9]{64}$/.test(r.version||''))return {status:400};
  const state=fabRead_(),matches=state.requests.filter(item=>item.id===r.id);
  if(!matches.length)return {status:404};if(matches.length!==1)return {status:409};

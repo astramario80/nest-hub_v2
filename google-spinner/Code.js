@@ -52,12 +52,15 @@ function doPost(e) {
       return json_(session?hiringView_(session.email,r.period,r.page):{status:401});
     } catch(error){console.error('Hiring view failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
   }
-  if(r.action==='auth-hiring-assign') {
+  if(['auth-hiring-assign','auth-hiring-partner','auth-hiring-review'].includes(r.action)) {
     const lock=LockService.getScriptLock();
     if(!lock.tryLock(15000))return json_({status:503});
     try {
       const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
-      return json_(session?hiringAssign_(session.email,r):{status:401});
+      if(!session)return json_({status:401});
+      const result=r.action==='auth-hiring-review'?hiringSaveReview_(session.email,r):r.action==='auth-hiring-partner'?hiringPartner_(session.email,r):hiringAssign_(session.email,r);
+      if(result.status===200&&r.action!=='auth-hiring-review')result.sharingQueued=hiringQueueSlideAccess_(r);
+      return json_(result);
     } catch(error){console.error('Hiring assignment failed',String(error&&error.message||error).slice(0,200));return json_({status:503});}
     finally{lock.releaseLock();}
   }
