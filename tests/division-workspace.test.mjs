@@ -177,3 +177,15 @@ test('the live sharing routine includes both division managers on every individu
  ctx.nestSyncDivisionSlideAccess('1');
  assert.deepEqual(applied.find(p=>p.id==='role-slide').editors,['assistant@school.test','leader@school.test','manager@school.test']);assert.deepEqual(applied.find(p=>p.id==='manager-slide').editors,['assistant@school.test','manager@school.test']);assert.equal(applied.find(p=>p.id==='role-slide').viewers.length,4);
 });
+
+test('empty divisions revoke member access while unavailable or malformed rosters fail safely',()=>{
+ let rows=[],sheetAvailable=true;
+ const ctx=vm.createContext({console,SpreadsheetApp:{openById:()=>({getSheetByName:()=>sheetAvailable?{getRange:()=>({getValues:()=>rows})}:null})}});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
+ assert.equal(ctx.nestSlideRoster_('3').size,0);
+ rows=[['Member without an email','','']];assert.throws(()=>ctx.nestSlideRoster_('3'),/no valid member emails/);
+ sheetAvailable=false;assert.throws(()=>ctx.nestSlideRoster_('3'),/unavailable/);
+ let permissions=[{id:'owner',type:'user',role:'owner'},{id:'former',type:'user',role:'reader',emailAddress:'former@school.test'}];
+ ctx.Drive={Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);}}};
+ ctx.nestSlidePermissions_('empty-division',new Set(),new Set());assert.equal(permissions.length,1);assert.equal(permissions[0].role,'owner');
+});
