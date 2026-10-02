@@ -4,32 +4,33 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import handler from '../api/division.mjs';
+import pageHandler,{renderDivisionPage} from '../api/division-page.mjs';
 import {DIVISIONS} from '../lib/divisions.mjs';
 import {LEADER_SLIDES} from '../lib/division-slides.mjs';
 const tick=()=>new Promise(r=>setTimeout(r,25));
 const id='12345678-1234-1234-1234-123456789abc';
-const access=(canManage=true)=>({canManage,manager:{id:DIVISIONS['1'].slides,role:'Manager Slideshow',canEdit:canManage},leaders:LEADER_SLIDES['1'].map(slide=>({...slide,canEdit:canManage||slide.role==='Software Technician'}))});
+const access=(canManage=true)=>({team:[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}],canManage,manager:{id:DIVISIONS['1'].slides,role:'Manager Slideshow',canEdit:canManage},leaders:LEADER_SLIDES['1'].map(slide=>({...slide,canEdit:canManage||slide.role==='Software Technician'}))});
 function ui(canManage=true){
- const dom=new JSDOM(fs.readFileSync('index.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/'}),w=dom.window,calls=[];
+ const dom=new JSDOM(renderDivisionPage('1',access(canManage)),{runScripts:'outside-only',url:'https://gknest.org/divisions/1'}),w=dom.window,calls=[];
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
  w.AbortSignal=AbortSignal;w.NestAuth={identity:{signedIn:true,email:'manager@students.bethelsd.org'},ready:Promise.resolve(),open(){}};
  w.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,json:async()=>access(canManage)};};
  w.eval(fs.readFileSync('js/division-workspace.js','utf8'));
- w.document.querySelector('[data-division-workspace="1"]').click();return {dom,w,calls};
+ return {dom,w,calls};
 }
-test('division window shows leadership buttons above the manager deck and clears frames on close',async()=>{
- const {w,calls}=ui();assert.equal(w.document.querySelector('iframe'),null);await tick();const dialog=w.document.querySelector('.division-workspace');
+test('division page shows the current team and leadership buttons above the manager deck',async()=>{
+ const {w,calls}=ui();await tick();const dialog=w.document.querySelector('.division-workspace');
  assert.equal(dialog.open,true);assert.match(dialog.querySelector('iframe').src,new RegExp(DIVISIONS['1'].slides));
  assert.equal(dialog.querySelectorAll('.division-window-positions button').length,9);
- assert.equal(dialog.querySelector('[data-load]').disabled,false);assert.equal(calls.length,1);
- dialog.querySelector('[data-close]').click();assert.equal(dialog.querySelector('iframe'),null);w.close();
+ assert.equal(dialog.querySelector('[data-load]').disabled,false);assert.equal(calls.length,0);assert.match(dialog.textContent,/Morgan Manager/);assert.match(dialog.textContent,/Taylor Technician/);assert.equal(dialog.tagName,'MAIN');
+ w.dispatchEvent(new w.Event('pagehide'));assert.equal(dialog.querySelector('iframe'),null);w.close();
 });
 test('assigned leader gets an editor window; other positions open read-only windows',async()=>{
  const {w,calls}=ui(false);await tick();const dialog=w.document.querySelector('.division-workspace'),individual=w.document.querySelector('.division-individual');
  const buttons=[...dialog.querySelectorAll('.division-window-positions button')];buttons.find(button=>button.textContent.includes('Software Technician')).click();
  assert.equal(individual.querySelector('iframe'),null);await tick();assert.match(individual.querySelector('iframe').src,/\/edit$/);
  individual.querySelector('[data-back]').click();assert.equal(individual.querySelector('iframe'),null);
- buttons.find(button=>button.textContent.includes('Safety Officer')).click();await tick();assert.match(individual.querySelector('iframe').src,/\/embed\?/);assert.equal(calls.length,3);w.close();
+ buttons.find(button=>button.textContent.includes('Safety Officer')).click();await tick();assert.match(individual.querySelector('iframe').src,/\/embed\?/);assert.equal(calls.length,2);w.close();
 });
 test('a denied division never loads decks or slide buttons',async()=>{
  const {w}=ui();w.fetch=async()=>({ok:false,status:403,json:async()=>({error:'Only division members can open this window.'})});
@@ -37,7 +38,7 @@ test('a denied division never loads decks or slide buttons',async()=>{
  assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.match(w.document.querySelector('.division-workspace [role=status]').textContent,/division members/);w.close();
 });
 test('ordinary members cannot trigger a slide update',async()=>{
- const {w,calls}=ui(false);await tick();const button=w.document.querySelector('[data-load]');assert.equal(button.disabled,true);button.click();assert.equal(calls.length,1);w.close();
+ const {w,calls}=ui(false);await tick();const button=w.document.querySelector('[data-load]');assert.equal(button.disabled,true);button.click();assert.equal(calls.length,0);assert.equal(w.document.querySelector('[data-hiring]').hidden,true);w.close();
 });
 test('slide update queues once and completion refreshes the manager slideshow',async()=>{
  const {w,calls}=ui();await tick();let state='queued',pollTimer;
@@ -49,12 +50,11 @@ test('slide update queues once and completion refreshes the manager slideshow',a
  state='completed';pollTimer();await tick();assert.match(dialog.querySelector('[role=status]').textContent,/updated/);
  assert.notEqual(oldFrame,dialog.querySelector('iframe'));assert.equal(button.disabled,false);w.close();
 });
-test('closing and reopening resumes a queued update without starting another',async()=>{
+test('refreshing the division page resumes a queued update without starting another',async()=>{
  const {w,calls}=ui();await tick();
  w.fetch=async(url,options)=>{calls.push({url,options});const job=options.method==='POST'?JSON.parse(options.body).job:new URL(url,'https://gknest.org').searchParams.get('job');return {ok:true,json:async()=>job?{job,state:'queued'}:access(true)};};
- const dialog=w.document.querySelector('.division-workspace');dialog.querySelector('[data-load]').click();await tick();dialog.querySelector('[data-close]').click();
- w.document.querySelector('[data-division-workspace="1"]').click();await tick();
- assert.match(dialog.querySelector('[role=status]').textContent,/queued/);assert.equal(calls.filter(c=>c.options.method==='POST').length,1);w.close();
+ const page=w.document.querySelector('.division-page');page.querySelector('[data-load]').click();await tick();page.querySelector('[data-refresh]').click();await tick();
+ assert.match(page.querySelector('[role=status]').textContent,/queued/);assert.equal(calls.filter(c=>c.options.method==='POST').length,1);w.close();
 });
 const res=()=>({code:200,setHeader(){},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
 test('division API rejects unsigned sessions, forged targets and cross-site starts',async()=>{
@@ -90,7 +90,7 @@ test('all divisions have verified server-side slide catalogs and public links st
  for(const name of ['index.html','control-center.html']){
   const dom=new JSDOM(fs.readFileSync(name,'utf8'));
   const links=[...dom.window.document.querySelectorAll('[data-division-workspace]')];
-  assert.deepEqual(links.map(a=>a.dataset.divisionWorkspace),Object.keys(DIVISIONS));assert.ok(links.every(a=>a.getAttribute('href').startsWith('/divisions?division=')));dom.window.close();
+  assert.deepEqual(links.map(a=>a.dataset.divisionWorkspace),Object.keys(DIVISIONS));assert.ok(links.every(a=>a.getAttribute('href').startsWith('/divisions/')));dom.window.close();
  }
 });
 test('wrong bridge token cannot enqueue a job',()=>{
@@ -110,7 +110,7 @@ test('school bridge resolves manual identities and does not grant other division
 });
 test('school bridge retries temporary Google redirect failures without submitting another update',()=>{
  let posts=0,gets=0;
- const ctx=vm.createContext({PERIODS:{'1':'roster'},OWNER_EMAILS:['owner@bethelsd.org'],email_:x=>x,memberEmail_:x=>x,authSession_:()=>({email:'owner@bethelsd.org'}),PropertiesService:{getScriptProperties:()=>({})},Utilities:{sleep(){}},UrlFetchApp:{fetch:(url,options)=>{
+ const ctx=vm.createContext({PERIODS:{'1':'roster'},rows_:()=>[],LEADERSHIP_DATABASE:'leaders',Sheets:{Spreadsheets:{Values:{get:()=>({values:[]})}}},OWNER_EMAILS:['owner@bethelsd.org'],email_:x=>x,memberEmail_:x=>x,authSession_:()=>({email:'owner@bethelsd.org'}),PropertiesService:{getScriptProperties:()=>({})},Utilities:{sleep(){}},UrlFetchApp:{fetch:(url,options)=>{
   if(options.method==='post'){posts++;return {getResponseCode:()=>302,getAllHeaders:()=>({Location:'https://script.googleusercontent.com/example'})};}
   gets++;return {getResponseCode:()=>gets===1?404:200,getContentText:()=>JSON.stringify({status:200,job:id,state:'queued'})};
  }}});
@@ -188,4 +188,32 @@ test('empty divisions revoke member access while unavailable or malformed roster
  let permissions=[{id:'owner',type:'user',role:'owner'},{id:'former',type:'user',role:'reader',emailAddress:'former@school.test'}];
  ctx.Drive={Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);}}};
  ctx.nestSlidePermissions_('empty-division',new Set(),new Set());assert.equal(permissions.length,1);assert.equal(permissions[0].role,'owner');
+});
+
+test('division pages deny unsigned and nonmember requests before returning team or deck data',async()=>{
+ const response=()=>({code:200,headers:{},setHeader(key,value){this.headers[key]=value;},status(code){this.code=code;return this;},send(html){this.html=html;return this;}});
+ let r=response();await pageHandler({method:'GET',headers:{},query:{period:'1'}},r);assert.equal(r.code,401);assert.match(r.html,/Sign in to NEST/);assert.doesNotMatch(r.html,/division-bootstrap|Morgan Manager|data-hiring|presentation\/d\//);assert.equal(r.headers['Vercel-CDN-Cache-Control'],'no-store');
+ const oldFetch=globalThis.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_URL='https://bridge.example.test';process.env.SPINNER_BRIDGE_TOKEN='test';
+ try{
+  globalThis.fetch=async()=>({ok:true,json:async()=>({status:403,team:[{name:'Private leader'}]})});r=response();await pageHandler({method:'GET',headers:{cookie:'__Host-nest-auth='+ 'a'.repeat(64)},query:{period:'2'}},r);assert.equal(r.code,403);assert.doesNotMatch(r.html,/Private leader|division-bootstrap|presentation\/d\//);
+  globalThis.fetch=async()=>({ok:true,json:async()=>({status:200,canManage:true,team:[{position:'Division Manager',name:'Private leader'}]})});r=response();await pageHandler({method:'GET',headers:{cookie:'__Host-nest-auth='+ 'a'.repeat(64)},query:{period:'1'}},r);assert.equal(r.code,200);assert.match(r.html,/Private leader|division-bootstrap/);
+ }finally{globalThis.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
+test('division bootstrap escapes script-breaking team names and pages do not intercept division navigation',()=>{
+ const data=access();data.team[0].name='</script><img onerror=alert(1)>';
+ const html=renderDivisionPage('1',data);assert.doesNotMatch(html,/<img onerror/);assert.match(html,/\\u003c/);
+ const {w}=ui();assert.equal(w.document.querySelector('[data-hiring]').hidden,false);assert.equal(w.document.querySelector('[data-hiring]').getAttribute('href'),'/hiring?period=1#manager-hiring');assert.equal(w.document.querySelector('.division-page-actions a').getAttribute('href'),'/leadership-application?division=1');w.close();
+});
+test('the school bridge returns only the selected division current members and reads leadership once',()=>{
+ let reads=0;const rows=[['Period 1','','Division Manager','Manager, Morgan','manager@school.test'],['Period 1','','Software Technician','Technician, Taylor','member@school.test'],['Period 1','','Safety Officer','Former, Leader','former@school.test'],['Period 2','','Division Manager','Other, Division','other@school.test']];
+ const ctx=vm.createContext({PERIODS:{'1':'roster'},OWNER_EMAILS:[],email_:x=>x,memberEmail_:x=>x,rows_:()=>[['Manager','manager@school.test'],['Member','member@school.test']],authSession_:()=>({email:'manager@school.test'}),PropertiesService:{getScriptProperties:()=>({})},LEADERSHIP_DATABASE:'leadership',Sheets:{Spreadsheets:{Values:{get:()=>{reads++;return {values:rows};}}}}});
+ vm.runInContext(fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);const result=ctx.divisionSlidesDispatch_({period:'1',operation:'access'});assert.equal(result.status,200);assert.equal(reads,1);assert.deepEqual(JSON.parse(JSON.stringify(result.team)),[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}]);
+});
+
+test('signing out clears the protected team, slide frames and manager actions immediately',async()=>{
+ const {w}=ui();await tick();w.NestAuth.identity=null;w.fetch=async()=>({ok:false,status:401,json:async()=>({error:'Sign in to NEST.'})});w.document.dispatchEvent(new w.Event('nest-auth-change'));
+ assert.equal(w.document.querySelector('iframe'),null);assert.equal(w.document.querySelectorAll('.division-window-positions button').length,0);assert.equal(w.document.querySelector('[data-team-summary]').textContent,'');assert.equal(w.document.querySelector('[data-hiring]').hidden,true);await tick();w.close();
+});
+test('the application page contains the form without loading manager hiring data',()=>{
+ const html=fs.readFileSync('leadership-application.html','utf8');assert.match(html,/NEST leadership application/);assert.doesNotMatch(html,/manager-hiring|js\/hiring\.js/);
 });

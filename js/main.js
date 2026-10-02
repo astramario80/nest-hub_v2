@@ -20,7 +20,7 @@ const SOP_LINKS = [
   },
   {
     terms: ["Division Leadership Slides", "Manager Control Center", "Division Folders"],
-    url: "/divisions" // division leadership windows
+    url: "/divisions" // division home pages
   },
   {
     terms: ["Trip-o-Meter", "Trip‑o‑Meter"],
