@@ -42,7 +42,7 @@
       "maxDuration": 30
     },
     "api/hiring.mjs": {
-      "maxDuration": 40
+      "maxDuration": 60
     },
     "api/signals.mjs": {
       "maxDuration": 60,

@@ -10,7 +10,7 @@
     const controller=new AbortController();
     let timer;
     const timeout=new Promise((_,reject)=>{
-      timer=setTimeout(()=>{controller.abort();reject(new Error('Hiring took too long to load. Please try again.'));},45000);
+      timer=setTimeout(()=>{controller.abort();reject(new Error('Hiring took too long to load. Please try again.'));},60000);
     });
     try {
       return await Promise.race([timeout,(async()=>{

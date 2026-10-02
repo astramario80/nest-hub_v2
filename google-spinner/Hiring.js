@@ -31,16 +31,18 @@ function hiringView_(email,period,page) {
   const tabs=info.sheets||[];
   const apps=tabs.find(sheet=>sheet.properties.title==='Applications');
   if(!apps)return {status:404};
-  const columns=(Sheets.Spreadsheets.Values.get(workbook,"'Applications'!A1:H1",{valueRenderOption:'FORMATTED_VALUE'}).values||[])[0]||[];
   const start=page*100+2,end=Math.min(start+99,apps.properties.gridProperties.rowCount);
-  const sourceRows=end>=start?(Sheets.Spreadsheets.Values.get(workbook,"'Applications'!A"+start+':H'+end,{valueRenderOption:'FORMATTED_VALUE'}).values||[]):[];
+  const ranges=["'Applications'!A1:H1"];
+  const applicationIndex=end>=start?ranges.push("'Applications'!A"+start+':H'+end)-1:-1;
+  const teamIndex=access.canManage&&tabs.some(sheet=>sheet.properties.title==='Division Team')?ranges.push("'Division Team'!B3:D20")-1:-1;
+  // Fetch the headers, bounded applications and permitted team cells together.
+  const values=Sheets.Spreadsheets.Values.batchGet(workbook,{ranges,valueRenderOption:'FORMATTED_VALUE'}).valueRanges||[];
+  const columns=(values[0]&&values[0].values||[])[0]||[];
+  const sourceRows=applicationIndex>=0&&values[applicationIndex]?values[applicationIndex].values||[]:[];
   const expectedPeriod=period==='CTSO'?'CTSO':'Period '+period;
   const applications=sourceRows.filter(row=>String(row[2]||'').trim()===expectedPeriod);
-  let team=[],candidates=[];
-  if(access.canManage && tabs.some(sheet=>sheet.properties.title==='Division Team')) {
-    team=Sheets.Spreadsheets.Values.get(workbook,"'Division Team'!B3:D20",{valueRenderOption:'FORMATTED_VALUE'}).values||[];
-    candidates=rows_(period).filter(row=>districtEmail_(row[1])).map(row=>({name:row[0],email:row[1]}));
-  }
+  const team=teamIndex>=0&&values[teamIndex]?values[teamIndex].values||[]:[];
+  const candidates=teamIndex>=0?rows_(period).filter(row=>districtEmail_(row[1])).map(row=>({name:row[0],email:row[1]})):[];
   return {status:200,division:period==='CTSO'?'NEST Robotics':'Division '+period,canManage:access.canManage,columns,applications,team,candidates,page,hasMore:end<apps.properties.gridProperties.rowCount&&sourceRows.length===100};
 }
 function hiringAssign_(email,r) {
