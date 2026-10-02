@@ -12,8 +12,14 @@ function divisionSlidesDispatch_(r){
  if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period)||!['access','start','status'].includes(r.operation))return {status:400};
  const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
  if(!session)return {status:401};
+ const email=memberEmail_(session.email,r.period),isOwner=OWNER_EMAILS.includes(email_(session.email));
+ if(!isOwner&&!rows_(r.period).some(row=>email_(row[1])===email))return {status:403};
  const canManage=divisionSlidesPermissions_(session.email,r.period);
- if(r.operation==='access')return {status:200,canManage};
+ if(r.operation==='access'){
+  const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];
+  const roles=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&email_(row[4])===email).map(row=>String(row[2]||'').trim());
+  return {status:200,canManage,roles,isOwner};
+ }
  if(!canManage)return {status:403};
  if(!/^[a-f0-9-]{36}$/.test(r.job||''))return {status:400};
  if(!DIVISION_SLIDES_WEBAPP)return {status:503};

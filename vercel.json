@@ -6,6 +6,10 @@
     {
       "source": "/favicon.ico",
       "destination": "/assets/nest_menu_icon.png"
+    },
+    {
+      "source": "/divisions",
+      "destination": "/control-center.html"
     }
   ],
   "functions": {
@@ -51,6 +55,16 @@
     {
       "source": "/lib/signals-player/:path*",
       "destination": "/api/signals?asset=blocked",
+      "permanent": false
+    },
+    {
+      "source": "/lib/division-slides.mjs",
+      "destination": "/api/division?period=blocked",
+      "permanent": false
+    },
+    {
+      "source": "/lib/divisions.mjs",
+      "destination": "/api/division?period=blocked",
       "permanent": false
     }
   ]

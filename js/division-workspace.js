@@ -1,12 +1,12 @@
 (() => {
-  const divisions={"1": {"folder": "1X7faoEUTi0dCNSOVi8EwFo4Z0fY6gEfG", "slides": "1gqZ-iyiFJy16NpoEtw4bFOoTl39778Gdy4DriRw0mI8", "sheet": 0}, "2": {"folder": "1SWRfcL8hT5C3CRu366rpoRCWXk6ObL7B", "slides": "1awp5Ge_Nhn4fow5pqIe9MnpOBodMzeXCNZYm_6TS_iU", "sheet": 726738533}, "3": {"folder": "16UJx1F6lStbayCUI41NOHGm5W0hKNFWX", "slides": "1jO2biUi392Ldf1lE43mQjSRKonOdVMMBwCqfYidF54Q", "sheet": 1651620119}, "4": {"folder": "1t1KwHPPQ3L-wv6RLlv8t2yZLXX_Vccv0", "slides": "1gka97wrtr1QeWpkzi2tK4ZxtNqlnxR3bVG_AXWKtxss", "sheet": 75640338}, "5": {"folder": "1diqsozFhlqdqgmu7rnfg3LzorBPzxBQh", "slides": "14C0Xd2EZExZUOyVhg8J6O0E5XjTbHDaM2zoCabytt1w", "sheet": 510218907}, "7": {"folder": "18zn5BYGBz8TyRnitb7arZFV7RIJDQ-VM", "slides": "1sT5PmcnbcaaC8kmNtz-FmQ4RIkUGhaYt8UQTReA8nt8", "sheet": 274321462}, "CTSO": {"folder": "15l5SwyCQim0rYQTxMqgr7u3LvqSd8E7n", "slides": "1I3M1LcUGbH8raqH3xwkIZY5TFs-tYpFOD1bEM9rBjb0", "sheet": 5696712}};
-  const controlSheet='1GYT_Of3ioinTXbpzjVCLUjr1rxvnrjjCD_kYMVUfqto';
+  const periods=['1','2','3','4','5','7','CTSO'];
   const dialog=document.createElement('dialog');dialog.className='division-workspace';dialog.setAttribute('aria-labelledby','division-window-title');
-  dialog.innerHTML=`<div class="division-window-layout"><div class="division-window-header"><div><h2 id="division-window-title"></h2><p>Division workspace</p></div><button type="button" data-close>Close ✕</button></div><div class="division-window-tabs" role="tablist" aria-label="Division screens"><button type="button" id="division-tab-folder" role="tab" data-screen="folder" aria-controls="division-window-panel">Folder</button><button type="button" id="division-tab-slides" role="tab" data-screen="slides" aria-controls="division-window-panel">Manager Slideshow</button><button type="button" id="division-tab-control" role="tab" data-screen="control" aria-controls="division-window-panel">Control Center</button></div><div class="division-window-controls"><button type="button" data-load disabled>Load division slides</button><p>Replace the slides after the title slide with the latest leadership slides from this division’s folder.</p></div><p class="division-window-status" role="status" aria-live="polite"></p><div class="division-window-stage" id="division-window-panel" role="tabpanel"></div><div class="division-window-footer"><small>Google keeps the original sharing rules. If a preview needs a Google sign-in, open it in a new tab.</small><button type="button" data-refresh>Refresh screen</button><a class="division-original" data-external target="_blank" rel="noopener noreferrer">Open in Google ↗</a></div></div>`;
-  document.body.append(dialog);
-  const status=dialog.querySelector('[role=status]'),loadButton=dialog.querySelector('[data-load]'),stage=dialog.querySelector('.division-window-stage'),original=dialog.querySelector('.division-original');
-  const tabs=[...dialog.querySelectorAll('[data-screen]')];
-  let period='',screen='folder',generation=0,opener,timer,canManage=false,job='',busy=false;
+  dialog.innerHTML=`<div class="division-window-layout"><div class="division-window-header"><div><h2 id="division-window-title"></h2><p>Your division’s leadership slides</p></div><button type="button" data-close>Close ✕</button></div><nav class="division-window-positions" aria-label="Leadership slides"></nav><div class="division-window-controls" hidden><button type="button" data-load disabled>Load division slides</button><p>Update the manager slideshow with this division’s latest leadership slides.</p><button type="button" data-edit-manager hidden>Edit manager slide</button></div><p class="division-window-status" role="status" aria-live="polite"></p><div class="division-window-stage"></div><div class="division-window-footer" hidden><small>Select a position above to open its slide. Use your school Google account to view and edit.</small><button type="button" data-refresh>Refresh slideshow</button></div></div>`;
+  const individual=document.createElement('dialog');individual.className='division-workspace division-individual';individual.setAttribute('aria-labelledby','division-slide-title');
+  individual.innerHTML=`<div class="division-window-layout"><div class="division-window-header"><div><h2 id="division-slide-title"></h2><p data-mode></p></div><button type="button" data-back>Back to division</button></div><p class="division-window-status" role="status" aria-live="polite"></p><div class="division-window-stage"></div><div class="division-window-footer"><small>Editing uses your school Google account. Changes save automatically.</small><a class="division-original" data-external target="_blank" rel="noopener noreferrer" hidden>Open in Google ↗</a></div></div>`;
+  document.body.append(dialog,individual);
+  const status=dialog.querySelector('[role=status]'),loadButton=dialog.querySelector('[data-load]'),stage=dialog.querySelector('.division-window-stage'),positions=dialog.querySelector('.division-window-positions');
+  let period='',generation=0,opener,timer,canManage=false,job='',busy=false,config=null,slideGeneration=0,slideOpener;
   const storageKey=p=>'nest-division-slides:'+p;
   function remember(value){try{if(value)sessionStorage.setItem(storageKey(period),value);else sessionStorage.removeItem(storageKey(period));}catch{}}
   function saved(){try{return sessionStorage.getItem(storageKey(period))||'';}catch{return '';}}
@@ -14,25 +14,42 @@
   async function request(method,extra={}){
     const url='/api/division?period='+encodeURIComponent(period)+(method==='GET'&&extra.job?'&job='+encodeURIComponent(extra.job):'');
     const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(55000),...(method==='POST'?{headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'load-slides',period,...extra})}:{})});
-    let data;try{data=await response.json();}catch{throw new Error('The division workspace is temporarily unavailable. Please try again.');}
-    if(!response.ok){const error=new Error(data.error||'The division workspace is unavailable.');error.status=response.status;throw error;}
+    let data;try{data=await response.json();}catch{throw new Error('The division window is temporarily unavailable. Please try again.');}
+    if(!response.ok){const error=new Error(data.error||'The division window is unavailable.');error.status=response.status;throw error;}
     return data;
   }
-  function render(){
-    const config=divisions[period];if(!config)return;
-    tabs.forEach(tab=>{const selected=tab.dataset.screen===screen;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;});
-    stage.setAttribute('aria-labelledby','division-tab-'+screen);
-    stage.replaceChildren();
-    if(screen==='control'){
-      const heading=document.createElement('h3');heading.textContent='Update this division’s manager slideshow';
-      const text=document.createElement('p');text.textContent='Use “Load division slides” above to run the existing Control Center update. It keeps the title slide and loads the division’s leadership slides in their usual position order. The update also runs the existing template and sharing steps. Updates usually start within a minute. You can switch screens while it works.';
-      stage.append(heading,text);original.href='https://docs.google.com/spreadsheets/d/'+controlSheet+'/edit#gid='+config.sheet;
-    }else{
-      const frame=document.createElement('iframe');frame.title=(period==='CTSO'?'NEST Robotics':'Division '+period)+(screen==='slides'?' manager slideshow':' folder');
-      frame.src=screen==='slides'?'https://docs.google.com/presentation/d/'+config.slides+'/embed?start=false&loop=false':'https://drive.google.com/embeddedfolderview?id='+config.folder+'#list';
-      frame.allowFullscreen=true;frame.referrerPolicy='strict-origin-when-cross-origin';stage.append(frame);
-      original.href=screen==='slides'?'https://docs.google.com/presentation/d/'+config.slides+'/edit':'https://drive.google.com/drive/folders/'+config.folder;
+  function frame(slide,edit=false){
+    const iframe=document.createElement('iframe');iframe.title=(period==='CTSO'?'NEST Robotics':'Division '+period)+' — '+slide.role+(edit?' editor':' slideshow');
+    iframe.src='https://docs.google.com/presentation/d/'+slide.id+(edit?'/edit':'/embed?start=false&loop=false');iframe.allowFullscreen=true;iframe.referrerPolicy='strict-origin-when-cross-origin';return iframe;
+  }
+  function render(){if(config)stage.replaceChildren(frame(config.manager));}
+  function clearAccess(){
+    config=null;canManage=false;setBusy(false);positions.replaceChildren();stage.replaceChildren();
+    dialog.querySelector('.division-window-controls').hidden=true;dialog.querySelector('.division-window-footer').hidden=true;
+    if(individual.open)individual.close();
+  }
+  function showConfig(result){
+    if(!result.manager||!Array.isArray(result.leaders))throw new Error('The leadership slides are unavailable.');
+    config=result;canManage=result.canManage===true;positions.replaceChildren();
+    for(const slide of result.leaders){
+      const button=document.createElement('button');button.type='button';button.textContent=slide.role;
+      const mode=document.createElement('small');mode.textContent=slide.canEdit?'Edit slide':'View slide';button.append(mode);button.addEventListener('click',()=>openSlide(slide.id,button));positions.append(button);
     }
+    dialog.querySelector('.division-window-controls').hidden=false;loadButton.hidden=!canManage;
+    dialog.querySelector('.division-window-controls p').textContent=canManage?'Update the manager slideshow with this division’s latest leadership slides.':'You can view all leadership slides in your division. Only your assigned positions allow editing.';
+    dialog.querySelector('[data-edit-manager]').hidden=!result.manager.canEdit;
+    dialog.querySelector('.division-window-footer').hidden=false;render();
+  }
+  async function openSlide(id,button){
+    const own=++slideGeneration,current=generation;slideOpener=button;
+    const panel=individual.querySelector('.division-window-stage'),notice=individual.querySelector('[role=status]'),external=individual.querySelector('a');
+    panel.replaceChildren();external.hidden=true;external.removeAttribute('href');individual.querySelector('h2').textContent='Leadership slide';individual.querySelector('[data-mode]').textContent='';notice.textContent='Checking access…';individual.showModal();individual.querySelector('[data-back]').focus();
+    try{
+      const result=await request('GET');if(own!==slideGeneration||current!==generation||!individual.open)return;
+      const slide=[result.manager,...result.leaders].find(slide=>slide.id===id);if(!slide)throw new Error('This leadership slide is no longer available.');
+      individual.querySelector('h2').textContent=slide.role;individual.querySelector('[data-mode]').textContent=slide.canEdit?'Editing enabled':'View only · Assigned leaders and division managers can edit';
+      notice.textContent='';panel.append(frame(slide,slide.canEdit===true));external.href='https://docs.google.com/presentation/d/'+slide.id+(slide.canEdit?'/edit':'/preview');external.hidden=false;
+    }catch(error){if(own!==slideGeneration||current!==generation||!individual.open)return;notice.textContent=error.message;if([401,403].includes(error.status)){clearAccess();recover(error.message,checkAccess);}}
   }
   function recover(message,retry){
     status.textContent=message;
@@ -44,7 +61,7 @@
       const result=await request('GET',{job});if(own!==generation||!dialog.open)return;
       if(result.state==='completed'){
         remember('');job='';setBusy(false);status.textContent='Division slides updated. The manager slideshow is ready.';
-        if(screen==='slides')render();return;
+        render();return;
       }
       if(result.state==='failed'){
         remember('');job='';setBusy(false);status.textContent='The update did not finish. You can load the division slides again.';return;
@@ -53,6 +70,7 @@
       timer=setTimeout(()=>poll(own),10000);
     }catch(error){
       if(own!==generation||!dialog.open)return;
+      if([401,403].includes(error.status)){clearAccess();recover(error.message,checkAccess);return;}
       if(error.status===404){remember('');job='';setBusy(false);recover('The update has not started. Please try again.',start);return;}
       recover('Could not check the update yet. '+error.message,()=>poll(own));
     }
@@ -61,43 +79,39 @@
     if(!canManage||busy)return;
     const own=generation;job=crypto.randomUUID();remember(job);setBusy(true);status.textContent='Starting the division slide update…';
     try{await request('POST',{job});if(own===generation&&dialog.open)poll(own);}
-    catch(error){if(own!==generation||!dialog.open)return;recover(error.message+' Check the update before starting another.',()=>poll(own));}
+    catch(error){if(own!==generation||!dialog.open)return;if([401,403].includes(error.status)){clearAccess();recover(error.message,checkAccess);return;}recover(error.message+' Check the update before starting another.',()=>poll(own));}
   }
   async function checkAccess(){
-    const own=++generation;clearTimeout(timer);canManage=false;setBusy(false);
-    if(!window.NestAuth?.identity?.signedIn){
-      status.textContent='Sign in to NEST to load division slides.';const sign=document.createElement('button');sign.type='button';sign.textContent='NEST sign in';sign.addEventListener('click',()=>window.NestAuth?.open());status.append(' ',sign);return;
+    const own=++generation;clearTimeout(timer);clearAccess();
+    if(window.NestAuth?.identity?.signedIn===false){
+      status.textContent='Sign in to NEST to open your division’s leadership window.';const sign=document.createElement('button');sign.type='button';sign.textContent='NEST sign in';sign.addEventListener('click',()=>window.NestAuth?.open());status.append(' ',sign);return;
     }
-    status.textContent='Checking slide update access…';
+    status.textContent='Checking division membership…';
     try{
       const result=await request('GET');if(own!==generation||!dialog.open)return;
-      canManage=result.canManage===true;job=canManage?saved():'';setBusy(Boolean(job));
-      status.textContent=canManage?'Ready to load this division’s leadership slides.':'You can view this workspace. Only this division’s managers can load slides.';
-      if(job)poll(own);
+      showConfig(result);job=canManage?saved():'';setBusy(Boolean(job));status.textContent='';if(job)poll(own);
     }catch(error){if(own===generation&&dialog.open)recover(error.message,checkAccess);}
+  }
+  function openDivision(target,link){
+    if(!periods.includes(target))return;
+    if(dialog.open)dialog.close();period=target;opener=link;job='';clearAccess();
+    dialog.querySelector('h2').textContent=period==='CTSO'?'NEST™ Robotics':'Division '+period;
+    dialog.showModal();dialog.querySelector('[data-close]').focus();checkAccess();
   }
   document.addEventListener('click',event=>{
     const link=event.target.closest('a[data-division-workspace]');
     if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-    const target=link.dataset.divisionWorkspace;if(!Object.hasOwn(divisions,target))return;
-    event.preventDefault();period=target;screen=link.dataset.divisionScreen||'folder';opener=link;job='';
-    dialog.querySelector('h2').textContent=period==='CTSO'?'NEST™ Robotics':'Division '+period;
-    render();dialog.showModal();dialog.querySelector('[data-close]').focus();
-    if(window.NestAuth?.identity!==null&&window.NestAuth?.identity!==undefined)checkAccess();
-    else {status.textContent='Checking your NEST sign-in…';window.NestAuth?.ready.then(()=>{if(dialog.open&&status.textContent==='Checking your NEST sign-in…')checkAccess();});}
-  });
-  tabs.forEach((tab,index)=>{
-    tab.addEventListener('click',()=>{screen=tab.dataset.screen;render();});
-    tab.addEventListener('keydown',event=>{
-      let next=index;
-      if(event.key==='ArrowRight')next=(index+1)%tabs.length;else if(event.key==='ArrowLeft')next=(index+tabs.length-1)%tabs.length;
-      else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;
-      event.preventDefault();screen=tabs[next].dataset.screen;render();tabs[next].focus();
-    });
+    if(!periods.includes(link.dataset.divisionWorkspace))return;
+    event.preventDefault();openDivision(link.dataset.divisionWorkspace,link);
   });
   dialog.querySelector('[data-load]').addEventListener('click',start);
-  dialog.querySelector('[data-refresh]').addEventListener('click',render);
+  dialog.querySelector('[data-edit-manager]').addEventListener('click',event=>{if(config?.manager.canEdit)openSlide(config.manager.id,event.target);});
+  dialog.querySelector('[data-refresh]').addEventListener('click',checkAccess);
   dialog.querySelector('[data-close]').addEventListener('click',()=>dialog.close());
-  dialog.addEventListener('close',()=>{generation++;clearTimeout(timer);stage.replaceChildren();canManage=false;job='';setBusy(false);opener?.focus();});
+  dialog.addEventListener('close',()=>{generation++;clearTimeout(timer);clearAccess();job='';opener?.focus();});
+  individual.querySelector('[data-back]').addEventListener('click',()=>individual.close());
+  individual.addEventListener('close',()=>{slideGeneration++;individual.querySelector('.division-window-stage').replaceChildren();individual.querySelector('a').removeAttribute('href');slideOpener?.focus();});
   document.addEventListener('nest-auth-change',()=>{if(dialog.open)checkAccess();});
+  const deepPeriod=new URLSearchParams(location.search).get('division');
+  if(periods.includes(deepPeriod))openDivision(deepPeriod,null);
 })();

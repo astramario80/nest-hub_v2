@@ -19,8 +19,8 @@ const SOP_LINKS = [
     url: "https://docs.google.com/spreadsheets/d/1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I/edit?gid=931965198#gid=931965198"
   },
   {
-    terms: ["Manager Control Center"],
-    url: "#control-center" // internal menu link
+    terms: ["Division Leadership Slides", "Manager Control Center", "Division Folders"],
+    url: "/divisions" // division leadership windows
   },
   {
     terms: ["Trip-o-Meter", "Trip‑o‑Meter"],
@@ -194,7 +194,7 @@ const sopsData = {
     content: `
       <p><strong>Be organized:</strong></p>
       <ul>
-        <li>using the Manager Control Center.</li>
+        <li>updating the manager slideshow in your division’s leadership window.</li>
         <li>Keeping meetings on division Google Calendars.</li>
         <li>Fill out POWs up to date, for every meeting, and any official business.</li>
         <li>Measure progress of the division using the Trip-o-Meter.</li>

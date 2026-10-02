@@ -7,6 +7,7 @@ function nestWebAllowed_(email,period){
  email=String(email||'').trim().toLowerCase();
  if(!email)return false;
  if(['mpenalver@bethelsd.org','mario@memberhq.net'].includes(email))return true;
+ if(!nestSlideRoster_(period).has(email))return false;
  const rows=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported').getRange('B2:F99').getValues();
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&String(row[4]||'').trim().toLowerCase()===email&&
  (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));

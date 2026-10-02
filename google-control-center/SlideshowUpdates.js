@@ -208,9 +208,9 @@ function nestUpdateManagerSlides_(divisionName) {
   const positionEmailMap = {};
   leadershipData.forEach(([period, , position, , email]) => {
     if (!period || !position || !email) return;
-    if (String(period).trim() !== divisionPeriod) return;
+    if (String(period).replace(/period/ig, "").trim().toUpperCase() !== divisionPeriod.replace(/period/ig, "").trim().toUpperCase()) return;
 
-    const key = String(position).trim().toLowerCase();
+    const key = nestSlideRole_(position);
     if (!positionEmailMap[key]) positionEmailMap[key] = [];
     positionEmailMap[key].push(String(email).trim());
   });
@@ -235,7 +235,7 @@ function nestUpdateManagerSlides_(divisionName) {
 
   // === INSERT SLIDES FOR EACH POSITION (SKIP DM & CTSO CEO) ===
   positionOrder.forEach(position => {
-    const key = String(position).toLowerCase();
+    const key = nestSlideRole_(position);
     if (key === "division manager" || key === "chief executive officer") return;
 
     let leaderSlideFile = null;
@@ -245,7 +245,7 @@ function nestUpdateManagerSlides_(divisionName) {
     while (existing.hasNext()) {
       const f = existing.next();
       const name = String(f.getName());
-      if (name.toLowerCase().includes(key) && name.includes(divisionTeamName)) {
+      if (nestSlideRole_(name.split("_").pop()) === key && name.includes(divisionTeamName)) {
         leaderSlideFile = f;
         break;
       }
@@ -256,7 +256,7 @@ function nestUpdateManagerSlides_(divisionName) {
       const templateFiles = templateLeaderSlidesFolder.getFiles();
       while (templateFiles.hasNext()) {
         const tf = templateFiles.next();
-        if (String(tf.getName()).toLowerCase().includes(key)) {
+        if (nestSlideRole_(String(tf.getName()).split("_").pop()) === key) {
           leaderSlideFile = tf.makeCopy(`${divisionTeamName} Team_${position}`, leaderSlidesFolder);
           break;
         }
@@ -278,71 +278,10 @@ function nestUpdateManagerSlides_(divisionName) {
       return;
     }
 
-    // === SHARE LEADER SLIDE FILE (leaders in role + management) ===
-    const leaderEmails = sanitizeEmails_(positionEmailMap[key] || []);
-    const allEditors = [...new Set([...leaderEmails, ...managementEmails])];
-
-    const currentEditors = leaderSlideFile.getEditors().map(e => e.getEmail().toLowerCase());
-    const currentViewers = leaderSlideFile.getViewers().map(v => v.getEmail().toLowerCase());
-
-    currentEditors.forEach(email => {
-      if (!allEditors.includes(email)) {
-        leaderSlideFile.removeEditor(email);
-        Logger.log(`➖ Removed editor: ${email} from ${position}`);
-      }
-    });
-
-    currentViewers.forEach(email => {
-      if (!allEditors.includes(email)) {
-        leaderSlideFile.removeViewer(email);
-        Logger.log(`➖ Removed viewer: ${email} from ${position}`);
-      }
-    });
-
-    allEditors.forEach(email => {
-      if (!currentEditors.includes(email)) {
-        try {
-          leaderSlideFile.addEditor(email);
-          Logger.log(`✅ Added editor: ${email} to ${position}`);
-        } catch (err) {
-          Logger.log(`⚠️ Skipped invalid email for ${position}: ${email} (${err.message})`);
-        }
-      }
-    });
-
-    // Leave viewable-by-link
-    leaderSlideFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   });
 
-  // === RECONCILE MANAGER DECK EDITORS (DM only by default) ===
-  const managerEmailsFinal = sanitizeEmails_(positionEmailMap["division manager"] || []);
-  const asstEmailsFinal = sanitizeEmails_(positionEmailMap["assistant manager"] || []);
-
-  // Toggle assistants here if desired:
-  const includeAssistantManagers = false;
-  const expectedEditors = includeAssistantManagers
-    ? [...new Set([...managerEmailsFinal, ...asstEmailsFinal])]
-    : [...new Set(managerEmailsFinal)];
-
-  const currentMgrEditors = managerDeckFile.getEditors().map(u => u.getEmail().toLowerCase());
-
-  currentMgrEditors.forEach(email => {
-    if (!expectedEditors.includes(email)) {
-      managerDeckFile.removeEditor(email);
-      Logger.log(`➖ Removed extra editor from Manager Slides: ${email}`);
-    }
-  });
-
-  expectedEditors.forEach(email => {
-    if (!currentMgrEditors.includes(email)) {
-      try {
-        managerDeckFile.addEditor(email);
-        Logger.log(`✅ Added editor to Manager Slides: ${email}`);
-      } catch (err) {
-        Logger.log(`⚠️ Skipped invalid manager email: ${email} (${err.message})`);
-      }
-    }
-  });
+  // Apply the same role-specific sharing used by the daily access job.
+  nestSyncDivisionSlideAccess(divisionName === 'CTSO' ? 'CTSO' : divisionName.split(' ')[1]);
 
   Logger.log(`✅ Finished updating manager slideshow for ${divisionName}`);
 }
