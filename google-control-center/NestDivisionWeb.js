@@ -8,7 +8,8 @@ function nestWebAllowed_(email,period){
  if(!email)return false;
  if(['mpenalver@bethelsd.org','mario@memberhq.net'].includes(email))return true;
  if(!nestSlideRoster_(period).has(email))return false;
- const rows=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported').getRange('B2:F99').getValues();
+ const imported=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported');
+ const rows=imported.getRange(2,2,Math.max(1,imported.getLastRow()-1),5).getValues();
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&String(row[4]||'').trim().toLowerCase()===email&&
  (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));
 }
@@ -26,6 +27,11 @@ function doPost(e){
   const r=JSON.parse(e.postData.contents);
   const digest=typeof r.token==='string'?Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,r.token).map(b=>('0'+(b&255).toString(16)).slice(-2)).join(''):'';
   if(digest!==NEST_WEB_DIGEST)return nestWebJson_({status:401});
+  if(r.operation==='sync-access'){
+   if(!NEST_WEB_PERIODS.includes(r.period))return nestWebJson_({status:400});
+   PropertiesService.getScriptProperties().setProperty('nest-hiring-access:'+r.period,Utilities.getUuid());
+   return nestWebJson_({status:200});
+  }
   if(r.operation==='health')return nestWebJson_({status:200,ready:ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='nestDivisionSlidesWorker')});
   if(!NEST_WEB_PERIODS.includes(r.period)||!['start','status'].includes(r.operation)||!/^[a-f0-9-]{36}$/.test(r.job||''))return nestWebJson_({status:400});
   if(!nestWebAllowed_(r.email,r.period))return nestWebJson_({status:403});
@@ -62,6 +68,8 @@ function nestDivisionSlidesWorker(){
    job.state='failed';job.updatedAt=now;store.setProperty(job.key,JSON.stringify(job));
   }
   if(jobs.some(job=>job.state==='running'))return;
+  const pending=Object.keys(store.getProperties()).find(key=>key.startsWith('nest-hiring-access:'));
+  if(pending){const revision=store.getProperty(pending);nestSyncDivisionSlideAccess(pending.split(':')[1]);if(store.getProperty(pending)===revision)store.deleteProperty(pending);return;}
   const job=jobs.filter(job=>job.state==='queued').sort((a,b)=>a.updatedAt-b.updatedAt)[0];if(!job)return;
   job.state='running';job.updatedAt=now;store.setProperty(job.key,JSON.stringify(job));
   try{

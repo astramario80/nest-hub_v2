@@ -49,7 +49,8 @@ function nestSlideLimitFolder_(id){
 function nestSyncDivisionSlideAccess(period){
  if(!Object.prototype.hasOwnProperty.call(NEST_SLIDE_FOLDERS,period))throw new Error('Unknown division');
  const roster=nestSlideRoster_(period);
- const leaders=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported').getRange('B2:F99').getValues();
+ const imported=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported');
+ const leaders=imported.getRange(2,2,Math.max(1,imported.getLastRow()-1),5).getValues();
  const roleEmails={};leaders.forEach(row=>{
   const email=String(row[4]||'').trim().toLowerCase();if(String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()!==period||!roster.has(email))return;
   const role=nestSlideRole_(row[2]);if(!roleEmails[role])roleEmails[role]=new Set();roleEmails[role].add(email);
