@@ -82,4 +82,5 @@ test('locked HQ never returns the tracker and old tracker URLs route to Division
   const config=JSON.parse(fs.readFileSync('vercel.json','utf8'));
   assert.ok(config.redirects.some(r=>r.source==='/trip-o-meter'&&r.destination==='/divisions'));
   assert.doesNotMatch(fs.readFileSync('index.html','utf8'),/href="\/trip-o-meter"/);
+  assert.match(fs.readFileSync('trip-o-meter.html','utf8'),/location.replace\("\/divisions"/);
 });
