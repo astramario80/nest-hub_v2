@@ -58,3 +58,15 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
   .division-hq-tabs [role=tab] { min-width: 108px; padding: 15px 10px; font-size: .8rem; }
   .division-hq-content .leadership-page { padding: 14px; }
 }
+
+/* Center every row of HQ buttons and spin their badges on hover. */
+.division-hq-grid { display: flex; flex-wrap: wrap; justify-content: center; }
+.division-hq-grid .trip-card { flex: 0 1 220px; box-sizing: border-box; max-width: 100%; }
+@keyframes divisionBadgeSpin { to { transform: rotate(360deg); } }
+.division-hq-grid .trip-card:hover .division-hq-card-icon,
+.division-hq-grid .trip-card:focus-visible .division-hq-card-icon { animation: divisionBadgeSpin 2s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .division-hq-grid .trip-card:hover .division-hq-card-icon,
+  .division-hq-grid .trip-card:focus-visible .division-hq-card-icon { animation: none; }
+  .division-hq-grid .trip-card:hover { transform: none; }
+}
