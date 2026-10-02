@@ -59,7 +59,7 @@ function nestSyncDivisionSlideAccess(period){
   nestSlidePermissions_(file.getId(),management,roster);count++;
  }
  const subfolders=folder.getFoldersByName('Division Leader Slides');if(!subfolders.hasNext())throw new Error('Leadership slide folder missing');
- const source=subfolders.next();nestSlideLimitFolder_(source.getId());nestSlidePermissions_(source.getId(),new Set(),roster);
+ const source=subfolders.next();nestSlidePermissions_(source.getId(),new Set(),roster);
  const slides=source.getFiles();while(slides.hasNext()){
   const slide=slides.next();if(slide.getMimeType()!=='application/vnd.google-apps.presentation')continue;
   const role=nestSlideRole_(slide.getName().split('_').pop().replace(/^\d+-/,''));
@@ -68,9 +68,33 @@ function nestSyncDivisionSlideAccess(period){
  console.log('Division '+period+': '+count+' decks verified; division-only viewers, assigned leaders and managers as editors.');
 }
 function nestSyncAllDivisionSlideAccess(){
- // Remove legacy sharing on the common parent before reconciling children.
- nestSlideLimitFolder_('1JIjmW9E7Z0im8udvmdTksNdrb7NSjD5k');
- nestSlidePermissions_('1JIjmW9E7Z0im8udvmdTksNdrb7NSjD5k',new Set(),new Set());
- Object.keys(NEST_SLIDE_FOLDERS).forEach(nestSyncDivisionSlideAccess);
- console.log('All division slide access verified.');
+ const store=PropertiesService.getScriptProperties();
+ // Checkpoint each division so first-time sharing grants can exceed a single
+ // Apps Script execution without losing progress or leaving later divisions out.
+ if(!store.getProperty('nest-slide-access-pending')){
+  nestSlideLimitFolder_('1JIjmW9E7Z0im8udvmdTksNdrb7NSjD5k');
+  nestSlidePermissions_('1JIjmW9E7Z0im8udvmdTksNdrb7NSjD5k',new Set(),new Set());
+  store.setProperty('nest-slide-access-pending',JSON.stringify(Object.keys(NEST_SLIDE_FOLDERS)));
+  store.deleteProperty('nest-slide-access-completed');
+ }
+ if(!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='nestContinueDivisionSlideAccess'))ScriptApp.newTrigger('nestContinueDivisionSlideAccess').timeBased().everyMinutes(1).create();
+ nestContinueDivisionSlideAccess();
+}
+function nestContinueDivisionSlideAccess(){
+ const lock=LockService.getScriptLock();if(!lock.tryLock(1000))return;
+ try{
+  const store=PropertiesService.getScriptProperties(),raw=store.getProperty('nest-slide-access-pending');
+  if(!raw)return;
+  const pending=JSON.parse(raw);if(pending.length){nestSyncDivisionSlideAccess(pending[0]);pending.shift();}
+  if(pending.length){store.setProperty('nest-slide-access-pending',JSON.stringify(pending));console.log('Division sharing continues automatically: '+pending.join(', '));}
+  else{
+   store.deleteProperty('nest-slide-access-pending');store.setProperty('nest-slide-access-completed',String(Date.now()));
+   ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()==='nestContinueDivisionSlideAccess').forEach(t=>ScriptApp.deleteTrigger(t));
+   console.log('All division slide access verified.');
+  }
+ }finally{lock.releaseLock();}
+}
+function nestReportDivisionSlideAccess(){
+ const store=PropertiesService.getScriptProperties();
+ console.log(store.getProperty('nest-slide-access-pending')?'Sharing still running: '+store.getProperty('nest-slide-access-pending'):store.getProperty('nest-slide-access-completed')?'All division slide access verified.':'No sharing update has been queued.');
 }

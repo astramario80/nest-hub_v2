@@ -155,3 +155,15 @@ test('limited-access folders verify their boundary and ignore metadata-only pare
  assert.equal(patches[0].value.inheritedPermissionsDisabled,true);assert.equal(patches[0].id,'folder');
  ctx.Drive.Files.get=()=>({inheritedPermissionsDisabled:false});assert.throws(()=>ctx.nestSlideLimitFolder_('folder'),/Could not isolate/);
 });
+test('first-time sharing checkpoints each division and resumes after interruption',()=>{
+ const properties=new Map(),triggers=[],synced=[];
+ const store={getProperty:key=>properties.get(key),setProperty:(key,value)=>properties.set(key,value),deleteProperty:key=>properties.delete(key)};
+ const ctx=vm.createContext({console,Date,PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>triggers,newTrigger:name=>({timeBased:()=>({everyMinutes:()=>({create:()=>triggers.push({getHandlerFunction:()=>name})})})}),deleteTrigger:trigger=>triggers.splice(triggers.indexOf(trigger),1)}});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
+ ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=()=>{};ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);
+ ctx.nestSyncAllDivisionSlideAccess();assert.deepEqual(synced,['1']);assert.equal(triggers.length,1);
+ ctx.nestSyncDivisionSlideAccess=()=>{throw new Error('Execution interrupted');};assert.throws(()=>ctx.nestContinueDivisionSlideAccess(),/interrupted/);
+ assert.equal(JSON.parse(properties.get('nest-slide-access-pending'))[0],'2');
+ ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);for(let i=0;i<6;i++)ctx.nestContinueDivisionSlideAccess();
+ assert.deepEqual(synced,['1','2','3','4','5','7','CTSO']);assert.equal(properties.has('nest-slide-access-pending'),false);assert.equal(triggers.length,0);assert.ok(properties.has('nest-slide-access-completed'));
+});
