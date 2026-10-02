@@ -19,7 +19,7 @@ const SOP_LINKS = [
     url: "https://docs.google.com/spreadsheets/d/1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I/edit?gid=931965198#gid=931965198"
   },
   {
-    terms: ["Division Leadership Slides", "Manager Control Center", "Division Folders"],
+    terms: ["Division HQ", "Division Home", "Division Leadership Slides", "Manager Control Center", "Division Folders"],
     url: "/divisions" // division home pages
   },
   {

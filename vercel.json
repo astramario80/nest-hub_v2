@@ -8,10 +8,6 @@
       "destination": "/assets/nest_menu_icon.png"
     },
     {
-      "source": "/divisions",
-      "destination": "/control-center"
-    },
-    {
       "source": "/divisions/:period",
       "destination": "/api/division-page?period=:period"
     }
@@ -72,6 +68,11 @@
     {
       "source": "/lib/divisions.mjs",
       "destination": "/api/division?period=blocked",
+      "permanent": false
+    },
+    {
+      "source": "/control-center",
+      "destination": "/divisions",
       "permanent": false
     }
   ]
