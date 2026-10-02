@@ -962,6 +962,46 @@ document.addEventListener('click', event => {
   });
 })();
 
+// Keep HQ navigation visible while the next authenticated page loads.
+(() => {
+  let pendingLink, previousBusy, status;
+  function clearPending() {
+    if (pendingLink) {
+      pendingLink.classList.remove('division-navigation-pending');
+      if (previousBusy === null) pendingLink.removeAttribute('aria-busy');
+      else pendingLink.setAttribute('aria-busy', previousBusy);
+    }
+    pendingLink = null;
+    if (status) { status.hidden = true; status.textContent = ''; }
+  }
+  document.addEventListener('click', event => {
+    const link = event.target.closest?.('a[href]');
+    if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.hasAttribute('download')) return;
+    const target = link.getAttribute('target') || document.querySelector('base[target]')?.getAttribute('target');
+    if (target && target.toLowerCase() !== '_self') return;
+    const destination = new URL(link.href, location.href);
+    const match = destination.pathname.match(/^\/divisions(?:\/(1|2|3|4|5|7|CTSO))?\/?$/);
+    if (destination.origin !== location.origin || !match || (destination.pathname === location.pathname && destination.search === location.search)) return;
+    clearPending();
+    pendingLink = link;
+    previousBusy = link.getAttribute('aria-busy');
+    link.classList.add('division-navigation-pending');
+    link.setAttribute('aria-busy', 'true');
+    if (!status) {
+      status = document.createElement('div');
+      status.className = 'division-navigation-status';
+      status.setAttribute('role', 'status');
+      status.setAttribute('aria-live', 'polite');
+      document.body.append(status);
+    }
+    status.hidden = false;
+    status.textContent = match[1] ? `Opening ${match[1] === 'CTSO' ? 'CTSO' : 'Division ' + match[1]}…` : 'Opening Division HQ…';
+    // Preserve the normal link so authentication and browser navigation still apply.
+  });
+  window.addEventListener('pageshow', clearPending);
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') clearPending(); });
+})();
+
 // Share the eagle navigation across pages using the standard NEST header.
 if (document.querySelector('header .logo-container') && !document.body.classList.contains('soar-embedded')) {
   const eagleMenuScript=document.createElement('script');

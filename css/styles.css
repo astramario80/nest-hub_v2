@@ -1836,6 +1836,44 @@ main.sops-content {
     color: var(--primary-orange);
 }
 
+a.division-navigation-pending {
+    outline: 2px solid var(--primary-orange);
+    outline-offset: 3px;
+    color: var(--primary-orange);
+    background-color: rgba(232, 119, 34, 0.12);
+}
+
+.trip-card.division-navigation-pending {
+    transform: translateY(-8px);
+    border-color: var(--primary-orange);
+    box-shadow: 0 16px 40px rgba(232, 119, 34, 0.3);
+}
+
+.trip-card.division-navigation-pending h2 { color: var(--primary-orange); }
+
+.division-navigation-status {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10001;
+    max-width: calc(100vw - 32px);
+    padding: 16px 24px;
+    border: 2px solid var(--primary-orange);
+    border-radius: 12px;
+    background: #171717;
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.division-navigation-status[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .trip-card.division-navigation-pending { transform: none; }
+}
+
 /* ====== SPIN ANIMATION ====== */
 @keyframes spinIn {
     0% { opacity: 0; transform: rotate(-90deg) scale(0.5); }
