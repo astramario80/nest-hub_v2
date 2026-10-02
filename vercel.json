@@ -10,6 +10,10 @@
     {
       "source": "/divisions",
       "destination": "/control-center"
+    },
+    {
+      "source": "/divisions/:period",
+      "destination": "/api/division-page?period=:period"
     }
   ],
   "functions": {
@@ -48,6 +52,9 @@
       "maxDuration": 60
     },
     "api/division.mjs": {
+      "maxDuration": 60
+    },
+    "api/division-page.mjs": {
       "maxDuration": 60
     }
   },

@@ -1,10 +1,10 @@
 // Website identities and live division roles are checked before reaching the
 // existing Control Center's owner-run slide routine. No browser receives a token.
 const DIVISION_SLIDES_WEBAPP = 'https://script.google.com/macros/s/AKfycbwRXV7QLRzmTqBJJcJs8WdQ3Gy0kwbCwgQBqW_t5ujSkSGOwb9wGF8MCpvEvNNkR0oA/exec';
-function divisionSlidesPermissions_(identity,period){
+function divisionSlidesPermissions_(identity,period,leaders){
  if(OWNER_EMAILS.includes(email_(identity)))return true;
  const email=memberEmail_(identity,period);
- const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];
+ const rows=leaders||(Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[]);
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===email&&
   (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));
 }
@@ -13,12 +13,17 @@ function divisionSlidesDispatch_(r){
  const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
  if(!session)return {status:401};
  const email=memberEmail_(session.email,r.period),isOwner=OWNER_EMAILS.includes(email_(session.email));
- if(!isOwner&&!rows_(r.period).some(row=>email_(row[1])===email))return {status:403};
- const canManage=divisionSlidesPermissions_(session.email,r.period);
+ const roster=rows_(r.period),members=new Set(roster.map(row=>email_(row[1])));
+ if(!isOwner&&!members.has(email))return {status:403};
+ const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];
+ const canManage=divisionSlidesPermissions_(session.email,r.period,leaders);
  if(r.operation==='access'){
-  const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F99").values||[];
   const roles=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&email_(row[4])===email).map(row=>String(row[2]||'').trim());
-  return {status:200,canManage,roles,isOwner};
+  const team=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&members.has(email_(row[4]))).map(row=>{
+   const name=String(row[3]||'').trim(),comma=name.indexOf(',');
+   return {position:String(row[2]||'').trim(),name:comma>=0?name.slice(comma+1).trim()+' '+name.slice(0,comma).trim():name};
+  }).filter(leader=>leader.position&&leader.name);
+  return {status:200,canManage,roles,isOwner,team};
  }
  if(!canManage)return {status:403};
  if(!/^[a-f0-9-]{36}$/.test(r.job||''))return {status:400};
