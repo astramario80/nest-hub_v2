@@ -19,6 +19,6 @@ export default async function handler(req,res){
  if(!Object.hasOwn(DIVISIONS,period))return res.status(404).send('Division not found.');
  let code=200,data;
  // Reuse the same live membership check before returning any team or deck data.
- await division({...req,query:{period}}, {setHeader(){},status(value){code=value;return this;},json(value){data=value;return this;}});
+ await division({method:req.method,headers:req.headers,query:{period}}, {setHeader(){},status(value){code=value;return this;},json(value){data=value;return this;}});
  return res.status(code).send(renderDivisionPage(period,data,code));
 }
