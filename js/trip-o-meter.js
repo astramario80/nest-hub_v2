@@ -1,5 +1,6 @@
 (() => {
   const host=document.getElementById('trip-app');if(!host)return;
+  const hq=host.closest('main.division-page'),fixedPeriod=hq?.dataset.period;
   const q=s=>host.querySelector(s);let period='',data=null,busy=false,expiryTimer,version=0;
   const status=q('[data-status]'),login=q('[data-login]'),view=q('[data-view]'),periodSelect=q('[data-period-select]'),tempAccess=q('[data-temp-access]'),refresh=q('[data-refresh]'),exportButton=q('[data-export]');
   let scoreQueue=[],savingScores=false,saveError=false,queueTimer,retryCount=0,inFlightCount=0,deferredChanges=[],activeGesture=null,editingTitle=false,lastTitleTap=null;
@@ -14,13 +15,13 @@
   const scoreKey=e=>e.student+':'+e.assignment;
   const node=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
   function clear(){if(activeGesture)activeGesture();editingTitle=false;lastTitleTap=null;data=null;clearTimeout(expiryTimer);view.replaceChildren();view.hidden=true;tempAccess.replaceChildren();tempAccess.hidden=true;exportButton.hidden=true;}
-  function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value);}
+  function setBusy(value){busy=value;host.setAttribute('aria-busy',String(value));host.querySelectorAll('button,input,select').forEach(el=>el.disabled=value||(Boolean(fixedPeriod)&&el===periodSelect));}
   async function api(action,extra={}){
     const response=await fetch('/api/spinner',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(55000),body:JSON.stringify({action,period,...extra})});
     let result;try{result=await response.json();}catch{throw new Error('Access is temporarily unavailable. Please try again.');}
     if(!response.ok)throw Object.assign(new Error(result.error||'Unable to complete this request.'),{status:response.status});return result;
   }
-  function lock(message,needsLogin=!window.NestAuth?.identity){scoreQueue=[];deferredChanges=[];saveError=false;retryCount=0;clearTimeout(queueTimer);queueTimer=null;clear();login.hidden=!needsLogin;status.textContent=message||(needsLogin?'Sign in to NEST to open this period.':'Choose a period. NEST will check your access.');}
+  function lock(message,needsLogin=!window.NestAuth?.identity){version++;setBusy(false);scoreQueue=[];deferredChanges=[];saveError=false;retryCount=0;clearTimeout(queueTimer);queueTimer=null;clear();login.hidden=!needsLogin;status.textContent=message||(needsLogin?'Sign in to NEST to open this period.':'Choose a period. NEST will check your access.');}
   function expired(){if(data&&Date.now()>=Math.min(data.expires,data.editExpires||data.expires)){lock('Your access to this period has ended. Choose the period to refresh.');return true;}return false;}
   function scheduleExpiry(){
     if(!data)return;
@@ -262,9 +263,10 @@
     finally{savingScores=false;inFlightCount=0;if(scoreQueue.length&&!saveError&&data&&!queueTimer)flushScores();else if(!scoreQueue.length&&deferredChanges.length&&data&&!saveError)save(deferredChanges.shift());}
   }
   window.addEventListener('beforeunload',event=>{if(scoreQueue.length){event.preventDefault();event.returnValue='';}});
-  async function load(){if(busy||!period)return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{
+  async function load(){if(busy||!period||(hq&&!window.NestDivisionHQ?.allowed))return;const current=++version;clear();login.hidden=true;setBusy(true);status.textContent='Opening period '+period+'…';try{
     await window.NestAuth.ready;
     if(!window.NestAuth.identity){lock();return;}
+    if(current!==version||(hq&&!window.NestDivisionHQ?.allowed))return;
     const result=await api('tracker');if(current===version)render(result);
   }catch(e){if(current!==version)return;
     if(e.status===401){
@@ -273,10 +275,10 @@
     }else lock(e.status===403?'Your NEST account does not have access to this period.':e.message,false);
   }finally{if(current===version)setBusy(false);}}
   async function save(change){
-    if(busy||!data||expired())return;
+    if(busy||!data||expired())return;const currentVersion=version;
     if(savingScores||scoreQueue.length){if(['grant','revoke'].includes(change.type)){deferredChanges.push(change);status.textContent='Finishing score saves before sharing access…';clearTimeout(queueTimer);queueTimer=null;flushScores();}return;}
     const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0,accessOpen=Boolean(q('.trip-temp-access')?.open);
-    const show=result=>{render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};
+    const show=result=>{if(currentVersion!==version)return;render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};
     setBusy(true);
     try{
       let result;
@@ -309,10 +311,18 @@
     const lines=[['Student','Email',...result.assignments.map(a=>a.title)],...result.students.map(s=>[s.name,s.email,...result.assignments.map(a=>result.scores[s.id]?.[a.id]||'')])];
     const url=URL.createObjectURL(new Blob(['\uFEFF'+lines.map(row=>row.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}));const link=node('a');link.href=url;link.download='NEST-Period-'+target+'.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);status.textContent='CSV downloaded for '+(target==='CTSO'?'Robotics':'Period '+target)+'.';
   }catch(e){status.textContent=e.message;}finally{setBusy(false);}}
-  periodSelect.addEventListener('change',()=>{if(busy)return;period=periodSelect.value;display=readDisplay();refresh.disabled=!period;exportButton.hidden=true;if(period)load();else{clear();status.textContent='';}});
+  periodSelect.addEventListener('change',()=>{if(busy||fixedPeriod)return;period=periodSelect.value;display=readDisplay();refresh.disabled=!period;exportButton.hidden=true;if(period)load();else{clear();status.textContent='';}});
   refresh.addEventListener('click',load);
   exportButton.addEventListener('click',()=>download(period));
   q('[data-open-login]').addEventListener('click',()=>window.NestAuth?.open());
   document.addEventListener('nest-auth-change',()=>{if(!window.NestAuth?.identity){lock();}else if(period&&!busy){display=readDisplay();load();}});
+  if(fixedPeriod){
+    period=fixedPeriod;periodSelect.value=period;periodSelect.disabled=true;
+    periodSelect.hidden=true;host.querySelector('label[for=trip-period]').hidden=true;
+    display=readDisplay();
+    document.addEventListener('nest-hq-access-revoked',()=>lock('Division access has ended.',false));
+    document.addEventListener('nest-hq-access-ready',()=>{if(!data&&!busy)load();});
+    load();
+  }
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&scoreQueue.length){clearTimeout(queueTimer);queueTimer=null;flushScores();}expired();});window.addEventListener('pageshow',expired);
 })();

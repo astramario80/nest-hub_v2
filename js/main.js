@@ -24,7 +24,7 @@ const SOP_LINKS = [
   },
   {
     terms: ["Trip-o-Meter", "Trip‑o‑Meter"],
-    url: "/trip-o-meter"
+    url: "/divisions"
   },
   {
     terms: ["Weather Reports"],
@@ -269,7 +269,7 @@ const sopsData = {
 
       <p>
         Track class progress:
-        <a href="/trip-o-meter">
+        <a href="/divisions">
           Open Trip‑o‑Meter
         </a>
       </p>

@@ -108,7 +108,7 @@
   }
   dialog.querySelector('[data-load]').addEventListener('click',start);
   dialog.querySelector('[data-edit-manager]').addEventListener('click',event=>{if(config?.manager.canEdit)openSlide(config.manager.id,event.target);});
-  dialog.querySelector('[data-refresh]').addEventListener('click',checkAccess);
+  dialog.querySelector('[data-refresh-division]').addEventListener('click',checkAccess);
   let teamNeedsRefresh=false;
   document.addEventListener('nest-hiring-team-change',()=>{teamNeedsRefresh=true;});
   document.addEventListener('nest-hq-tab-change',event=>{if(event.detail.tab==='meetings'){if(teamNeedsRefresh){teamNeedsRefresh=false;checkAccess();}else if(!stage.querySelector('iframe'))render();}});

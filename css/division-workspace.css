@@ -70,3 +70,7 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
   .division-hq-grid .trip-card:focus-visible .division-hq-card-icon { animation: none; }
   .division-hq-grid .trip-card:hover { transform: none; }
 }
+
+/* Tracker belongs to the HQ content surface. */
+.division-hq-content .trip-access { color: #fff; }
+.division-hq-content .trip-table-scroll { height: 65vh; height: 65dvh; min-height: 320px; }
