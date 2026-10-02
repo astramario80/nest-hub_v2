@@ -5,8 +5,11 @@ function nestSlideRole_(role){return String(role||'').trim().toLowerCase().repla
 function nestSlideRoster_(period){
  const sheet=SpreadsheetApp.openById('12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE').getSheetByName(period==='CTSO'?'CTSO':'Period '+period);
  if(!sheet)throw new Error('Division roster unavailable');
- const emails=sheet.getRange('A2:C1000').getValues().filter(row=>row[0]).map(row=>String(row[2]||'').trim().toLowerCase()).filter(email=>/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email));
- if(!emails.length)throw new Error('Division roster is empty; sharing was not changed');
+ const rows=sheet.getRange('A2:C1000').getValues().filter(row=>row.some(value=>String(value||'').trim()));
+ const emails=rows.filter(row=>row[0]).map(row=>String(row[2]||'').trim().toLowerCase()).filter(email=>/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email));
+ if(rows.length&&!emails.length)throw new Error('Division roster has no valid member emails; sharing was not changed');
+ // A confirmed empty sheet has no members: remove former member grants.
+ // Missing sheets and malformed nonempty rosters still fail without changes.
  return new Set(emails);
 }
 function nestSlidePermissions_(id,editors,viewers){
