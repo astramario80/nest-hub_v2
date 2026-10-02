@@ -138,7 +138,7 @@ test('school bridge denies nonmembers even if a stale management assignment rema
 });
 test('sharing removes public and outsider access and keeps division managers, role holders and readers',()=>{
  let permissions=[{id:'owner',type:'user',role:'owner',emailAddress:'teacher@school.test'},{id:'public',type:'anyone',role:'reader'},{id:'domain',type:'domain',role:'reader'},{id:'outsider',type:'user',role:'writer',emailAddress:'outside@school.test'},{id:'member',type:'user',role:'writer',emailAddress:'member@school.test'}];
- const ctx=vm.createContext({console,Drive:{Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);},insert:(p)=>permissions.push({...p,emailAddress:p.value,id:p.value})}}});
+ const ctx=vm.createContext({console,Drive:{Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);},patch:(value,id,key)=>{permissions.find(p=>p.id===key).role=value.role;},insert:(p)=>permissions.push({...p,emailAddress:p.value,id:p.value})}}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
  ctx.nestSlidePermissions_('deck',new Set(['manager@school.test','assistant@school.test','leader@school.test']),new Set(['member@school.test','manager@school.test','assistant@school.test','leader@school.test']));
  assert.equal(permissions.length,5);assert.equal(permissions.find(p=>p.emailAddress==='member@school.test').role,'reader');

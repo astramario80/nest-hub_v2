@@ -16,6 +16,12 @@ function nestSlidePermissions_(id,editors,viewers){
   if(permission.role==='owner'||permission.view==='metadata')return;
   const email=String(permission.emailAddress||'').toLowerCase(),desired=permission.type==='user'?target[email]:null;
   if(desired===permission.role){delete target[email];return;}
+  if(desired){
+   // A direct editor grant can coexist with inherited reader access. Removing
+   // that permission is rejected as inherited; patch the direct role instead.
+   try{Drive.Permissions.patch({role:desired},id,permission.id,{supportsAllDrives:true});delete target[email];return;}
+   catch(error){if(!/inherited/i.test(String(error.message)))throw error;return;}
+  }
   // Parent folders are reconciled first, so inherited access follows the same
   // division policy. Any remaining inherited permission fails the final audit.
   try{Drive.Permissions.remove(id,permission.id,{supportsAllDrives:true});}
@@ -24,7 +30,7 @@ function nestSlidePermissions_(id,editors,viewers){
  Object.keys(target).forEach(email=>Drive.Permissions.insert({type:'user',role:target[email],value:email},id,{sendNotificationEmails:false,supportsAllDrives:true}));
  const final=nestSlideListPermissions_(id);
  const violations=final.filter(permission=>permission.role!=='owner'&&permission.view!=='metadata'&&(permission.type!=='user'||(editors.has(String(permission.emailAddress||'').toLowerCase())?'writer':viewers.has(String(permission.emailAddress||'').toLowerCase())?'reader':null)!==permission.role));
- if(violations.length)throw new Error('Unexpected inherited or broad slide access remains on '+id);
+ if(violations.length){console.log(JSON.stringify(violations.map(p=>({type:p.type,role:p.role,hasEmail:Boolean(p.emailAddress),assigned:editors.has(String(p.emailAddress||'').toLowerCase()),member:viewers.has(String(p.emailAddress||'').toLowerCase()),view:p.view||'',details:p.permissionDetails||[]}))));throw new Error('Unexpected inherited or broad slide access remains on '+id);}
 }
 function nestSlideListPermissions_(id){
  let pageToken,permissions=[];
