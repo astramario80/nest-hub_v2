@@ -9,7 +9,7 @@
     },
     {
       "source": "/divisions",
-      "destination": "/control-center.html"
+      "destination": "/control-center"
     }
   ],
   "functions": {
