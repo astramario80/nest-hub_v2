@@ -54,3 +54,10 @@ test('eagle menu reuses all four gears and their destinations; hover, home click
   }finally{w.close();}
  }
 });
+
+test('corner menu loads without a homepage request and Command matches the current division structure',()=>{
+ const dom=page('hiring.html'),w=dom.window;w.fetch=()=>{throw new Error('Navigation must not fetch the homepage');};
+ w.eval(read('js/eagle-menu.js'));const command=[...w.document.querySelectorAll('#eagle-menu > div > details')].find(group=>group.querySelector('summary').textContent==='⚙️ Command');
+ assert.ok(command);assert.equal(command.querySelectorAll('a[href="/divisions"]').length,1);assert.doesNotMatch(command.textContent,/Control Center|Division Folders/);assert.ok(command.querySelector('a[href="/leadership"]'));assert.ok(command.querySelector('a[href="/weather"]'));
+ const home=page('index.html'),sourceLinks=[...home.window.document.querySelectorAll('.gear-panel .gear-links a')].map(a=>a.getAttribute('href')).sort(),menuLinks=[...w.document.querySelectorAll('#eagle-menu > div a')].map(a=>a.getAttribute('href')).sort();assert.deepEqual(menuLinks,sourceLinks);home.window.close();w.close();
+});

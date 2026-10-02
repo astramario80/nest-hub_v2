@@ -1,6 +1,6 @@
 // Application data stays in its school-owned workbook; every read checks live leadership roles.
 const HIRING_PERIODS = ['1','2','3','4','5','7','CTSO'];
-function hiringRows_() {return Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];}
+function hiringRows_() {return (typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];}
 function hiringPermissions_(email,period,rows) {
   if(OWNER_EMAILS.includes(email_(email)))return {canReview:true,canManage:true};
   rows=rows||hiringRows_();

@@ -1,4 +1,4 @@
-import { COOKIE, cookies, validToken, bridge, originAllowed } from '../lib/nest-auth.mjs';
+import { COOKIE, cookies, validToken, bridge, originAllowed, verifiedIdentity } from '../lib/nest-auth.mjs';
 const periods=new Set(['1','2','3','4','5','7','CTSO','mine']);
 const ratings=value=>Array.isArray(value)&&value.length===4&&value.every(x=>x===null||(Number.isInteger(x)&&x>=1&&x<=4));
 export default async function handler(req,res) {
@@ -28,13 +28,15 @@ export default async function handler(req,res) {
   if(!validToken(session))return res.status(401).json({error:'Sign in to NEST to review applications.'});
   if(!periods.has(period)||!Number.isInteger(page)||page<0||page>10)return res.status(400).json({error:'Invalid division or page.'});
   try {
+    const readStarted=Date.now();
     const data=await bridge({action:'auth-hiring-view',session,period,page},45000);
+    res.setHeader('Server-Timing','school;dur='+(Date.now()-readStarted));
     if([401,403,404].includes(data.status))return res.status(data.status).json({error:data.status===403?'You do not have hiring access for this division.':data.status===404?'This division’s hiring workbook is not connected.':'Your sign-in has expired.'});
     if(period==='mine') {
       if(data.status!==200||!Array.isArray(data.periods)||!data.periods.every(value=>periods.has(value)&&value!=='mine'))throw new Error('Invalid hiring access list');
       return res.status(200).json({periods:data.periods});
     }
     if(data.status!==200||!Array.isArray(data.columns)||!Array.isArray(data.applications)||!Array.isArray(data.team)||!Array.isArray(data.candidates)||!Array.isArray(data.reviews)||!Array.isArray(data.positions)||data.positions.length>50||!data.positions.every(value=>typeof value==='string'&&value.length<=100)||data.columns.length>8||data.applications.length>100||data.team.length>10000||data.candidates.length>1000||!data.applications.every(row=>Array.isArray(row)&&row.length<=8)||!data.team.every(row=>Array.isArray(row)&&row.length<=3)||!data.candidates.every(item=>typeof item.name==='string'&&typeof item.email==='string')||data.reviews.length!==data.applications.length||!data.reviews.every(item=>/^[a-f0-9]{64}$/.test(item.key)&&/^[a-f0-9]{64}$/.test(item.revision)&&typeof item.notes==='string'&&ratings(item.scores)))throw new Error('Invalid hiring view');
-    return res.status(200).json({division:data.division,canManage:data.canManage===true,columns:data.columns,applications:data.applications,reviews:data.reviews,team:data.team,positions:data.positions,candidates:data.canManage===true?data.candidates:[],page,hasMore:data.hasMore===true});
+    return res.status(200).json({identity:verifiedIdentity(data.identity),division:data.division,canManage:data.canManage===true,columns:data.columns,applications:data.applications,reviews:data.reviews,team:data.team,positions:data.positions,candidates:data.canManage===true?data.candidates:[],page,hasMore:data.hasMore===true});
   }catch(error){console.error('Hiring view request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Applications are temporarily unavailable.'});}
 }

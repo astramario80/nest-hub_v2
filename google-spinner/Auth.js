@@ -26,7 +26,7 @@ function username_(value) {
   return /^[a-z][a-z0-9._-]{2,31}$/.test(name)?name:'';
 }
 function accounts_() {
-  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,AUTH_SHEET).values||[];
+  const rows=nestAccessValues_(NEST_DATABASE,AUTH_SHEET).values||[];
   return rows.map((row,index)=>({row:index+2,username:username_(row[0]),email:accountEmail_(row[1]),passwordHash:String(row[2]||''),passwordSalt:String(row[3]||''),active:String(row[4]||'').toLowerCase()==='true',version:Number(row[5])||1,periods:String(row[8]||'').split(',').filter(value=>Object.prototype.hasOwnProperty.call(PERIODS,value)),recoveryEmail:districtEmail_(row[9])||(OWNER_EMAILS.includes(email_(row[9]))?email_(row[9]):'')||districtEmail_(row[1])||(OWNER_EMAILS.includes(email_(row[1]))?email_(row[1]):''),linkedEmail:districtEmail_(row[10])})).filter(a=>a.email);
 }
 function accountByEmail_(email) {return accounts_().find(a=>a.email===email_(email));}
