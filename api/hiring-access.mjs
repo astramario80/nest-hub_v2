@@ -1,7 +1,8 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge } from '../lib/nest-auth.mjs';
 
 const periods=new Set(['1','2','3','4','5','7','CTSO']);
-export default async function handler(req,res) {
+async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');
   res.setHeader('Vary','Cookie');
@@ -17,3 +18,5 @@ export default async function handler(req,res) {
     throw new Error('Invalid hiring access response');
   }catch(error){console.error('Hiring access request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Hiring access is temporarily unavailable.'});}
 }
+
+export default withDiagnostics('hiring',handler);

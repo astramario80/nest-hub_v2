@@ -1,8 +1,9 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, originAllowed, verifiedIdentity } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 import { LEADER_SLIDES, roleKey } from '../lib/division-slides.mjs';
 const validJob=id=>typeof id==='string'&&/^[a-f0-9-]{36}$/.test(id);
-export default async function handler(req,res){
+async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');
  res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
  res.setHeader('X-Content-Type-Options','nosniff');
@@ -36,3 +37,5 @@ export default async function handler(req,res){
   return res.status(200).json({job,state:result.state,updatedAt:result.updatedAt||null});
  }catch(error){console.error('Division slide request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'The division workspace is temporarily unavailable. Please try again.'});}
 }
+
+export default withDiagnostics('division',handler);

@@ -1,3 +1,4 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import division from './division.mjs';
 import { nestHeader, nestFooter } from '../lib/nest-page-shell.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
@@ -20,9 +21,9 @@ export function renderDivisionPage(period,data,code=200){
  ${data.canManage?`<section role="tabpanel" id="hq-panel-hiring" aria-labelledby="hq-tab-hiring" tabindex="0" hidden><div class="internal-page hiring-page" data-hiring-period="${escape(period)}">${HQ_HIRING_HTML}</div></section>`:''}
  </div></div></main><script type="application/json" id="division-bootstrap">${scriptJSON(data)}</script>`:
  `<main class="division-page-lock"><div class="division-hq-heading">${icon}<div><p class="division-eyebrow">Division HQ</p><h1>${escape(label)}</h1></div></div><p role="status">${escape(data?.error||'This division is unavailable.')}</p>${code===401?'<button type="button" data-sign-in>Sign in to NEST</button>':''}${code===503?'<button type="button" data-retry>Try again</button>':''}<p><a href="/divisions">Back to Division HQ</a></p></main>`;
- return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(label)} · NEST™</title><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/resource-viewer.css"><link rel="stylesheet" href="/css/internal-workspaces.css"><link rel="stylesheet" href="/css/hiring-workspace.css"><link rel="stylesheet" href="/css/trip-o-meter.css"><link rel="stylesheet" href="/css/division-workspace.css"><link rel="stylesheet" href="/css/group-email.css"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body><div class="bg-watermark"></div>${nestHeader}${content}${allowed&&data.identity?`<script type="application/json" id="nest-auth-bootstrap">${scriptJSON(data.identity)}</script>`:''}${nestFooter}<script src="/js/nest-auth.js"></script><script src="/js/division-hq.js"></script><script src="/js/division-workspace.js"></script><script src="/js/group-email.js"></script><script src="/js/main.js"></script><script src="/js/resource-viewer.js"></script></body></html>`;
+ return `<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escape(label)} · NEST™</title><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/resource-viewer.css"><link rel="stylesheet" href="/css/internal-workspaces.css"><link rel="stylesheet" href="/css/hiring-workspace.css"><link rel="stylesheet" href="/css/trip-o-meter.css"><link rel="stylesheet" href="/css/division-workspace.css"><link rel="stylesheet" href="/css/group-email.css"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body><div class="bg-watermark"></div>${nestHeader}${content}${allowed&&data.identity?`<script type="application/json" id="nest-auth-bootstrap">${scriptJSON(data.identity)}</script>`:''}${nestFooter}<script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js"></script><script src="/js/division-hq.js"></script><script src="/js/division-workspace.js"></script><script src="/js/group-email.js"></script><script src="/js/main.js"></script><script src="/js/resource-viewer.js"></script></body></html>`;
 }
-export default async function handler(req,res){
+async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('X-Robots-Tag','noindex, nofollow');
  if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).send('Method not allowed.');}
  const period=String(req.query?.period||'');
@@ -32,3 +33,5 @@ export default async function handler(req,res){
  await division({method:req.method,headers:req.headers,query:{period}}, {setHeader(name,value){if(name==='Server-Timing')res.setHeader(name,value);},status(value){code=value;return this;},json(value){data=value;return this;}});
  return res.status(code).send(renderDivisionPage(period,data,code));
 }
+
+export default withDiagnostics('division',handler);

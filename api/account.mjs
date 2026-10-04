@@ -1,3 +1,4 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { createHmac, pbkdf2Sync, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { COOKIE, IDENTITY, RECOVERY_CHALLENGE, RECOVERY_TICKET, accountEmail, districtEmail, username, token, validToken, cookies, setCookie, signedIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
@@ -13,7 +14,7 @@ async function current(jar) {
   const data=await bridge({action:'auth-me',session:jar[COOKIE]},25000);
   return data.status===200?data:null;
 }
-export default async function handler(req,res) {
+async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -123,3 +124,5 @@ export default async function handler(req,res) {
     return fail(res,400,'Unknown account action.');
   } catch(error) {console.error('NEST account action failed',{action:body.action,kind:error?.name||'Error'});return fail(res,503,'NEST accounts are temporarily unavailable.');}
 }
+
+export default withDiagnostics('profile',handler);

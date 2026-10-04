@@ -1,6 +1,7 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { parseLunchPdf } from '../lib/lunch-parser.mjs';
 let cached=null;
-export default async function handler(req,res) {
+async function handler(req,res) {
   if(req.method!=='GET') {res.setHeader('Allow','GET');return res.status(405).json({error:'Method not allowed'});}
   const endpoint=process.env.LUNCH_BRIDGE_URL,token=process.env.LUNCH_BRIDGE_TOKEN;
   if(!endpoint || !token) return res.status(503).json({error:'Lunch assignments unavailable'});
@@ -18,3 +19,5 @@ export default async function handler(req,res) {
   }
 }
 function respond(res,data) {res.setHeader('Cache-Control','public, max-age=60, s-maxage=300');return res.status(200).json(data);}
+
+export default withDiagnostics('lunch',handler);

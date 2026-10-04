@@ -61,9 +61,22 @@
     },
     "api/group-email.mjs": {
       "maxDuration": 120
+    },
+    "api/diagnostics.mjs": {
+      "maxDuration": 30
     }
   },
   "redirects": [
+    {
+      "source": "/admin-diagnostics",
+      "destination": "/profile#diagnostics",
+      "permanent": false
+    },
+    {
+      "source": "/admin-diagnostics.html",
+      "destination": "/profile#diagnostics",
+      "permanent": false
+    },
     {
       "source": "/lib/signals-player/:path*",
       "destination": "/api/signals?asset=blocked",

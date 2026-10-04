@@ -1,6 +1,7 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge } from '../lib/nest-auth.mjs';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
   res.setHeader('Vary', 'Cookie');
@@ -31,3 +32,5 @@ export default async function handler(req, res) {
   }
   return res.status(503).json({ error: 'Leadership data is temporarily unavailable. Please try again.' });
 }
+
+export default withDiagnostics('leadership',handler);

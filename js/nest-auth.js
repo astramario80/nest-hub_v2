@@ -106,7 +106,7 @@
         const profile = document.createElement('a');profile.href = '/profile';profile.textContent = 'Profile';
         const out = document.createElement('button');out.type = 'button';out.textContent = 'Log out';out.addEventListener('click', logout);
         toggle.addEventListener('click', event => {event.stopPropagation();const open = toggle.getAttribute('aria-expanded') !== 'true';closeOptions();if (open) setOptions(options,true);});
-        account.append(toggle,options);options.append(profile,out);list.append(account);
+        account.append(toggle,options);options.append(profile,out);if(['mario@memberhq.net','mpenalver@bethelsd.org','astramario@gmail.com'].includes(String(identity.email||'').toLowerCase())){const diagnostics=document.createElement('a');diagnostics.href='/profile#diagnostics';diagnostics.textContent='Access diagnostics';options.insertBefore(diagnostics,out);}list.append(account);
         const signedInIdentity = identity;
         fetch('/api/signals?asset=access', { credentials: 'same-origin', cache: 'no-store' }).then(async response => {
           if (!response.ok) return;

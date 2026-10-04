@@ -3,12 +3,12 @@
   const owners=new Set(['mario@memberhq.net','mpenalver@bethelsd.org','astramario@gmail.com']);
   function selectTab(name,updateUrl=false) {
     const identity=window.NestAuth?.identity,admin=!!identity&&owners.has(String(identity.email).toLowerCase());
-    const accounts=name==='accounts'&&admin;
-    $('profile-details-tab').setAttribute('aria-selected',String(!accounts));
-    $('profile-admin-tab').setAttribute('aria-selected',String(accounts));
-    $('profile-details-panel').hidden=accounts;
-    $('profile-admin-panel').hidden=!accounts;
-    if(updateUrl)history.replaceState(null,'',accounts?'#accounts':'#profile');
+    const selected=admin&&['accounts','diagnostics'].includes(name)?name:'profile';
+    for(const [tab,panel,key] of [['details','details','profile'],['admin','admin','accounts'],['diagnostics','diagnostics','diagnostics']]) {
+      $('profile-'+tab+'-tab').setAttribute('aria-selected',String(selected===key));
+      $('profile-'+panel+'-panel').hidden=selected!==key;
+    }
+    if(updateUrl)history.replaceState(null,'','#'+selected);
     document.dispatchEvent(new CustomEvent('nest-profile-tab-change'));
   }
   async function api(action,details) {
@@ -22,8 +22,9 @@
     $('profile-signed-in').hidden=!identity;
     $('profile-signed-out').hidden=Boolean(identity);
     status.textContent=identity?'Signed in.':'Sign in to edit your profile, or recover your account below.';
+    $('profile-diagnostics-tab').hidden=!identity||!owners.has(String(identity.email).toLowerCase());
     $('profile-admin-tab').hidden=!identity||!owners.has(String(identity.email).toLowerCase());
-    selectTab(location.hash==='#accounts'?'accounts':'profile');
+    selectTab(location.hash.slice(1));
     if(identity){$('profile-identity').textContent=identity.username;$('profile-form').elements.username.value=identity.username;api('profile-read',{}).then(data=>{if(window.NestAuth?.identity?.email===identity.email)$('profile-identity').textContent=`${data.username} · ${data.manual?'Manually created account':'District account'} · Recovery: ${data.recoveryEmail||'administrator reset only'}`;}).catch(()=>{});}
   }
   async function submit(form,action,details) {
@@ -54,6 +55,7 @@
   $('profile-login').addEventListener('click',()=>window.NestAuth?.open('login'));
   $('profile-details-tab').addEventListener('click',()=>selectTab('profile',true));
   $('profile-admin-tab').addEventListener('click',()=>selectTab('accounts',true));
-  window.addEventListener('hashchange',()=>selectTab(location.hash==='#accounts'?'accounts':'profile'));
+  $('profile-diagnostics-tab').addEventListener('click',()=>selectTab('diagnostics',true));
+  window.addEventListener('hashchange',()=>selectTab(location.hash.slice(1)));
   document.addEventListener('nest-auth-change',show);window.NestAuth?.ready.then(show);
 })();
