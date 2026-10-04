@@ -44,3 +44,5 @@ body:has(.service-page) .bg-watermark{opacity:.24;z-index:0}body:has(.service-pa
 .service-log-editor{margin:18px 0;padding:18px;border:1px solid #d1ac68;border-radius:12px;background:#ffffff35}.service-log-editor h3{margin:0 0 10px}.service-update small{display:block;margin:8px 0;font-size:.82rem}.service-update .internal-actions{margin:10px 0 0}.service-page .service-update button{padding:6px 14px}.service-log-editor textarea{min-height:140px}.service-log-editor[hidden]{display:none}
 
 #service-copy-choices label{display:flex;gap:.6rem;align-items:center;margin:.6rem 0;font-weight:normal}#service-copy-choices input{width:auto;flex:0 0 auto}#service-copy-panel{margin:1rem 0}#service-email-history{overflow-wrap:anywhere}
+
+#service-unassigned-dialog{position:fixed;inset:110px 18px auto auto;margin:0;width:min(400px,calc(100vw - 36px));max-height:60vh;overflow:auto;z-index:30;padding:18px;background:rgba(245,246,240,.97);color:#25251f;border:1px solid #d1ac68;border-radius:14px;box-shadow:0 12px 36px #0005}#service-unassigned-list{display:grid;gap:8px;margin:12px 0}#service-unassigned-list button{text-align:left}

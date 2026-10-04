@@ -14,7 +14,7 @@
  const date=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d.toLocaleString():String(value||'');};
  const allowDiscard=()=>!dirty||window.confirm('Discard your unsaved service request update?');
  function clearDetail(){selected=null;logEdit=null;dirty=false;$('service-log-editor').hidden=true;$('service-log-editor-note').value='';$('service-log-editor-status').textContent='';$('service-test-help').textContent='';$('service-detail').hidden=true;$('service-note').value='';$('service-public-note').value='';$('service-legacy-history').textContent='';$('service-access-status').textContent='';['service-detail-title','service-detail-fields','service-public-history','service-internal-history','service-save-status','service-log-audit','service-email-history','service-copy-choices','service-log-editor-title','service-log-editor-help'].forEach(id=>$(id).replaceChildren());$('service-manager').replaceChildren();$('service-email').disabled=true;}
- function clearManager(){managerLoad?.controller.abort();managerLoad=null;$('service-gear-status').textContent='';$('service-email-mode').querySelector('option[value="test"]')?.remove();delete document.body.dataset.servicePrint;$('metric-student-search').value='';$('service-search').value='';$('service-period-status').textContent='';workspaceLoadedAt=0;termRange=null;$('metric-start').value='';$('metric-end').value='';tickets=[];students=[];metricRows=[];metricLoaded=false;chosenManagers=null;chartModel=null;metricOptions();managerEpoch++;managers=[];clearDetail();$('service-workspace').hidden=true;['service-ticket-list','service-metrics','service-reviews','service-metric-summary','service-metric-status','metric-calendar-status','service-chart-ranking','service-participation','service-participation-context','metric-export-status'].forEach(id=>$(id).replaceChildren());}
+ function clearManager(){$('service-unassigned-dialog').close?.();$('service-unassigned-list').replaceChildren();managerLoad?.controller.abort();managerLoad=null;$('service-gear-status').textContent='';$('service-email-mode').querySelector('option[value="test"]')?.remove();delete document.body.dataset.servicePrint;$('metric-student-search').value='';$('service-search').value='';$('service-period-status').textContent='';workspaceLoadedAt=0;termRange=null;$('metric-start').value='';$('metric-end').value='';tickets=[];students=[];metricRows=[];metricLoaded=false;chosenManagers=null;chartModel=null;metricOptions();managerEpoch++;managers=[];clearDetail();$('service-workspace').hidden=true;['service-ticket-list','service-metrics','service-reviews','service-metric-summary','service-metric-status','metric-calendar-status','service-chart-ranking','service-participation','service-participation-context','metric-export-status'].forEach(id=>$(id).replaceChildren());}
  function clearClient(){clientLoadedAt=0;clientEpoch++;clientSignedIn=false;$('client-requests').replaceChildren();$('client-logout').hidden=true;$('client-status').textContent='';}
  function history(container,updates){container.replaceChildren();if(!updates.length){container.append(node('p','No client updates yet.'));return;}updates.slice().reverse().forEach(e=>{const item=node('div',null,'service-update');item.append(node('strong',date(e.time)+' · '+e.status),node('p',e.note));container.append(item);});}
  async function initGoogle(){
@@ -70,7 +70,7 @@
   if(!r.emailHistory?.length)$('service-email-history').append(node('p','No recorded email sends.'));
   configureEmailOptions();
   $('service-legacy-history').textContent=r.legacyLog||'No earlier log entries.';
-  applyAccess();$('service-access-status').textContent=r.canEdit===false?'View only. Updates are limited to the assigned project manager and their division leadership.':r.canAssign===false?'You can update this ticket and email saved client updates. Division leadership manages assignments.':'You can update this ticket, manage its assignment, and email saved client updates.';
+  applyAccess();$('service-access-status').textContent=r.canEdit===false&&r.canAssign?'Assign a project manager to enable ticket management by that manager and their division leadership.':r.canEdit===false?'View only. Updates are limited to the assigned project manager and their division leadership.':r.canAssign===false?'You can update this ticket and email saved client updates. Division leadership manages assignments.':'You can update this ticket, manage its assignment, and email saved client updates.';
   emailStatus();
   renderList();
  }
@@ -107,8 +107,15 @@
  function flip(back){
   flipped=back;$('service-front').hidden=back;$('view-manage').hidden=!back;
   $('service-flip-card').classList.toggle('is-flipped',back);$('service-gear').setAttribute('aria-expanded',String(back));
-  $('service-gear').setAttribute('aria-label',back?'Return to My requests':'Open Client Relations');$('service-face-label').textContent=back?'Client Relations':'Your service desk';
+  $('service-gear').setAttribute('aria-label',back?'Return to My requests':'Open Client Relations');$('service-face-label').textContent=back?'Client Relations':'Your service desk';if(back)showUnassigned();else $('service-unassigned-dialog').close?.();
  }
+ function showUnassigned(){
+  const pending=tickets.filter(r=>r.status!=='Closed'&&!String(r.manager||'').trim()&&r.canAssign===true),dialog=$('service-unassigned-dialog');$('service-unassigned-list').replaceChildren();
+  if(!pending.length){dialog.close?.();return;}
+  pending.forEach(r=>{const button=node('button',(r.name||'Request '+r.id.slice(0,8))+' · '+(r.description||'Service request').slice(0,90));button.type='button';button.addEventListener('click',async()=>{if(busy||!allowDiscard())return;await tool('tickets');$('service-period').value='all';$('service-search').value='';openTicket(r);$('service-detail').scrollIntoView?.({block:'start',behavior:'smooth'});$('service-manager').focus();});$('service-unassigned-list').append(button);});
+  if(!dialog.open)dialog.show?.();
+ }
+ $('service-unassigned-later').addEventListener('click',()=>$('service-unassigned-dialog').close?.());
  async function changeView(name){
   if(busy||!allowDiscard())return;if(dirty)clearDetail();
   if(name==='manage'){
@@ -216,11 +223,11 @@
  function savedHistory(container,entries,scope){
   container.replaceChildren();if(!entries.length){container.append(node('p',scope==='public'?'No client updates yet.':'No internal entries.'));return;}
   entries.slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(node('strong',date(e.time)+' · '+e.status));if(scope==='internal')card.append(node('p',e.actor+' · '+(e.manager||'Unassigned')));card.append(node('p',e.note||''));if(e.updatedAt)card.append(node('small','Edited '+date(e.updatedAt)));if(scope==='public'&&e.emailed)card.append(node('small','Included in an earlier email attempt. Sent emails cannot be changed.'));
-   if(selected?.canEdit!==false&&e.note&&e.entryId&&e.entryVersion){const actions=node('div',null,'internal-actions');[['edit','Edit'],['delete','Delete']].forEach(([action,label])=>{const button=node('button',label);button.type='button';button.dataset.logAction=action;button.setAttribute('aria-label',label+' '+(scope==='public'?'client-facing':'internal')+' entry from '+date(e.time));button.addEventListener('click',()=>action==='edit'?beginLogEdit(e,scope):deleteLogEntry(e,scope));actions.append(button);});card.append(actions);}container.append(card);
+   if(selected?.canEdit!==false&&e.canManageNote===true&&e.note&&e.entryId&&e.entryVersion){const actions=node('div',null,'internal-actions');[['edit','Edit'],['delete','Delete']].forEach(([action,label])=>{const button=node('button',label);button.type='button';button.dataset.logAction=action;button.setAttribute('aria-label',label+' '+(scope==='public'?'client-facing':'internal')+' entry from '+date(e.time));button.addEventListener('click',()=>action==='edit'?beginLogEdit(e,scope):deleteLogEntry(e,scope));actions.append(button);});card.append(actions);}container.append(card);
   });
  }
  function beginLogEdit(entry,scope){
-  if(busy||logEdit||selected?.canEdit===false||!allowDiscard())return;const r=selected;if(dirty)openTicket(r);logEdit={entry,scope};dirty=true;$('service-log-editor').hidden=false;$('service-log-editor-title').textContent='Edit '+(scope==='public'?'client-facing':'internal')+' entry · '+date(entry.time);$('service-log-editor-help').textContent=scope==='public'?'Changes appear in the client portal and future emails. Emails already sent cannot be changed. A private revision history is kept.':'Changes update this saved internal entry. A private revision history is kept.';$('service-log-editor-note').value=entry.note;applyAccess();$('service-log-editor-note').focus();$('service-log-editor').scrollIntoView?.({block:'nearest',behavior:'smooth'});
+  if(busy||logEdit||entry.canManageNote!==true||selected?.canEdit===false||!allowDiscard())return;const r=selected;if(dirty)openTicket(r);logEdit={entry,scope};dirty=true;$('service-log-editor').hidden=false;$('service-log-editor-title').textContent='Edit '+(scope==='public'?'client-facing':'internal')+' entry · '+date(entry.time);$('service-log-editor-help').textContent=scope==='public'?'Changes appear in the client portal and future emails. Emails already sent cannot be changed. A private revision history is kept.':'Changes update this saved internal entry. A private revision history is kept.';$('service-log-editor-note').value=entry.note;applyAccess();$('service-log-editor-note').focus();$('service-log-editor').scrollIntoView?.({block:'nearest',behavior:'smooth'});
  }
  async function changeSavedLog(operation,r,entry,scope,note,epoch){
   const payload={id:r.id,version:r.version,eventId:entry.entryId,entryVersion:entry.entryVersion,scope,...(operation==='edit-log'?{note}:{})};
@@ -236,14 +243,14 @@
    const latest=fresh.request,updated=(scope==='public'?latest.updates:latest.internalUpdates||[]).find(e=>e.entryId===entry.entryId);
    acceptSaved(fresh,r.id);
    if(operation==='edit-log'){
-    logEdit={entry:updated||entry,scope,unavailable:!updated?.note||latest.canEdit===false};dirty=true;$('service-log-editor').hidden=false;$('service-log-editor-note').value=note;$('service-log-editor-title').textContent='Review your log edit';$('service-log-editor-help').textContent='The saved log has been updated below. Your draft is preserved.';
+    logEdit={entry:updated||entry,scope,unavailable:!updated?.note||updated.canManageNote!==true||latest.canEdit===false};dirty=true;$('service-log-editor').hidden=false;$('service-log-editor-note').value=note;$('service-log-editor-title').textContent='Review your log edit';$('service-log-editor-help').textContent='The saved log has been updated below. Your draft is preserved.';
     $('service-log-editor-status').textContent=!updated?.note?'This entry has been deleted. Your draft is kept here for copying.':error.status===409?'This entry changed elsewhere. Review the current log and your draft before saving again.':'The change could not be confirmed. The current log is shown below; your draft is kept.';
    }else $('service-save-status').textContent=error.status===409?'This entry changed elsewhere. The current log is shown; review it before deleting again.':'Deletion could not be confirmed. The current log is shown.';
    return null;
   }
  }
  async function deleteLogEntry(entry,scope){
-  if(busy||logEdit||selected?.canEdit===false||!allowDiscard())return;const r=selected;if(dirty)openTicket(r);
+  if(busy||logEdit||entry.canManageNote!==true||selected?.canEdit===false||!allowDiscard())return;const r=selected;if(dirty)openTicket(r);
   if(!window.confirm('Delete this '+(scope==='public'?'client-facing':'internal')+' entry? '+(scope==='public'?'It will be removed from the client portal and future log emails. Emails already sent stay unchanged. ':'')+'A private revision history will remain.'))return;
   const epoch=managerEpoch;setBusy(true);$('service-save-status').textContent='Deleting log entry…';
   try{const result=await changeSavedLog('delete-log',r,entry,scope,null,epoch);if(epoch!==managerEpoch||!result)return;if(!acceptSaved(result,r.id))await loadManager(r.id);$('service-save-status').textContent='Log entry deleted.';}
@@ -251,7 +258,7 @@
   finally{setBusy(false);}
  }
  $('service-log-editor').addEventListener('submit',async event=>{
-  event.preventDefault();if(!logEdit||logEdit.unavailable||!selected||busy||selected.canEdit===false)return;const r=selected,{entry,scope}=logEdit,note=$('service-log-editor-note').value.trim();if(!note){$('service-log-editor-status').textContent='Enter the updated text, or cancel and use Delete.';return;}if(note===entry.note){$('service-log-editor-status').textContent='No changes to save.';return;}
+  event.preventDefault();if(!logEdit||logEdit.entry.canManageNote!==true||logEdit.unavailable||!selected||busy||selected.canEdit===false)return;const r=selected,{entry,scope}=logEdit,note=$('service-log-editor-note').value.trim();if(!note){$('service-log-editor-status').textContent='Enter the updated text, or cancel and use Delete.';return;}if(note===entry.note){$('service-log-editor-status').textContent='No changes to save.';return;}
   const epoch=managerEpoch;setBusy(true);$('service-log-editor-status').textContent='Saving changes…';
   try{const result=await changeSavedLog('edit-log',r,entry,scope,note,epoch);if(epoch!==managerEpoch||!result)return;if(!acceptSaved(result,r.id)){dirty=false;await loadManager(r.id);}$('service-save-status').textContent='Log entry updated.';}
   catch(error){if(epoch===managerEpoch){$('service-log-editor-status').textContent=error.message;if([401,403].includes(error.status))clearManager();}}
@@ -259,15 +266,15 @@
  });
  $('service-log-editor-cancel').addEventListener('click',()=>{if(!busy&&selected)openTicket(selected);});
  function applyAccess(){
-  const locked=busy||!selected||selected.canEdit===false,testing=$('service-email-mode').value==='test';$('service-save').disabled=locked||Boolean(logEdit);['service-status','service-note','service-public-note'].forEach(id=>$(id).disabled=locked||Boolean(logEdit));$('service-manager').disabled=locked||Boolean(logEdit)||selected?.canAssign===false;
+  const locked=busy||!selected||selected.canEdit===false,testing=$('service-email-mode').value==='test';$('service-save').disabled=busy||!selected||selected.canEdit===false&&selected.canAssign!==true||Boolean(logEdit);$('service-save').textContent=selected?.canEdit===false&&selected.canAssign?'Assign project manager':'Save update';['service-status','service-note','service-public-note'].forEach(id=>$(id).disabled=locked||Boolean(logEdit));$('service-manager').disabled=busy||!selected||Boolean(logEdit)||selected.canAssign!==true;
   $('service-test-mode-label').hidden=!testing||!selected?.canTestEmail;$('service-test-help').hidden=!testing||!selected?.canTestEmail;$('service-test-help').textContent=testing&&selected?.canTestEmail?'Test recipient: '+selected.testEmail+'. The client is not emailed.':'';$('service-email').textContent=testing?'Send test to my email':'Email log to client';
   $('service-email').disabled=locked||dirty||!selected?.updates?.length||(testing?!selected?.canTestEmail:(selected?.emailStates?.[$('service-email-mode').value]||selected?.emailState)!=='unsent');
   document.querySelectorAll('[data-log-action]').forEach(b=>b.disabled=locked||Boolean(logEdit));['service-log-editor-note','service-log-editor-save','service-log-editor-cancel'].forEach(id=>$(id).disabled=locked);$('service-log-editor-save').disabled=locked||Boolean(logEdit?.unavailable);$('service-test-log-mode').disabled=locked||dirty;$('service-copy-panel').hidden=testing||selected?.canEdit===false;document.querySelectorAll('[data-email-copy]').forEach(input=>input.disabled=locked||dirty||Boolean(logEdit)||testing);
  }
  const setBusy=value=>{busy=value;applyAccess();};
  $('service-edit').addEventListener('submit',async event=>{
-  event.preventDefault();if(!selected||busy||logEdit||selected.canEdit===false)return;const r=selected,epoch=managerEpoch;setBusy(true);$('service-save-status').textContent='Saving update…';
-  try{const result=await api('update',{id:r.id,version:r.version,status:$('service-status').value,manager:$('service-manager').value,note:$('service-note').value,publicNote:$('service-public-note').value});if(epoch!==managerEpoch)return;dirty=false;if(!acceptSaved(result,r.id))await loadManager(r.id);$('service-save-status').textContent='Update saved.';}
+  event.preventDefault();if(!selected||busy||logEdit||selected.canEdit===false&&selected.canAssign!==true)return;const r=selected,epoch=managerEpoch;setBusy(true);$('service-save-status').textContent='Saving update…';
+  try{const result=await api('update',{id:r.id,version:r.version,status:r.canEdit===false?r.status:$('service-status').value,manager:$('service-manager').value,note:r.canEdit===false?'':$('service-note').value,publicNote:r.canEdit===false?'':$('service-public-note').value});if(epoch!==managerEpoch)return;dirty=false;if(!acceptSaved(result,r.id))await loadManager(r.id);if(r.manager!==result.request?.manager&&result.request?.manager)$('service-unassigned-dialog').close?.();$('service-save-status').textContent='Update saved.';}
   catch(error){if(epoch===managerEpoch){$('service-save-status').textContent=error.message;if([401,403].includes(error.status))clearManager();}}
   finally{setBusy(false);}
  });
