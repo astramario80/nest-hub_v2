@@ -78,7 +78,7 @@ test('winner notice waits until the day after the final absence',()=>{
 test('main menu link follows the barometer state',async()=>{
   for(const active of [false,true]) {
     const dom=new JSDOM('<a id="doughnut-menu-link" hidden></a>',{runScripts:'outside-only'});
-    dom.window.fetch=async()=>({ok:true,json:async()=>({active})});
+    dom.window.fetch=async()=>({ok:true,json:async()=>({active,start:'2020-01-01',end:'2099-12-31'})});
     dom.window.eval(fs.readFileSync('js/doughnut-menu.js','utf8'));
     await new Promise(resolve=>setTimeout(resolve,0));
     assert.equal(dom.window.document.querySelector('a').hidden,!active);
@@ -142,4 +142,77 @@ test('barometer retries a transient Google connection failure without forwarding
   const res={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}};
   try{await barometerHandler({method:'GET',headers:{},query:{comments:'1'}},res);assert.equal(calls,2);assert.equal(res.code,200);assert.deepEqual(res.value,{active:false});}
   finally{globalThis.fetch=oldFetch;if(oldUrl===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldUrl;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
+
+
+test('menu immediately restores only a fresh verified window inside the school dates',async()=>{
+  const now=Date.now();
+  const good={start:'2020-01-01',end:'2099-12-31',checkedAt:now};
+  const cases=[
+    [JSON.stringify(good),true],
+    [JSON.stringify({...good,checkedAt:now-300001}),false],
+    [JSON.stringify({...good,checkedAt:now+60000}),false],
+    [JSON.stringify({...good,end:'2020-01-02'}),false],
+    [JSON.stringify({...good,start:'2099-12-30'}),false],
+    [JSON.stringify({...good,start:'2026-02-30'}),false],
+    ['invalid',false]
+  ];
+  for(const [stored,visible] of cases) {
+    const dom=new JSDOM('<a id="doughnut-menu-link" hidden></a>',{runScripts:'outside-only',url:'https://gknest.org/'});
+    dom.window.localStorage.setItem('nest-doughnut-window-v1',stored);
+    dom.window.fetch=()=>new Promise(()=>{});
+    dom.window.eval(fs.readFileSync('js/doughnut-menu.js','utf8'));
+    assert.equal(dom.window.document.querySelector('a').hidden,!visible);
+    dom.window.close();
+  }
+});
+test('menu clears a cached window on inactive response and tolerates blocked storage',async()=>{
+  for(const blocked of [false,true]) {
+    const dom=new JSDOM('<a id="doughnut-menu-link" hidden></a>',{runScripts:'outside-only',url:'https://gknest.org/'});
+    const {window}=dom;
+    window.localStorage.setItem('nest-doughnut-window-v1',JSON.stringify({start:'2020-01-01',end:'2099-12-31',checkedAt:Date.now()}));
+    if(blocked)Object.defineProperty(window,'localStorage',{get(){throw new Error('Blocked');}});
+    window.fetch=async()=>({ok:true,json:async()=>({active:false})});
+    window.eval(fs.readFileSync('js/doughnut-menu.js','utf8'));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(window.document.querySelector('a').hidden,true);
+    if(!blocked)assert.equal(window.localStorage.getItem('nest-doughnut-window-v1'),null);
+    dom.window.close();
+  }
+});
+test('menu respects Los Angeles date boundaries and retains fresh dates through network failure',async()=>{
+  for(const [clock,visible] of [['2026-10-11T06:59:59Z',true],['2026-10-11T07:00:00Z',false]]) {
+    const dom=new JSDOM('<a id="doughnut-menu-link" hidden></a>',{runScripts:'outside-only',url:'https://gknest.org/'});
+    const {window}=dom;
+    const RealDate=window.Date;
+    window.Date=class extends RealDate {constructor(...args){super(...(args.length?args:[clock]));}static now(){return new RealDate(clock).getTime();}};
+    window.localStorage.setItem('nest-doughnut-window-v1',JSON.stringify({start:'2026-10-02',end:'2026-10-10',checkedAt:window.Date.now()}));
+    window.fetch=async()=>{throw new TypeError('Network unavailable');};
+    window.eval(fs.readFileSync('js/doughnut-menu.js','utf8'));
+    await new Promise(resolve=>setTimeout(resolve,0));
+    assert.equal(window.document.querySelector('a').hidden,!visible);
+    dom.window.close();
+  }
+});
+test('only successful public summaries are cached; private and failed checks are never shared',async()=>{
+  const oldFetch=globalThis.fetch,oldUrl=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+  process.env.SPINNER_BRIDGE_URL='https://script.google.com/macros/s/test/exec';process.env.SPINNER_BRIDGE_TOKEN='test-token';
+  const response=()=>({headers:{},setHeader(key,value){this.headers[key]=value;},status(code){this.code=code;return this;},json(value){this.value=value;return this;}});
+  try {
+    for(const active of [false,true])for(const comments of [undefined,'1']) {
+      globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({status:200,active,start:'2026-10-02',end:'2026-10-10',periods:periods.map(name=>({name,average:8})),announcementReady:false,commentsAuthorized:true,comments:[{period:'Period 7',text:'Private'}]})});
+      const res=response();
+      await barometerHandler({method:'GET',headers:{cookie:`__Host-nest-auth=${validSession}`},query:{comments}},res);
+      assert.equal(res.code,200);
+      assert.equal(res.headers['Vercel-CDN-Cache-Control'],comments?'no-store':'public, s-maxage=60, stale-while-revalidate=300');
+      if(!comments&&active){assert.equal(res.value.commentsAuthorized,false);assert.deepEqual(res.value.comments,[]);}
+    }
+    globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({status:500})});
+    const failed=response();await barometerHandler({method:'GET',headers:{},query:{}},failed);
+    assert.equal(failed.code,503);assert.equal(failed.headers['Vercel-CDN-Cache-Control'],'no-store');
+  } finally {
+    globalThis.fetch=oldFetch;
+    if(oldUrl===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldUrl;
+    if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;
+  }
 });

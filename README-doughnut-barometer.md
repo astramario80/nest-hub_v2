@@ -9,3 +9,9 @@ Deploy `google-spinner/Code.js` and `google-spinner/DoughnutBarometer.js` togeth
 The legacy end date is the last absence date plus three calendar days. Starting the next day, the main menu and barometer page show a winner dialog if at least one period has a positive average. Equal top averages share the win. A visitor must acknowledge the dialog to continue, and their acknowledgment is kept in local storage for that winner and window. A changed winner is announced again.
 
 Publication repair: the repository now includes the existing published Service Desk source and the Doughnut Barometer together. The shared service-request-work release and school-bridge-stage also include the barometer action and module to prevent later releases from dropping it. Preserve all of these features on future updates.
+
+## Menu load performance
+
+The public API caches validated summaries at Vercel for 60 seconds, with up to 300 seconds of background revalidation. Errors and every `comments=1` request remain uncached; comments still require a fresh session check.
+
+The menu remembers only the public start/end dates and verification time for five minutes. It can reveal a recently verified button immediately, then refresh in the background. Every reveal checks the inclusive window against the current America/Los_Angeles date, including after a cached response, so a cached window cannot extend the button beyond its final day. A completely cold CDN request still waits on Google Apps Script.
