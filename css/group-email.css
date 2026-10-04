@@ -5,3 +5,5 @@
 .leadership-page [data-email-selection]{display:none}.leadership-page[data-email-enabled=true] [data-email-selection]{display:block;grid-column:1 / -1;margin-top:10px;font-size:.85rem}
 
 @media(max-width:600px){.group-email-dialog{width:calc(100vw - 12px);padding:14px;height:96dvh;max-height:96dvh}.group-email-message{min-height:45dvh}}
+
+.group-email-connection{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:14px 0}.group-email-actions [data-email-send]{background:#e87722;color:#111827;font-weight:700}.group-email-actions [data-email-open]{background:#26344d;color:white;font-weight:400}

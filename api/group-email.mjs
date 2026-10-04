@@ -30,6 +30,6 @@ export default async function handler(req,res){
       const emails=new Set(current.map(s=>districtEmail(s.email))),division=roster.period==='CTSO'?'NEST Robotics':'Period '+roster.period;
       directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail(l.email))&&typeof l.position==='string').forEach(l=>leaders.push({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position}));
     });
-    return res.status(200).json({period,divisions:included,members:[...members.values()],leaders});
+    return res.status(200).json({period,divisions:included,members:[...members.values()],leaders,gmailClientId:process.env.EMAIL_GOOGLE_CLIENT_ID||process.env.SERVICE_GOOGLE_CLIENT_ID||''});
   }catch(error){console.error('Email group lookup failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Email groups could not load. Please try again.'});}
 }
