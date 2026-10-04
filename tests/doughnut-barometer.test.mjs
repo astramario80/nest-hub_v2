@@ -134,3 +134,12 @@ test('winner dialog handles a tie and skips a window with no ratings',()=>{
   assert.match(window.document.querySelector('dialog h2').textContent,/Period 7 & Period 1 tie/);
   dom.window.close();
 });
+
+test('barometer retries a transient Google connection failure without forwarding public comments access',async()=>{
+  const oldFetch=globalThis.fetch,oldUrl=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN;
+  process.env.SPINNER_BRIDGE_URL='https://script.google.com/macros/s/test/exec';process.env.SPINNER_BRIDGE_TOKEN='test-token';let calls=0;
+  globalThis.fetch=async(_url,options)=>{calls++;assert.equal(JSON.parse(options.body).session,undefined);if(calls===1)throw new TypeError('fetch failed');return {ok:true,status:200,json:async()=>({status:200,active:false})};};
+  const res={setHeader(){},status(code){this.code=code;return this;},json(value){this.value=value;return this;}};
+  try{await barometerHandler({method:'GET',headers:{},query:{comments:'1'}},res);assert.equal(calls,2);assert.equal(res.code,200);assert.deepEqual(res.value,{active:false});}
+  finally{globalThis.fetch=oldFetch;if(oldUrl===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldUrl;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
+});
