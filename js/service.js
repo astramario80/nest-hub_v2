@@ -1,6 +1,6 @@
 (() => {
  const $=id=>document.getElementById(id),node=(tag,text,className)=>{const n=document.createElement(tag);if(text!=null)n.textContent=String(text);if(className)n.className=className;return n;};
- let workspaceLoadedAt=0,clientLoadedAt=0;const workspaceTTL=120000;
+ let workspaceLoadedAt=0,clientLoadedAt=0,termRange=null;const workspaceTTL=120000;
  let view='client',activeTool='tickets',metricRows=[],flipped=false,tickets=[],managers=[],selected=null,dirty=false,busy=false,managerEpoch=0,clientEpoch=0,googleReady=null,clientSignedIn=false;
  const api=async(operation,body)=>{
   const response=await fetch('/api/service-requests'+(body?'':'?operation='+encodeURIComponent(operation)),body?{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation,...body})}:{credentials:'same-origin',cache:'no-store'});
@@ -9,7 +9,7 @@
  const date=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d.toLocaleString():String(value||'');};
  const allowDiscard=()=>!dirty||window.confirm('Discard your unsaved service request update?');
  function clearDetail(){selected=null;dirty=false;$('service-detail').hidden=true;$('service-note').value='';$('service-public-note').value='';$('service-legacy-history').textContent='';$('service-access-status').textContent='';['service-detail-title','service-detail-fields','service-public-history','service-internal-history','service-save-status'].forEach(id=>$(id).replaceChildren());$('service-manager').replaceChildren();$('service-email').disabled=true;}
- function clearManager(){workspaceLoadedAt=0;metricRows=[];metricOptions();managerEpoch++;tickets=[];managers=[];clearDetail();$('service-workspace').hidden=true;['service-ticket-list','service-metrics','service-reviews','service-metric-summary','service-metric-status','metric-calendar-status'].forEach(id=>$(id).replaceChildren());}
+ function clearManager(){workspaceLoadedAt=0;termRange=null;$('metric-start').value='';$('metric-end').value='';tickets=[];metricRows=[];metricOptions();managerEpoch++;managers=[];clearDetail();$('service-workspace').hidden=true;['service-ticket-list','service-metrics','service-reviews','service-metric-summary','service-metric-status','metric-calendar-status'].forEach(id=>$(id).replaceChildren());}
  function clearClient(){clientLoadedAt=0;clientEpoch++;clientSignedIn=false;$('client-requests').replaceChildren();$('client-logout').hidden=true;$('client-status').textContent='';}
  function history(container,updates){container.replaceChildren();if(!updates.length){container.append(node('p','No client updates yet.'));return;}updates.slice().reverse().forEach(e=>{const item=node('div',null,'service-update');item.append(node('strong',date(e.time)+' · '+e.status),node('p',e.note));container.append(item);});}
  async function initGoogle(){
@@ -43,8 +43,9 @@
   }
  }
  function renderList(){
-  const filter=$('service-filter').value,search=$('service-search').value.trim().toLowerCase();$('service-ticket-list').replaceChildren();
-  const visible=tickets.filter(r=>(filter==='all'||(filter==='closed'?r.status==='Closed':r.status!=='Closed'))&&[r.id,r.name,r.room,r.description,r.manager].join(' ').toLowerCase().includes(search));
+  const period=$('service-period').value,range=periodRange(period),filter=$('service-filter').value,search=$('service-search').value.trim().toLowerCase();$('service-ticket-list').replaceChildren();
+  const visible=tickets.filter(r=>periodMatch(r,period)&&(filter==='all'||(filter==='closed'?r.status==='Closed':r.status!=='Closed'))&&[r.id,r.name,r.room,r.description,r.manager].join(' ').toLowerCase().includes(search));
+  $('service-period-status').textContent=period==='current'&&!range?'Current trimester dates are unavailable. Select All time.':$('service-period').selectedOptions[0].textContent+' · '+visible.length+' matching requests.'+(period!=='all'&&tickets.some(r=>!requestDay(r))?' Requests with missing dates are included only in All time.':'');
   if(!visible.length)$('service-ticket-list').append(node('p','No matching requests.'));
   visible.forEach(r=>{const button=node('button',null,'service-ticket');button.type='button';button.setAttribute('aria-current',String(r.id===selected?.id));button.append(node('strong',r.name||r.email||'Request '+r.id.slice(0,8)),node('span',r.status+' · Room '+(r.room||'—')),node('span',(r.description||'Service request').slice(0,110)));button.addEventListener('click',()=>{if(busy||!allowDiscard())return;openTicket(r);});$('service-ticket-list').append(button);});
  }
@@ -59,14 +60,14 @@
   (r.internalUpdates||[]).slice().reverse().forEach(e=>{const item=node('div',null,'service-update');item.append(node('strong',date(e.time)+' · '+e.actor),node('p',e.status+' · '+(e.manager||'Unassigned')),node('p',e.note||''));$('service-internal-history').append(item);});
   $('service-legacy-history').textContent=r.legacyLog||'No earlier log entries.';
   applyAccess();$('service-access-status').textContent=r.canEdit===false?'View only. Updates are limited to the assigned project manager and their division leadership.':r.canAssign===false?'You can update this ticket and email saved client updates. Division leadership manages assignments.':'You can update this ticket, manage its assignment, and email saved client updates.';
-  if(['sent','sending','unknown'].includes(r.emailState))$('service-save-status').textContent=({sent:'The latest client update has been emailed.',sending:'An email attempt is in progress. Check sent mail before retrying.',unknown:'Email delivery is uncertain. Check sent mail before retrying.'})[r.emailState];
+  emailStatus();
   renderList();
  }
  async function loadManager(keepId){
   const epoch=++managerEpoch;$('manager-status').textContent='Checking your current leadership role…';
   try{
    const data=await api('manage');if(epoch!==managerEpoch)return;if(dirty){$('manager-status').textContent='Fresh data is available. Save or discard your draft, then refresh.';return;}
-   workspaceLoadedAt=Date.now();tickets=data.requests;managers=data.managers;document.querySelector('[data-tool=reviews]').hidden=data.canReview===false;if(data.canReview===false&&activeTool==='reviews')activeTool='tickets';$('service-status').replaceChildren(...data.statuses.map(s=>{const option=node('option',s);option.value=s;return option;}));
+   workspaceLoadedAt=Date.now();tickets=data.requests;managers=data.managers;setTerm(data.trimester);periodOptions();document.querySelector('[data-tool=reviews]').hidden=data.canReview===false;if(data.canReview===false&&activeTool==='reviews')activeTool='tickets';$('service-status').replaceChildren(...data.statuses.map(s=>{const option=node('option',s);option.value=s;return option;}));
    $('service-workspace').hidden=false;$('manager-login').hidden=true;$('manager-status').textContent=tickets.length+' requests available. '+tickets.filter(r=>r.canEdit===true).length+' available for you to manage.';
    clearDetail();renderList();
    if(view==='manage'){flip(true);$('service-gear-status').textContent='';}
@@ -82,7 +83,7 @@
   const epoch=managerEpoch,container=$('service-'+name);container.replaceChildren(node('p','Loading…'));
   try{const data=await api(name);if(epoch!==managerEpoch)return;
    if(name==='reviews')table(container,data.columns,data.rows);
-   else {metricRows=data.metrics;if(data.trimester?.start&&data.trimester?.end){$('metric-start').value=data.trimester.start;$('metric-end').value=data.trimester.end;$('metric-calendar-status').textContent='Trimester '+data.trimester.number+' · '+data.trimester.start+' through '+data.trimester.end+' · School Google calendars';}else{$('metric-start').value='';$('metric-end').value='';$('metric-calendar-status').textContent=data.trimester?.error||'Calendar dates are unavailable. Select All time.';}metricOptions();renderMetrics();}
+   else {metricRows=data.metrics;setTerm(data.trimester);metricOptions();renderMetrics();}
   }catch(error){if(epoch===managerEpoch){container.replaceChildren(node('p',error.message));if([401,403].includes(error.status))clearManager();}}
  }
  function flip(back){
@@ -102,8 +103,23 @@
   view=name;flip(false);document.querySelectorAll('[data-view]:not(#service-gear)').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.view===name)));
   ['submit','client'].forEach(n=>$('view-'+n).hidden=n!==name);if(name==='client')await loadClient();
  }
+ function requestDay(r){return Number.isFinite(Date.parse(r.created))?new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(r.created)):'';}
+ function setTerm(value){
+  if(value?.start&&value?.end){termRange=value;$('metric-start').value=value.start;$('metric-end').value=value.end;$('metric-calendar-status').textContent='Trimester '+value.number+' · '+value.start+' through '+value.end+' · School Google calendars';}
+  else if(!termRange){$('metric-calendar-status').textContent=value?.error||'Calendar dates are unavailable. Select All time.';}
+ }
+ function periodRange(value){
+  if(value==='current')return termRange||($('metric-start').value&&$('metric-end').value?{start:$('metric-start').value,end:$('metric-end').value}:null);
+  if(/^year:\d{4}$/.test(value)){const year=Number(value.slice(5));return {start:year+'-07-01',end:(year+1)+'-06-30'};}return null;
+ }
+ function periodMatch(r,value){if(value==='all')return true;const range=periodRange(value),day=requestDay(r);return Boolean(range&&day&&day>=range.start&&day<=range.end);}
+ function periodOptions(){
+  const today=requestDay({created:new Date().toISOString()}),current=Number(today.slice(0,4))-(Number(today.slice(5,7))<7?1:0),years=new Set([current,current-1]);
+  tickets.forEach(r=>{const day=requestDay(r);if(day){const year=Number(day.slice(0,4))-(Number(day.slice(5,7))<7?1:0);if(year>=1900&&year<=current)years.add(year);}});
+  ['service-period','metric-period'].forEach(id=>{const el=$(id),previous=el.value;el.replaceChildren();[['current','Current trimester'],...[...years].sort((a,b)=>b-a).map(y=>['year:'+y,'School year '+y+'–'+(y+1)]),['all','All time']].forEach(([value,label])=>{const opt=node('option',label);opt.value=value;el.append(opt);});el.value=[...el.options].some(o=>o.value===previous)?previous:(id==='service-period'?'all':'current');});
+ }
  function metricOptions(){
-  const fill=(id,values,label)=>{const el=$(id),current=el.value;el.replaceChildren();const first=node('option',label);first.value='';el.append(first);[...new Set(values)].sort().forEach(value=>{const opt=node('option',value);opt.value=value;el.append(opt);});el.value=[...el.options].some(o=>o.value===current)?current:'';};
+  periodOptions();  const fill=(id,values,label)=>{const el=$(id),current=el.value;el.replaceChildren();const first=node('option',label);first.value='';el.append(first);[...new Set(values)].sort().forEach(value=>{const opt=node('option',value);opt.value=value;el.append(opt);});el.value=[...el.options].some(o=>o.value===current)?current:'';};
   fill('metric-division',metricRows.map(r=>r.division||'Unassigned'),'All divisions');
   const role=$('metric-role').value,division=$('metric-division').value;
   $('metric-person-label').hidden=!role;
@@ -111,15 +127,15 @@
   fill('metric-person',role?candidates.map(r=>r[role]||'Unassigned'):[],'Everyone');
  }
  function renderMetrics(){
-  const all=$('metric-period').value==='all',start=$('metric-start').value,end=$('metric-end').value;
+  const period=$('metric-period').value,all=period==='all',range=periodRange(period),start=range?.start,end=range?.end;
   $('metric-start').disabled=all;$('metric-end').disabled=all;
-  if(!all&&(!start||!end||start>end)){$('service-metrics').replaceChildren(node('p','Choose the trimester start and end dates to view these requests.'));$('service-metric-summary').replaceChildren();$('service-metric-status').textContent='Trimester dates need to be set.';return;}
+  if(!all&&(!start||!end||start>end)){$('service-metrics').replaceChildren(node('p','Current trimester dates are unavailable. Select All time or a school year.'));$('service-metric-summary').replaceChildren();$('service-metric-status').textContent='Trimester dates need to be set.';return;}
   const labels=new Map(metricRows.map(r=>[r.manager,r])),groups=new Map(),clients=new Set();let excluded=0;
   for(const r of tickets){
    const meta=labels.get(r.manager||'Unassigned')||{manager:r.manager||'Unassigned',division:'Unassigned'};
    if($('metric-division').value&&meta.division!==$('metric-division').value)continue;
    const role=$('metric-role').value,person=$('metric-person').value;if(role&&person&&person!==(meta[role]||'Unassigned'))continue;
-   const day=Number.isFinite(Date.parse(r.created))?new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(r.created)):'';
+   const day=requestDay(r);
    if(!all&&!day){excluded++;continue;}if(!all&&(day<start||day>end))continue;
    const key=meta.manager;if(!groups.has(key))groups.set(key,{...meta,total:0,open:0,closed:0,days:[],clients:new Set()});const g=groups.get(key);g.total++;
    if(r.status==='Closed')g.closed++;else{g.open++;if(day)g.days.push(Math.max(0,Math.floor((Date.now()-Date.parse(r.created))/86400000)));}
@@ -139,13 +155,16 @@
  $('manager-refresh').addEventListener('click',()=>{if(!busy&&allowDiscard())loadManager(selected?.id);});
  $('client-refresh').addEventListener('click',loadClient);
  $('client-logout').addEventListener('click',async()=>{clearClient();$('client-status').textContent='Signing out…';try{await api('client-logout',{});googleReady=null;window.google?.accounts?.id.disableAutoSelect();await loadClient();}catch(e){$('client-status').textContent=e.message;}});
+ function emailStatus(){const state=selected?.emailStates?.[$('service-email-mode').value]||selected?.emailState;$('service-save-status').textContent=({sent:'This log option has already been emailed for the latest client entry.',sending:'An email attempt is in progress. Check sent mail before retrying.',unknown:'Email delivery is uncertain. Check sent mail before retrying.'})[state]||'';}
+ $('service-email-mode').addEventListener('change',()=>{applyAccess();if(!busy&&!dirty)emailStatus();});
+ $('service-period').addEventListener('change',renderList);
  ['service-filter','service-search'].forEach(id=>$(id).addEventListener('input',renderList));
- $('service-edit').addEventListener('input',()=>{dirty=true;$('service-email').disabled=true;});
+ $('service-edit').addEventListener('input',event=>{if(event.target.id==='service-email-mode')return;dirty=true;$('service-email').disabled=true;});
  function acceptSaved(data,id){
   const row=data.request;if(!row||row.id!==id||!/^[a-f0-9]{64}$/.test(row.version||''))return false;
   tickets=tickets.map(r=>r.id===id?row:r);workspaceLoadedAt=Date.now();clientLoadedAt=0;dirty=false;openTicket(row);return true;
  }
- function applyAccess(){const locked=busy||!selected||selected.canEdit===false;$('service-save').disabled=locked;['service-status','service-note','service-public-note'].forEach(id=>$(id).disabled=locked);$('service-manager').disabled=locked||selected?.canAssign===false;$('service-email').disabled=locked||dirty||selected?.emailState!=='unsent'||!selected?.updates?.length;}
+ function applyAccess(){const locked=busy||!selected||selected.canEdit===false;$('service-save').disabled=locked;['service-status','service-note','service-public-note'].forEach(id=>$(id).disabled=locked);$('service-manager').disabled=locked||selected?.canAssign===false;$('service-email').disabled=locked||dirty||(selected?.emailStates?.[$('service-email-mode').value]||selected?.emailState)!=='unsent'||!selected?.updates?.length;}
  const setBusy=value=>{busy=value;applyAccess();};
  $('service-edit').addEventListener('submit',async event=>{
   event.preventDefault();if(!selected||busy||selected.canEdit===false)return;const r=selected,epoch=managerEpoch;setBusy(true);$('service-save-status').textContent='Saving update…';
@@ -155,10 +174,11 @@
  });
  $('service-email').addEventListener('click',async()=>{
   if(!selected||busy||dirty||selected.canEdit===false)return;const r=selected,latest=r.updates.at(-1);if(!latest)return;
-  if(!window.confirm('Email the saved client update to '+r.email+'?'))return;
+  const logMode=$('service-email-mode').value;
+  if(!window.confirm('Email '+(logMode==='entire'?'the entire client-facing log':'the most recent client-facing entry')+' to '+r.email+'?'))return;
   const epoch=managerEpoch;setBusy(true);$('service-save-status').textContent='Sending the saved client update…';
-  try{const result=await api('email',{id:r.id,version:r.version,eventId:latest.eventId});if(epoch!==managerEpoch)return;if(!acceptSaved(result,r.id))await loadManager(r.id);$('service-save-status').textContent='Client update emailed.';}
-  catch(error){if(epoch===managerEpoch){$('service-save-status').textContent=error.message;if([502,503].includes(error.status)&&selected)selected.emailState='unknown';$('service-email').disabled=true;if([401,403].includes(error.status))clearManager();}}
+  try{const result=await api('email',{id:r.id,version:r.version,eventId:latest.eventId,logMode});if(epoch!==managerEpoch)return;if(!acceptSaved(result,r.id))await loadManager(r.id);$('service-save-status').textContent='Client log emailed.';}
+  catch(error){if(epoch===managerEpoch){$('service-save-status').textContent=error.message;if([502,503].includes(error.status)&&selected){selected.emailStates={latest:selected.emailState,entire:selected.emailState,...selected.emailStates,[logMode]:'unknown'};selected.emailState=selected.emailStates.latest;}$('service-email').disabled=true;if([401,403].includes(error.status))clearManager();}}
   finally{setBusy(false);}
  });
  document.addEventListener('nest-auth-change',()=>{clearManager();if(view==='manage'&&window.NestAuth?.identity?.signedIn)loadManager();else flip(false);});
