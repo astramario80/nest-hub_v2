@@ -7,11 +7,11 @@ import {renderDivisionPage} from '../api/division-page.mjs';
 const tick=()=>new Promise(r=>setTimeout(r,20));
 const records={period:'2',members:[{name:'Sample Leader',email:'leader@students.bethelsd.org'},{name:'Sample Member',email:'member@students.bethelsd.org'}],leaders:[{name:'Sample Leader',email:'leader@students.bethelsd.org',position:'Safety Officer'}]};
 const response=()=>({code:200,setHeader(){},status(c){this.code=c;return this;},json(data){this.data=data;return this;}});
-async function server(access){
+async function server(access,period="2"){
  const oldFetch=globalThis.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN,calls=[];
  process.env.SPINNER_BRIDGE_URL='https://bridge.example.test';process.env.SPINNER_BRIDGE_TOKEN='test';
- globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);const result=body.action==='auth-division-slides'?access:body.action==='auth-leadership-directory'?{status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]}:{status:200,period:'2',students:[...records.members,{name:'Archived',email:'archived@students.bethelsd.org',active:false}],scores:{private:'excluded'}};return new Response(JSON.stringify(result));};
- try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period:'2'}},res);return {res,calls};}
+ globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);const result=body.action==='auth-division-slides'?(typeof access==='function'?access(body.period):access):body.action==='auth-leadership-directory'?{status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]}:{status:200,period:body.period,students:[...records.members,{name:'Archived',email:'archived@students.bethelsd.org',active:false}],scores:{private:'excluded'}};return new Response(JSON.stringify(result));};
+ try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period}},res);return {res,calls};}
  finally{globalThis.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 }
 test('email groups require login and reject invalid divisions and write requests',async()=>{
@@ -48,4 +48,16 @@ test('revoked access prevents copying and opening recipients, and clears the dra
  const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('[data-email-subject]').value='Meeting';q('.group-email-message').textContent='Hello';
  w.fetch=async()=>({ok:false,json:async()=>({error:'Leadership access ended.'})});q('[data-email-open]').click();await tick();assert.equal(app.copied,null);assert.equal(app.opened,null);
  w.NestDivisionHQ.allowed=false;w.document.dispatchEvent(new w.Event('nest-hq-access-revoked'));assert.equal(q('.group-email-message').textContent,'');assert.equal(q('.group-email-dialog').open,false);assert.equal(q('.group-email-launch').hidden,true);w.close();
+});
+
+test('All divisions aggregates authorized rosters, deduplicates recipients and excludes nonleadership divisions',async()=>{
+ const owner=await server({status:200,isOwner:true},'all');assert.equal(owner.res.code,200);assert.deepEqual(owner.res.data.divisions,['1','2','3','4','5','7','CTSO']);assert.equal(owner.res.data.members.length,2);assert.equal(owner.calls.filter(a=>a==='tracker').length,7);
+ const leader=await server(p=>p==='2'?{status:200,roles:['Safety Officer']}:{status:200,roles:[]},'all');assert.equal(leader.res.code,200);assert.deepEqual(leader.res.data.divisions,['2']);assert.equal(leader.calls.filter(a=>a==='tracker').length,1);assert.equal(leader.res.data.leaders.length,1);
+ const denied=await server({status:200,roles:[]},'all');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('tracker'),false);
+});
+test('All divisions is selectable and retains the written draft when changing scope',async()=>{
+ const {w}=ui();await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('.group-email-message').textContent='Keep this message';
+ assert.equal(q('[data-email-division] option[value=all]').textContent,'All divisions');
+ let requested;w.fetch=async url=>{requested=url;return {ok:true,json:async()=>({...records,period:'all',divisions:['2','3']})};};
+ q('[data-email-division]').value='all';q('[data-email-division]').dispatchEvent(new w.Event('change'));await tick();assert.match(requested,/period=all/);assert.equal(q('.group-email-message').textContent,'Keep this message');assert.match(q('[data-email-status]').textContent,/Division 2, Division 3/);w.close();
 });
