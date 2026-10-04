@@ -11,7 +11,7 @@ export default async function handler(req,res) {
     const rawSession=cookies(req)[COOKIE];
     const session=requested&&validToken(rawSession)?rawSession:'';
     const data=await bridge(session?{action:'doughnut-barometer',session}:{action:'doughnut-barometer'},45000);
-    if(data.status!==200||typeof data.active!=='boolean')throw new Error('Invalid barometer response');
+    if(data.status!==200||typeof data.active!=='boolean'){console.error('Barometer bridge response rejected',{status:data.status,activeType:typeof data.active});throw new Error('Invalid barometer response');}
     if(!data.active)return res.status(200).json({active:false});
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data.start)||!/^\d{4}-\d{2}-\d{2}$/.test(data.end)||
       !Array.isArray(data.periods)||data.periods.length!==names.length||
@@ -25,7 +25,7 @@ export default async function handler(req,res) {
     }
     return res.status(200).json({active:true,start:data.start,end:data.end,periods:data.periods,commentsAuthorized,comments,announcementReady:data.announcementReady});
   } catch(error) {
-    console.error('Doughnut Barometer request failed',{kind:error?.name||'Error'});
+    console.error('Doughnut Barometer request failed',{kind:error?.name||'Error',reason:error?.message});
     return res.status(503).json({error:'The Doughnut Barometer is temporarily unavailable.'});
   }
 }
