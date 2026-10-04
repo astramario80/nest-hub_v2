@@ -12,11 +12,22 @@
 .soar-embedded .soar-content-area{padding:20px;min-height:calc(100dvh - 36px);max-height:none}
 @media(max-width:600px){.soar-toolbar{padding:0 16px}.soar-embedded main.soar-split-layout{padding:10px!important;gap:12px!important}.soar-embedded .soar-content-area{padding:12px}.soar-embedded .soar-sidebar{width:46px}.soar-embedded .soar-letter{font-size:1.5rem;padding:8px;width:46px;height:46px}}
 
-/* Ease the letter highlight alongside the section fade. */
-.soar-letter {
-  transition: background-color 350ms ease, color 350ms ease, border-color 350ms ease,
-              transform 350ms ease, translate 350ms ease, box-shadow 350ms ease, filter 350ms ease;
+/* Keep SOAR letter feedback subtle, including the shared button hover rules. */
+.soar-letter:not(:disabled) {
+  transition: background-color 650ms ease, color 650ms ease, border-color 650ms ease,
+              transform 650ms ease, translate 650ms ease, box-shadow 650ms ease, filter 650ms ease;
+}
+.soar-letter:not(:disabled):hover,
+.soar-letter:not(:disabled):active,
+.soar-letter.active {
+  transform: translateX(2px);
+  translate: none;
+  filter: none;
+  box-shadow: 0 8px 24px rgba(232, 119, 34, 0.18);
 }
 @media (prefers-reduced-motion: reduce) {
-  .soar-letter { transition: none; }
+  .soar-letter:not(:disabled) { transition: none; }
+  .soar-letter:not(:disabled):hover,
+  .soar-letter:not(:disabled):active,
+  .soar-letter.active { transform: none; }
 }
