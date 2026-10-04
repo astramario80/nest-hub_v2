@@ -1,8 +1,9 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { signalsClasses } from '../lib/signals-classes.mjs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
   res.setHeader('Vary', 'Cookie');
@@ -20,3 +21,5 @@ export default async function handler(req, res) {
   const source = await readFile(join(process.cwd(), 'lib/signals-player', asset === 'app' ? 'app.txt' : 'index.txt'), 'utf8');
   return res.status(200).send(source);
 }
+
+export default withDiagnostics('signals',handler);

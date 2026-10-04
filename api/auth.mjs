@@ -1,3 +1,4 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { COOKIE, CHALLENGE, TICKET, IDENTITY, IDENTITY_TTL, durations, token, validToken, registrationEmail, username, cookies, setCookie, signedIdentity, readIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
@@ -24,7 +25,7 @@ async function retryableAuthBridge(payload, deadline = Date.now() + 55000) {
   throw lastError || new Error('School service deadline exceeded');
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -124,3 +125,5 @@ export default async function handler(req, res) {
     return fail(res, 503);
   }
 }
+
+export default withDiagnostics('auth',handler);

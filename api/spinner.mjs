@@ -1,10 +1,11 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
 const periods = new Set(['1','2','3','4','5','7','CTSO']);
 const actions = new Set(['roster','tracker','tracker-update','export']);
 const errors = {400:'Please check your entry.',401:'Sign in to NEST to continue.',403:'You do not have access to this period or action.',409:'The tracker changed. Refresh it before saving again.',429:'Too many requests. Please try again later.',503:'NEST access is temporarily unavailable.'};
 
-export default async function handler(req,res) {
+async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -35,3 +36,5 @@ export default async function handler(req,res) {
     return res.status(200).json(data);
   } catch(error) {console.error('NEST tool request failed',{action,kind:error?.name||'Error'});return fail(503);}
 }
+
+export default withDiagnostics('tracker',handler);

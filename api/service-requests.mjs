@@ -1,10 +1,11 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE,cookies,validToken,token,bridge,originAllowed,setCookie } from '../lib/nest-auth.mjs';
 import { CLIENT_COOKIE,NONCE_COOKIE,newChallenge,readChallenge,verifyStaff } from '../lib/service-google.mjs';
 const statuses=['New!','Assigned','In Progress','Completed','Closed'];
 const id=value=>typeof value==='string'&&/^[a-f0-9-]{36}$/.test(value);
 const digest=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const clientRow=r=>({id:r.id,status:r.status,created:typeof r.created==='string'&&/^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(r.created)&&Number.isFinite(Date.parse(r.created))?r.created:'',description:r.description,category:r.category,room:r.room,manager:r.manager,updates:(r.updates||[]).map(e=>({time:e.time,status:e.status,note:e.note}))});
-export default async function handler(req,res){
+async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');
  if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'});}
  const jar=cookies(req),operation=req.method==='GET'?String(req.query?.operation||'client-view'):req.body?.operation;
@@ -72,3 +73,5 @@ export default async function handler(req,res){
   return res.status(200).json({eventId:data.eventId,emailState:data.emailState,testSent:data.testSent,request:data.request});
  }catch(error){console.error('Service request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Service requests are temporarily unavailable. Refresh to check whether your change saved.'});}
 }
+
+export default withDiagnostics('service',handler);

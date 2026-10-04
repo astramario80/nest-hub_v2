@@ -1,7 +1,8 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, originAllowed, verifiedIdentity } from '../lib/nest-auth.mjs';
 const periods=new Set(['1','2','3','4','5','7','CTSO','mine']);
 const ratings=value=>Array.isArray(value)&&value.length===4&&value.every(x=>x===null||(Number.isInteger(x)&&x>=1&&x<=4));
-export default async function handler(req,res) {
+async function handler(req,res) {
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');
   res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');
@@ -40,3 +41,5 @@ export default async function handler(req,res) {
     return res.status(200).json({identity:verifiedIdentity(data.identity),division:data.division,canManage:data.canManage===true,columns:data.columns,applications:data.applications,reviews:data.reviews,team:data.team,positions:data.positions,candidates:data.canManage===true?data.candidates:[],page,hasMore:data.hasMore===true});
   }catch(error){console.error('Hiring view request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Applications are temporarily unavailable.'});}
 }
+
+export default withDiagnostics('hiring',handler);

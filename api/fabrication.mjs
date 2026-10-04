@@ -1,8 +1,9 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, originAllowed } from '../lib/nest-auth.mjs';
 const statuses=['Queued','In progress','On hold','Errored','Ready for pickup','Done','Cancelled'];
 const digest=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const publicRow=row=>({id:row.id,status:row.status,machine:row.machine,updates:row.updates.map(({time,status,note,eventId})=>({time,status,note,eventId}))});
-export default async function handler(req,res){
+async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');
  if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'});}
  let payload;const session=cookies(req)[COOKIE];
@@ -31,3 +32,5 @@ export default async function handler(req,res){
   return res.status(200).json({requests,statuses,page:payload.page,total:data.total,hasMore:data.hasMore===true});
  }catch(error){console.error('Fabrication request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Fabrication requests are temporarily unavailable. Refresh to check whether your update saved.'});}
 }
+
+export default withDiagnostics('fabrication',handler);

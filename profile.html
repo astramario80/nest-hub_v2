@@ -5,6 +5,7 @@
   <title>Your NEST™ Profile</title>
   <link rel="icon" href="/assets/nest_menu_icon.png" type="image/png">
   <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/internal-workspaces.css">
+  <link rel="stylesheet" href="/css/diagnostics.css">
 </head>
 <body>
   <div class="bg-watermark"></div>
@@ -27,6 +28,7 @@
       <nav id="profile-tabs" class="profile-tabs" role="tablist" aria-label="Profile sections">
         <button type="button" id="profile-details-tab" role="tab" aria-controls="profile-details-panel" aria-selected="true">My profile</button>
         <button type="button" id="profile-admin-tab" role="tab" aria-controls="profile-admin-panel" aria-selected="false" hidden>Student accounts</button>
+      <button type="button" id="profile-diagnostics-tab" role="tab" aria-controls="profile-diagnostics-panel" aria-selected="false" hidden>Access diagnostics</button>
       </nav>
       <section class="internal-card" id="profile-details-panel" role="tabpanel" aria-labelledby="profile-details-tab">
         <h2>Change username or password</h2><p id="profile-identity"></p>
@@ -56,6 +58,7 @@
           <section class="account-management-section"><h3>Created accounts</h3><p>Passwords are never displayed again. Editing a username, setting a new password, or removing access signs that account out everywhere.</p><div id="admin-accounts-list" class="account-list" aria-live="polite">Loading accounts…</div></section>
         </div>
       </section>
+      <section class="internal-card" id="profile-diagnostics-panel" role="tabpanel" aria-labelledby="profile-diagnostics-tab" hidden><h2>Access diagnostics</h2><p id="diagnostics-status" role="status">Checking your administrator access…</p><div id="diagnostics-workspace" hidden><div class="diagnostics-controls"><label>Time period<select id="diagnostics-period"><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="all">All retained records</option></select></label><label>Area<select id="diagnostics-area"><option value="">All areas</option><option value="auth">Sign-in</option><option value="service">Service requests</option><option value="hiring">Hiring</option><option value="tracker">Tracker</option><option value="signals">Signals</option><option value="division">Division</option><option value="leadership">Leadership</option><option value="fabrication">Fabrication</option><option value="lunch">Lunch</option><option value="profile">Profile</option></select></label><label>Show<select id="diagnostics-outcome"><option value="all">All attempts</option><option value="errors">Errors</option><option value="slow">Slow: 5 seconds or more</option></select></label><label>Account or request ID<input id="diagnostics-search" type="search" placeholder="Search records"></label><button id="diagnostics-refresh">Refresh records</button><button id="diagnostics-copy">Copy filtered report</button></div><div id="diagnostics-summary" class="diagnostics-summary"></div><p>Tracking starts with this release. The latest 5,000 records are retained. Browser wait measures time to response; server wait measures request processing. Attempts with both measurements appear once, with both times. Attempted usernames on failed sign-ins are unverified.</p><p>No passwords, verification codes, tokens, ticket text, or client contacts are included.</p><p id="diagnostics-count"></p><div class="diagnostics-table"><table><thead><tr><th>Time</th><th>Account</th><th>Area / action</th><th>Result</th><th>Browser / server wait</th><th>Share</th></tr></thead><tbody id="diagnostics-rows"></tbody></table></div><label>Copyable report<textarea id="diagnostics-report" rows="8" readonly placeholder="Choose Copy error or Copy filtered report. If automatic copying is unavailable, select this text and copy it."></textarea></label></div></section>
     </div>
     <section class="internal-card" id="profile-signed-out" hidden>
       <h2>Recover a username or password</h2><p>Enter the district recovery address on your NEST account. The message includes linked usernames and a code to reset one account’s password.</p>
@@ -78,6 +81,6 @@
       <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div></div></div>
   </div></footer>
-  <script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js"></script>
+  <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js"></script><script src="/js/diagnostics.js"></script>
 </body>
 </html>

@@ -19,6 +19,7 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(['diagnostics-record','auth-diagnostics-read'].includes(r.action))return json_(diagnosticDispatch_(r));
   if(r.action==='doughnut-barometer') {
     try{return json_(doughnutBarometer_(r.session));}catch(_){return json_({status:503});}
   }
