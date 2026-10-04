@@ -765,10 +765,22 @@ const defaultSOARText = `
     </div>
 `;
 
+let soarTextAnimation;
+let soarHoverTimer;
 window.showSOAR = function(key) {
+    clearTimeout(soarHoverTimer);
     const display = document.getElementById('soar-text-display');
-    if(display && soarData[key]) {
+    if(display && soarData[key] && display.dataset.soarKey !== key) {
+        const hasPreviousSection = Boolean(display.dataset.soarKey);
+        soarTextAnimation?.cancel();
         display.innerHTML = soarData[key];
+        display.dataset.soarKey = key;
+        if (hasPreviousSection && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            soarTextAnimation = display.animate(
+                [{ opacity: 0 }, { opacity: 1 }],
+                { duration: 350, easing: 'ease-out' }
+            );
+        }
         
         // Update active state on letters
         document.querySelectorAll('.soar-letter').forEach(el => {el.classList.remove('active');el.setAttribute('aria-pressed','false');});
@@ -780,7 +792,11 @@ window.showSOAR = function(key) {
 if (document.getElementById('soar-text-display')) {
     document.querySelectorAll('.soar-letter').forEach(button => {
         const select=()=>window.showSOAR(button.id.slice(-1));
-        button.addEventListener('mouseover',select);
+        button.addEventListener('mouseenter', () => {
+            clearTimeout(soarHoverTimer);
+            soarHoverTimer = setTimeout(select, 180);
+        });
+        button.addEventListener('mouseleave', () => clearTimeout(soarHoverTimer));
         button.addEventListener('click',select);
         button.addEventListener('focus',select);
     });
