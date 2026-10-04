@@ -766,9 +766,7 @@ const defaultSOARText = `
 `;
 
 let soarTextAnimation;
-let soarHoverTimer;
 window.showSOAR = function(key) {
-    clearTimeout(soarHoverTimer);
     const display = document.getElementById('soar-text-display');
     if(display && soarData[key] && display.dataset.soarKey !== key) {
         const hasPreviousSection = Boolean(display.dataset.soarKey);
@@ -777,8 +775,8 @@ window.showSOAR = function(key) {
         display.dataset.soarKey = key;
         if (hasPreviousSection && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             soarTextAnimation = display.animate(
-                [{ opacity: 0 }, { opacity: 1 }],
-                { duration: 350, easing: 'ease-out' }
+                [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)' }],
+                { duration: 450, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }
             );
         }
         
@@ -792,11 +790,7 @@ window.showSOAR = function(key) {
 if (document.getElementById('soar-text-display')) {
     document.querySelectorAll('.soar-letter').forEach(button => {
         const select=()=>window.showSOAR(button.id.slice(-1));
-        button.addEventListener('mouseenter', () => {
-            clearTimeout(soarHoverTimer);
-            soarHoverTimer = setTimeout(select, 180);
-        });
-        button.addEventListener('mouseleave', () => clearTimeout(soarHoverTimer));
+        button.addEventListener('mouseenter',select);
         button.addEventListener('click',select);
         button.addEventListener('focus',select);
     });
