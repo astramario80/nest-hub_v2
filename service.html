@@ -1,0 +1,73 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NEST™ Service Requests</title><link rel="icon" href="/assets/nest_menu_icon.png"><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/internal-workspaces.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/service.css"></head><body><div class="bg-watermark"></div><header>
+    <div class="logo-container"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo" /></a></div>
+    <div class="header-right">
+      <div id="today-date" class="date-display">Today is...</div>
+      <div class="header-dropdown"><button class="dropdown-btn" type="button" aria-haspopup="true">Quick Access ▾</button><div class="dropdown-content">
+        <a href="https://portal.bethelsd.org" target="_blank" rel="noopener noreferrer">StudentVue</a>
+        <a href="https://app.smartpass.app/main/passes" target="_blank" rel="noopener noreferrer">SmartPass</a>
+        <a href="/hiring">🚀 Join Us</a>
+        <a href="/weather">🌤️ Weather Report</a>
+      </div></div>
+      <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false"><img src="/assets/qr-code.png" alt="QR Code" /></button>
+    </div>
+  </header>
+<main class="internal-page service-page">
+  <p class="service-eyebrow">NEST™ CLIENT RELATIONS</p><h1>Service requests</h1>
+  <p>Tell us what needs attention. Check your progress here, from the first request to the finished project.</p>
+  <div class="service-flip-heading"><div><p class="service-face-label" id="service-face-label">Your service desk</p></div><button id="service-gear" type="button" data-view="manage" aria-label="Open Client Relations" aria-expanded="false" title="Client Relations">⚙</button></div><p id="service-gear-status" role="status" aria-live="polite"></p><div id="service-flip-card" class="service-flip-card"><div id="service-front"><nav class="service-tabs" aria-label="Service request views">
+    <button type="button" data-view="submit" aria-pressed="false">Request service</button>
+    <button type="button" data-view="client" aria-pressed="true">My requests</button>
+  </nav>
+  <section id="view-submit" class="internal-card" hidden>
+    <h2>How can we help?</h2><p>Share the room, the issue, how soon you need help, and any useful photos or videos. Submit with your school Google account so your request appears under My requests.</p>
+    <iframe src="https://docs.google.com/forms/d/1yZAY6_oO-2BwdQdTPXrUkbKRh3LKC4O3AC8Hhb8XmLI/viewform?embedded=true" title="NEST service request form" loading="lazy"></iframe>
+    <p><a href="https://docs.google.com/forms/d/1yZAY6_oO-2BwdQdTPXrUkbKRh3LKC4O3AC8Hhb8XmLI/viewform" target="_blank" rel="noopener noreferrer">Open the request form in a new window</a></p>
+  </section>
+  <section id="view-client" class="internal-card">
+    <h2>My requests</h2><p>Use your @bethelsd.org school Google account to see your requests and updates from the NEST team.</p>
+    <div id="service-google-button"></div><p id="client-status" role="status" aria-live="polite"></p>
+    <div class="internal-actions"><button id="client-refresh" type="button">Refresh requests</button><button id="client-logout" type="button" hidden>Sign out of My requests</button></div>
+    <div id="client-requests" class="service-client-list"></div>
+  </section>
+  </div><section id="view-manage" hidden>
+    <div class="service-workspace-toolbar">
+      <nav class="service-tabs" aria-label="Client Relations tools"><button type="button" data-tool="metrics" aria-pressed="false">Service barometer</button><button type="button" data-tool="tickets" aria-pressed="true">Communications &amp; status</button><button type="button" data-tool="closed" aria-pressed="false">Closed tickets</button><button type="button" data-tool="reviews" aria-pressed="false">Client reviews</button><button id="manager-refresh" type="button">↻ Refresh</button><button id="manager-login" type="button" hidden>Sign in to NEST</button></nav>
+      <p id="manager-status" role="status" aria-live="polite"></p>
+    </div>
+    <div id="service-workspace" hidden>
+      <section id="tool-tickets" class="service-ticket-grid">
+        <div class="internal-card"><label for="service-filter">Show requests</label><select id="service-filter"><option value="open">Open requests</option><option value="closed">Closed requests</option><option value="all">All requests</option></select>
+          <label for="service-search">Search requests</label><input id="service-search" type="search" placeholder="Name, room, issue, or request ID"><div id="service-ticket-list"></div>
+        </div>
+        <section id="service-detail" class="internal-card" hidden>
+          <h2 id="service-detail-title"></h2><div id="service-detail-fields"></div>
+          <p id="service-access-status" role="status"></p><form id="service-edit"><label>Status<select id="service-status"></select></label><label>Project manager<select id="service-manager"></select></label>
+            <label>Internal log entry<textarea id="service-note" maxlength="2000" placeholder="Visible only in Client Relations"></textarea></label>
+            <label>Update for the client<textarea id="service-public-note" maxlength="2000" placeholder="Visible in My requests; can be emailed after saving"></textarea></label>
+            <div class="internal-actions"><button type="submit" id="service-save">Save update</button><button type="button" id="service-email" disabled>Email latest client update</button></div>
+            <p id="service-save-status" role="status" aria-live="polite"></p>
+          </form>
+          <h3>Client-facing updates</h3><div id="service-public-history"></div><details><summary>Internal history</summary><div id="service-internal-history"></div><pre id="service-legacy-history"></pre></details>
+        </section>
+      </section>
+      <section id="tool-metrics" class="internal-card" hidden><h2>Service barometer</h2><p>Filter requests by submission date and the current leadership assignments.</p>
+      <div class="service-metric-filters"><label>Time period<select id="metric-period"><option value="current">Current trimester</option><option value="all">All time</option></select></label><label>Division<select id="metric-division"><option value="">All divisions</option></select></label><label>Filter by<select id="metric-role"><option value="">Everyone</option><option value="manager">Project manager</option><option value="divisionManager">Division Manager</option><option value="clientRelationsDirector">Client Relations Director</option></select></label><label id="metric-person-label" hidden>Person<select id="metric-person"><option value="">Everyone</option></select></label></div>
+      <input id="metric-start" type="hidden"><input id="metric-end" type="hidden">
+      <p id="metric-calendar-status" role="status"></p><p id="service-metric-status" role="status" aria-live="polite"></p><div id="service-metric-summary" class="service-metric-summary"></div><div id="service-metrics" class="table-scroll"></div></section>
+      <section id="tool-reviews" class="internal-card" hidden><h2>Client reviews</h2><div id="service-reviews" class="table-scroll"></div></section>
+    </div>
+  </section></div>
+</main><footer class="site-footer"><div class="footer-content">
+    <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+    <div class="footer-links"><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">Help &amp; Support ▾</span><div class="footer-dropdown-content">
+      <a href="/computer-lookup">💻 Computer Look-up</a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank" rel="noopener noreferrer">🎫 Tech Ticket</a>
+      <a href="/weather">🌤️ Weather Report</a>
+    </div></div><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span><div class="footer-dropdown-content">
+      <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mpenalver@bethelsd.org" target="_blank" rel="noopener noreferrer">Email me</a>
+      <a href="tel:2538006221">253.800.6221</a>
+      <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+      <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </div></div></div>
+  </div></footer>
+<script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script src="/js/service.js"></script></body></html>

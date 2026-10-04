@@ -42,7 +42,7 @@ test('weather division list exposes only authorized periods',()=>{
  assert.deepEqual(Array.from(executive.periods),['1','2','3','4','5','Advisory','CTSO']);
  assert.equal(ctx.weatherForMember_('exec@students.bethelsd.org','2',0).status,200);
  assert.equal(ctx.weatherForMember_('former@students.bethelsd.org','2',0).status,403);
- assert.equal(ctx.weatherForMember_('astramario@gmail.com','2',0).status,403);
+ assert.equal(ctx.weatherForMember_('astramario@gmail.com','2',0).status,200);
  assert.equal(ctx.weatherForMember_('mpenalver@bethelsd.org','2',0).status,200);
  assert.equal(ctx.weatherForMember_('mario@memberhq.net','2',0).status,200);
 });

@@ -1,7 +1,7 @@
 import { createHmac, pbkdf2Sync, randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { COOKIE, IDENTITY, RECOVERY_CHALLENGE, RECOVERY_TICKET, accountEmail, districtEmail, username, token, validToken, cookies, setCookie, signedIdentity, originAllowed, bridge } from '../lib/nest-auth.mjs';
 
-const owners = new Set(['mario@memberhq.net','mpenalver@bethelsd.org']);
+const owners = new Set(['mario@memberhq.net','mpenalver@bethelsd.org','astramario@gmail.com']);
 const periods = new Set(['1','2','3','4','5','7','CTSO']);
 const passwordValid = value => typeof value === 'string' && value.length >= 12 && value.length <= 128 && !/[\u0000-\u001f\u007f]/.test(value);
 const digest = (password, salt) => pbkdf2Sync(password, Buffer.from(salt, 'hex'), 210000, 32, 'sha256').toString('hex');
@@ -95,7 +95,7 @@ export default async function handler(req,res) {
       return res.status(200).json({username:data.username,recoveryEmail:data.recoveryEmail||null,manual:data.manual===true});
     }
     if(body.action==='recover-request') {
-      const email=districtEmail(body.email)||(String(body.email||'').trim().toLowerCase()==='mario@memberhq.net'?'mario@memberhq.net':'');
+      const email=districtEmail(body.email)||(owners.has(String(body.email||'').trim().toLowerCase())?String(body.email).trim().toLowerCase():'');
       if(!email)return fail(res,400,'Enter the approved recovery email address on your NEST account.');
       const challenge=token(),code=String(randomInt(0,1000000)).padStart(6,'0');
       const data=await bridge({action:'auth-recover-request',email,challenge,code,ip:ipHash(req)},25000);

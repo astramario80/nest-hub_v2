@@ -18,7 +18,8 @@ test('district email and username validation reject outsiders and dangerous shee
   assert.equal(districtEmail('A@students.bethelsd.org'),'a@students.bethelsd.org');
   assert.equal(districtEmail('a@other.org'),'');assert.equal(districtEmail('a@bethelsd.org.evil'),'');
   assert.equal(username('Mario.1'),'mario.1');assert.equal(username('=IMPORTXML'),'');
-  assert.equal(accountEmail('astramario@gmail.com'),'');
+  assert.equal(accountEmail('astramario@gmail.com'),'astramario@gmail.com');
+  assert.equal(accountEmail('outsider@gmail.com'),'');
   assert.equal(accountEmail('mario@memberhq.net'),'mario@memberhq.net');
 });
 test('registration sends a one-time code and puts only opaque tokens in secure cookies',async()=>{

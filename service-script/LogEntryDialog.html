@@ -1,0 +1,7 @@
+<!doctype html><html><head><base target="_top"><style>body{font:14px Arial;padding:16px}label{display:block;margin:12px 0 4px;font-weight:bold}select,textarea{width:100%;box-sizing:border-box}textarea{height:110px}button{margin-top:14px;padding:9px 20px}#message{margin-top:12px}</style></head><body>
+<label for="ticket">Open request</label><select id="ticket"><option value="">Loading…</option></select><label for="note">Internal log entry</label><textarea id="note" maxlength="2000"></textarea><button id="save" disabled>Save entry</button><div id="message" role="status"></div>
+<script>
+const ticket=document.getElementById('ticket'),note=document.getElementById('note'),button=document.getElementById('save'),message=document.getElementById('message');
+google.script.run.withSuccessHandler(tickets=>{ticket.replaceChildren(new Option('Select a request',''));tickets.forEach(t=>ticket.add(new Option(t.label,t.id)));button.disabled=!tickets.length;if(!tickets.length)message.textContent='No open requests.';}).withFailureHandler(error=>message.textContent=error.message).getOpenTicketsForDialog();
+button.addEventListener('click',()=>{if(!ticket.value||!note.value.trim()){message.textContent='Select a request and enter a note.';return;}button.disabled=true;message.textContent='Saving…';google.script.run.withSuccessHandler(()=>{message.textContent='Entry saved.';google.script.host.close();}).withFailureHandler(error=>{button.disabled=false;message.textContent=error.message;}).logManualEntryFromDialog(note.value,ticket.value);});
+</script></body></html>

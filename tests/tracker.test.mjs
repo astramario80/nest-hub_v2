@@ -19,7 +19,7 @@ function service(){
 const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
 function signIn(s,email=base.email){s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email,expires:1000000000+21600000}));return {status:200};}
 test('one owner or administrator session opens other periods; student sessions remain period-bound',()=>{
-  for(const email of ['mpenalver@bethelsd.org','mario@memberhq.net','admin@example.org']){
+  for(const email of ['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com','admin@example.org']){
     const s=service();assert.equal(signIn(s,email).status,200);
     assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);
     assert.equal(s.call({...base,period:'2',action:'roster'}).status,200);
@@ -28,7 +28,7 @@ test('one owner or administrator session opens other periods; student sessions r
   const s=service();signIn(s);s.ctx.rows_=period=>period==='1'?[['Student A','student@example.org']]:[];assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
   assert.equal(s.call({...base,action:'tracker'}).status,200);
   assert.equal(s.call({...base,action:'export'}).status,403);
-  const formerOwner=service();signIn(formerOwner,'astramario@gmail.com');
+  const formerOwner=service();signIn(formerOwner,'outsider@gmail.com');
   assert.equal(formerOwner.call({...base,period:'2',action:'tracker'}).status,403);
 });
 test('administrator emails are read from live rich links and removal revokes later access',()=>{
