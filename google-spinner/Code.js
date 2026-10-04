@@ -19,6 +19,9 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='doughnut-barometer') {
+    try{return json_(doughnutBarometer_(r.session));}catch(_){return json_({status:503});}
+  }
   if(r.action==='signals-classes') {
     try { return json_(signalsClasses_()); } catch(_) { return json_({status:503}); }
   }
