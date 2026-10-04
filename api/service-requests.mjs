@@ -50,7 +50,7 @@ export default async function handler(req,res){
     if(op==='update'){
      if(!statuses.includes(body.status)||typeof body.manager!=='string'||body.manager.length>254||typeof body.note!=='string'||body.note.length>2000||typeof body.publicNote!=='string'||body.publicNote.length>2000)return res.status(400).json({error:'Invalid update.'});
      Object.assign(request,{status:body.status,manager:body.manager,note:body.note,publicNote:body.publicNote});
-    }else{if(!id(body.eventId))return res.status(400).json({error:'Save a client update before emailing it.'});request.eventId=body.eventId;}
+    }else{if(!id(body.eventId))return res.status(400).json({error:'Save a client update before emailing it.'});if(body.logMode!=null&&!['latest','entire'].includes(body.logMode))return res.status(400).json({error:'Choose a log email option.'});request.eventId=body.eventId;request.logMode=body.logMode||'latest';}
    }
   }
   const data=await bridge(request,45000);
@@ -62,7 +62,7 @@ export default async function handler(req,res){
    if(!Array.isArray(data.requests)||data.requests.length>5000)throw new Error('Invalid client view');
    return res.status(200).json({email:data.email,requests:data.requests.map(clientRow)});
   }
-  if(op==='manage')return res.status(200).json({requests:data.requests,statuses,managers:data.managers,canReview:data.canReview});
+  if(op==='manage')return res.status(200).json({requests:data.requests,statuses,managers:data.managers,canReview:data.canReview,trimester:data.trimester});
   if(op==='reviews')return res.status(200).json({columns:data.columns,rows:data.rows});
   if(op==='metrics')return res.status(200).json({metrics:data.metrics,trimester:data.trimester});
   return res.status(200).json({eventId:data.eventId,emailState:data.emailState,request:data.request});
