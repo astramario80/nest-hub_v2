@@ -8,21 +8,28 @@ export default async function handler(req,res){
   res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'Method not allowed.'});}
   const period=String(req.query?.period||'');
-  if(!Object.hasOwn(DIVISIONS,period))return res.status(400).json({error:'Choose a division.'});
+  if(period!=='all'&&!Object.hasOwn(DIVISIONS,period))return res.status(400).json({error:'Choose a division.'});
   const session=cookies(req)[COOKIE];
   if(!validToken(session))return res.status(401).json({error:'Sign in to NEST to email your team.'});
   try{
-    const access=await bridge({action:'auth-division-slides',operation:'access',session,period},45000);
-    if(access.status===401)return res.status(401).json({error:'Your sign-in has expired.'});
-    if(access.status!==200||!(access.isOwner===true||access.canManage===true||Array.isArray(access.roles)&&access.roles.some(role=>typeof role==='string'&&role.trim())))return res.status(access.status===503?503:403).json({error:'Email groups are available only to this division’s leadership team.'});
-    const [directory,roster]=await Promise.all([
+    const targets=period==='all'?Object.keys(DIVISIONS):[period];
+    const access=await Promise.all(targets.map(async target=>({...await bridge({action:'auth-division-slides',operation:'access',session,period:target},45000),period:target})));
+    if(access.some(a=>a.status===401))return res.status(401).json({error:'Your sign-in has expired.'});
+    if(access.some(a=>![200,403].includes(a.status)))throw new Error('Division access unavailable');
+    const included=access.filter(a=>a.status===200&&(a.isOwner===true||a.canManage===true||Array.isArray(a.roles)&&a.roles.some(role=>typeof role==='string'&&role.trim()))).map(a=>a.period);
+    if(!included.length)return res.status(403).json({error:'Email groups are available only to the divisions where you are on the leadership team.'});
+    const [directory,rosters]=await Promise.all([
       bridge({action:'auth-leadership-directory',session},25000),
-      bridge({action:'tracker',session,period},50000)
+      Promise.all(included.map(target=>bridge({action:'tracker',session,period:target},50000)))
     ]);
-    if(directory.status!==200||roster.status!==200||roster.period!==period||!Array.isArray(directory.leaders)||!Array.isArray(roster.students))throw new Error('Group records unavailable');
-    const members=[...new Map(roster.students.filter(s=>s.active!==false&&districtEmail(s.email)&&typeof s.name==='string').map(s=>[districtEmail(s.email),{name:s.name,email:districtEmail(s.email)}])).values()];
-    const emails=new Set(members.map(s=>s.email)),division=period==='CTSO'?'NEST Robotics':'Period '+period;
-    const leaders=directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail(l.email))&&typeof l.position==='string').map(l=>({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position}));
-    return res.status(200).json({period,members,leaders});
+    if(directory.status!==200||!Array.isArray(directory.leaders)||rosters.some((r,i)=>r.status!==200||r.period!==included[i]||!Array.isArray(r.students)))throw new Error('Group records unavailable');
+    const members=new Map(),leaders=[];
+    rosters.forEach(roster=>{
+      const current=roster.students.filter(s=>s.active!==false&&districtEmail(s.email)&&typeof s.name==='string');
+      current.forEach(s=>members.set(districtEmail(s.email),{name:s.name,email:districtEmail(s.email)}));
+      const emails=new Set(current.map(s=>districtEmail(s.email))),division=roster.period==='CTSO'?'NEST Robotics':'Period '+roster.period;
+      directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail(l.email))&&typeof l.position==='string').forEach(l=>leaders.push({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position}));
+    });
+    return res.status(200).json({period,divisions:included,members:[...members.values()],leaders});
   }catch(error){console.error('Email group lookup failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Email groups could not load. Please try again.'});}
 }
