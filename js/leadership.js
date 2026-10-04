@@ -22,6 +22,7 @@
     leaders: [], // {division, position, firstName, lastName, email}
     positions: [], // [position]
     ready: false,
+    selectedEmails: new Set(),
   };
 
   // Elements
@@ -180,6 +181,7 @@
     div.className = 'leader-row';
     div.innerHTML = `<div class="leader-pos">${escapeHtml(l.position)}</div><div class="leader-person"><div class="leader-name">${escapeHtml([l.firstName,l.lastName].filter(Boolean).join(' '))}</div></div><div class="leader-div">${escapeHtml(l.division)}</div>`;
     const email = document.createElement('a');email.className = 'leader-email';email.href = `mailto:${l.email}`;email.textContent = l.email;div.querySelector('.leader-person').appendChild(email);
+    const selection=document.createElement("label"),box=document.createElement("input");box.type="checkbox";box.value=l.email;box.checked=state.selectedEmails.has(l.email);box.addEventListener("change",()=>box.checked?state.selectedEmails.add(l.email):state.selectedEmails.delete(l.email));box.dataset.emailSelect="";selection.dataset.emailSelection="";selection.append(box,document.createTextNode(" Select for group email"));div.append(selection);
     return div;
   }
 
@@ -333,6 +335,7 @@
       generation++;
       activeEmail = '';
       state.leaders = [];
+      state.selectedEmails.clear();
       state.positions = [];
       state.ready = false;
       controls.hidden = true;
