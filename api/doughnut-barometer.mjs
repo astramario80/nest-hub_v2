@@ -10,7 +10,7 @@ export default async function handler(req,res) {
     const requested=req.query?.comments==='1';
     const rawSession=cookies(req)[COOKIE];
     const session=requested&&validToken(rawSession)?rawSession:'';
-    const data=await bridge(session?{action:'doughnut-barometer',session}:{action:'doughnut-barometer'},15000);
+    const data=await bridge(session?{action:'doughnut-barometer',session}:{action:'doughnut-barometer'},45000);
     if(data.status!==200||typeof data.active!=='boolean')throw new Error('Invalid barometer response');
     if(!data.active)return res.status(200).json({active:false});
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data.start)||!/^\d{4}-\d{2}-\d{2}$/.test(data.end)||
