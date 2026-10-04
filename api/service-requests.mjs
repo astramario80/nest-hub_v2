@@ -42,29 +42,33 @@ export default async function handler(req,res){
    request={action:'service-client-view',session:jar[CLIENT_COOKIE]};
   }else{
    if(!validToken(jar[COOKIE]))return res.status(401).json({error:'Sign in to NEST to use Client Relations.'});
-   if(req.method==='GET'&&!['manage','reviews','metrics'].includes(op)||req.method==='POST'&&!['update','email'].includes(op))return res.status(400).json({error:'Invalid action.'});
+   if(req.method==='GET'&&!['manage','reviews','metrics','ticket'].includes(op)||req.method==='POST'&&!['update','email','edit-log','delete-log','test-email'].includes(op))return res.status(400).json({error:'Invalid action.'});
    request={action:'auth-service-'+op,session:jar[COOKIE]};
+   if(op==='ticket'){if(!id(req.query?.id))return res.status(400).json({error:'Select a request.'});request.id=req.query.id;}
    if(req.method==='POST'){
     if(!id(body.id)||!digest(body.version))return res.status(400).json({error:'Refresh and select a request.'});
     Object.assign(request,{id:body.id,version:body.version});
     if(op==='update'){
      if(!statuses.includes(body.status)||typeof body.manager!=='string'||body.manager.length>254||typeof body.note!=='string'||body.note.length>2000||typeof body.publicNote!=='string'||body.publicNote.length>2000)return res.status(400).json({error:'Invalid update.'});
      Object.assign(request,{status:body.status,manager:body.manager,note:body.note,publicNote:body.publicNote});
-    }else{if(!id(body.eventId))return res.status(400).json({error:'Save a client update before emailing it.'});if(body.logMode!=null&&!['latest','entire'].includes(body.logMode))return res.status(400).json({error:'Choose a log email option.'});request.eventId=body.eventId;request.logMode=body.logMode||'latest';}
+    }else if(['edit-log','delete-log'].includes(op)){
+     if(!id(body.eventId)||!digest(body.entryVersion)||!['public','internal'].includes(body.scope)||op==='edit-log'&&(typeof body.note!=='string'||!body.note.trim()||body.note.length>2000))return res.status(400).json({error:'Choose a saved log entry and enter its updated text.'});
+     Object.assign(request,{eventId:body.eventId,entryVersion:body.entryVersion,scope:body.scope});if(op==='edit-log')request.note=body.note;
+    }else{if(!id(body.eventId))return res.status(400).json({error:'Save a client update before emailing it.'});if(body.logMode!=null&&!['latest','entire'].includes(body.logMode))return res.status(400).json({error:'Choose a log email option.'});if(body.cc!=null&&(!Array.isArray(body.cc)||body.cc.length>20||body.cc.some(v=>typeof v!=='string'||! /^[^\s@,;<>]+@(students\.)?bethelsd\.org$/.test(v))))return res.status(400).json({error:'Choose current leadership members to copy.'});if(op==='test-email'&&body.cc?.length)return res.status(400).json({error:'Test emails go only to your signed-in account.'});request.cc=body.cc||[];request.eventId=body.eventId;request.logMode=body.logMode||'latest';}
    }
   }
   const data=await bridge(request,45000);
   if(data.status!==200){
    const code=[400,401,403,404,409,428,502].includes(data.status)?data.status:503;
-   return res.status(code).json({error:({400:'Invalid request.',401:'Your sign-in has expired.',403:'This action is limited to the assigned project manager and their current division leadership.',404:'This request is unavailable.',409:'The request changed or an email attempt already exists. Refresh before continuing.',428:'The service workbook needs its integration setup before this page can open.',502:'Email delivery is uncertain. Check sent mail before retrying.',503:'Service requests are temporarily unavailable. Refresh to check whether your change saved.'})[code]});
+   return res.status(code).json({error:({400:'Invalid request.',401:'Your sign-in has expired.',403:'This action is limited to the assigned project manager and their current division leadership.',404:'This request is unavailable.',409:['edit-log','delete-log'].includes(op)?'The ticket or log entry changed. Refresh before continuing.':'The request changed or an email attempt already exists. Refresh before continuing.',428:'The service workbook needs its integration setup before this page can open.',502:op==='test-email'?'Test delivery is uncertain. Check your inbox, then refresh before sending another test.':'Email delivery is uncertain. Check sent mail before retrying.',503:'Service requests are temporarily unavailable. Refresh to check whether your change saved.'})[code]});
   }
   if(op==='client-view'){
    if(!Array.isArray(data.requests)||data.requests.length>5000)throw new Error('Invalid client view');
    return res.status(200).json({email:data.email,requests:data.requests.map(clientRow)});
   }
-  if(op==='manage')return res.status(200).json({requests:data.requests,statuses,managers:data.managers,canReview:data.canReview,trimester:data.trimester});
+  if(op==='manage')return res.status(200).json({requests:data.requests,statuses,managers:data.managers,canReview:data.canReview,metrics:data.metrics,students:data.students,trimester:data.trimester});
   if(op==='reviews')return res.status(200).json({columns:data.columns,rows:data.rows});
-  if(op==='metrics')return res.status(200).json({metrics:data.metrics,trimester:data.trimester});
-  return res.status(200).json({eventId:data.eventId,emailState:data.emailState,request:data.request});
+  if(op==='metrics')return res.status(200).json({metrics:data.metrics,students:data.students,trimester:data.trimester});
+  return res.status(200).json({eventId:data.eventId,emailState:data.emailState,testSent:data.testSent,request:data.request});
  }catch(error){console.error('Service request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Service requests are temporarily unavailable. Refresh to check whether your change saved.'});}
 }

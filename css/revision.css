@@ -79,3 +79,8 @@ button:focus-visible,.gear-links a:focus-visible { outline:3px solid #fff; outli
 .bell-signals-link:hover { background:#fff0b8; }
 .bell-signals-link:focus-visible { outline:3px solid #fff; outline-offset:4px; }
 @media(max-width:700px) { .bell-signals { flex-direction:column; align-items:stretch; gap:16px; padding:20px; } }
+
+/* Gear highlighting already provides hover feedback without a title box. */
+.gear-trigger:not(:disabled):hover {
+  box-shadow: none;
+}
