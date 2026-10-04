@@ -6,6 +6,7 @@
     <title>NEST™ Menu</title>
     <link rel="stylesheet" href="css/styles.css?v=qr-click-1">
     <link rel="stylesheet" href="css/revision.css">
+    <link rel="stylesheet" href="css/doughnut-barometer.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/resource-viewer.css">
   <link rel="stylesheet" href="/css/nest-auth.css">
@@ -41,6 +42,11 @@
     </header>
 
     <main class="dashboard home-dashboard" style="margin-bottom: 60px;">
+        <a id="doughnut-menu-link" class="doughnut-menu-link" href="/doughnut-barometer" hidden aria-label="Open Doughnut Barometer">
+            <span class="doughnut-menu-icon" aria-hidden="true">🍩</span>
+            <span><strong>Doughnut Barometer</strong><small>See how the NEST™ is doing while Mr. P is away</small></span>
+            <span aria-hidden="true">→</span>
+        </a>
         <!-- SOAR Card -->
         <section class="gear-panel disclosure" style="animation-delay: 0.1s;">
             <button class="gear-trigger" aria-expanded="false" aria-controls="gear-0">
@@ -86,7 +92,7 @@
                         <a href="/inventory">📦 Inventory Lookup</a>
                         <a href="https://script.google.com/macros/s/AKfycbwyuQy5O6Flzf2yGH7wCmj3JYPVMysvDKCqEJhttXuBRSpyGIGHAKNNlEJiVlswduNfcw/exec" target="_blank">📝 NEST Request</a>
                         <a href="/print-queue">🛠️ Fabrication</a>
-                        <a href="https://docs.google.com/spreadsheets/d/1hSTOG16yGajUsrlywCHThvbMx9JHXQzmpAN43yzAXb0/edit?gid=1238881676#gid=1238881676" target="_blank">🛠️ Service Request</a>
+                        <a href="/service">🛠️ Service Request</a>
                     </div>
                 </div>
             </div>
@@ -207,6 +213,8 @@
 
     <script src="js/nest-auth.js"></script>
   <script src="js/main.js"></script>
+    <script src="js/doughnut-announcement.js"></script>
+    <script src="js/doughnut-menu.js"></script>
     <script src="js/disclosures.js"></script>
     <script src="js/bell.js"></script>
   <script src="/js/resource-viewer.js"></script>

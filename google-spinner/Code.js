@@ -19,6 +19,10 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='doughnut-barometer') {
+    try{return json_(doughnutBarometer_(r.session));}catch(_){return json_({status:503});}
+  }
+  if(/^(auth-service-|service-client-)/.test(r.action||''))return json_(serviceDispatch_(r));
   if(r.action==='signals-classes') {
     try { return json_(signalsClasses_()); } catch(_) { return json_({status:503}); }
   }
@@ -126,7 +130,7 @@ function withNestReadContext_(r,work){
 }
 function nestSessionIdentity_(session){return {signedIn:true,email:session.email,username:session.username,expires:session.expires};}
 const NEST_DATABASE = '12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE';
-const OWNER_EMAILS = ['mpenalver@bethelsd.org','mario@memberhq.net'];
+const OWNER_EMAILS = ['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com'];
 function email_(value) { return String(value||'').trim().toLowerCase(); }
 function rows_(period) {
   const rows=nestAccessValues_(NEST_DATABASE,"'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000").values||[];

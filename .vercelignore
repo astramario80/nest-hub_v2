@@ -8,3 +8,20 @@ google-spinner/
 README-spinner.md
 
 README-tracker.md
+
+service-script/
+control-script/
+leadership-script/
+google-control-center/
+README-service.md
+preview-service.mjs
+service-preview*.png
+
+school-service-live/
+school-service-stage/
+school-service-verified/
+memberhq-script/
+
+school-bridge-live/
+school-bridge-stage/
+school-bridge-verified/

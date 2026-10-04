@@ -1,0 +1,11 @@
+# Doughnut Barometer
+
+The existing legacy `Tool_AbsenceBarometer` job remains responsible for detecting Red Rover absence dates, updating the slideshow overlay, writing the active inclusive window to `DoughnutBarometer!B3/D3`, and refreshing the six averages in `G6:H11`. The website reads that output; it does not add another absence detector or read individual ratings.
+
+Deploy `google-spinner/Code.js` and `google-spinner/DoughnutBarometer.js` together to the school Google bridge before deploying the site. The bridge's deploying account must have read access to workbook `1wb1h-GIy8yL-gC-3XZPssZniFNl1NMdI0dEjig4pq5g`. Keep the current `SPINNER_BRIDGE_URL` and `SPINNER_BRIDGE_TOKEN` configuration. A bridge without the new action makes the menu button remain hidden and the page display an unavailable message.
+
+`/api/doughnut-barometer` returns `active:false` outside the stored window. During the window, dates and six period averages are public. The page requests comments separately with `?comments=1`, and the Google bridge validates the NEST session before it reads column E. Anonymous and expired sessions receive no comments; the API also strips comments unless the bridge confirms authorization. Comments contain period and text, without names or timestamps. The menu link is fetched on load and when the tab becomes visible again; the page is available by direct URL and explains when no window is active. Ratings use the guest teacher form's 1–10 scale.
+
+The legacy end date is the last absence date plus three calendar days. Starting the next day, the main menu and barometer page show a winner dialog if at least one period has a positive average. Equal top averages share the win. A visitor must acknowledge the dialog to continue, and their acknowledgment is kept in local storage for that winner and window. A changed winner is announced again.
+
+Publication repair: the repository now includes the existing published Service Desk source and the Doughnut Barometer together. The shared service-request-work release and school-bridge-stage also include the barometer action and module to prevent later releases from dropping it. Preserve all of these features on future updates.

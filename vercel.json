@@ -52,6 +52,12 @@
     },
     "api/division-page.mjs": {
       "maxDuration": 60
+    },
+    "api/service-requests.mjs": {
+      "maxDuration": 60
+    },
+    "api/doughnut-barometer.mjs": {
+      "maxDuration": 60
     }
   },
   "redirects": [

@@ -1,5 +1,5 @@
 (() => {
-  const owners=new Set(['mario@memberhq.net','mpenalver@bethelsd.org']);
+  const owners=new Set(['mario@memberhq.net','mpenalver@bethelsd.org','astramario@gmail.com']);
   const status=document.getElementById('admin-status'),tools=document.getElementById('admin-tools');
   const create=document.getElementById('admin-create'),period=document.getElementById('admin-period');
   const student=document.getElementById('admin-student'),studentEmail=document.getElementById('admin-student-email');
