@@ -58,6 +58,9 @@
     },
     "api/doughnut-barometer.mjs": {
       "maxDuration": 60
+    },
+    "api/group-email.mjs": {
+      "maxDuration": 120
     }
   },
   "redirects": [
