@@ -1,0 +1,15 @@
+# Division leadership email
+
+Email group is available to current division leadership and NEST owners in Team Lookup. The server reads live roles and rosters; All divisions includes only divisions where the signed-in account has leadership access. Ordinary members cannot retrieve group rosters.
+
+The composer provides Connect Gmail and Send email. It requests only `gmail.send` and `userinfo.email` through Google's browser token flow. The connected account's verified email is displayed. Nonmanual NEST identities must connect their matching Gmail account. Manual identities choose their Gmail account through Google's account chooser. Tokens stay in memory and clear on logout, identity changes, access loss, page exit and expiry. No refresh token, client secret or Gmail inbox scope is used.
+
+`api/group-email.mjs` includes a public Gmail OAuth client ID in authorized roster responses: EMAIL_GOOGLE_CLIENT_ID if configured, otherwise the existing SERVICE_GOOGLE_CLIENT_ID. That web client must allow https://gknest.org and https://www.gknest.org. Enable Gmail API in the client project and declare the two scopes in Google Auth Platform Data Access. An External app must be In production for accounts outside its test-user list. Google verification, user limits and school app policies still apply; district students authorize their own accounts.
+
+Each Send rechecks current division access and every selected recipient against the current roster. It builds a UTF-8 MIME multipart message with the NEST banner, sanitized formatting, plain text and selected recipients, then calls Gmail users/me/messages/send directly. Google determines the actual sender from the connected token. Sending locks the draft controls. A confirmed message ID marks the message sent and blocks another send until New email. A timeout, network loss, server error or malformed acknowledgement blocks retries and asks the sender to inspect Gmail Sent. Explicit 4xx rejection preserves the draft for correction/reconnection. No automatic retries or real group sends are used in tests.
+
+Indent/outdent keeps the selected range while moving multiple paragraphs or list items. Bullets nest under a preceding item; first bullets receive a visible margin. Nested outdent preserves following children. Plain-text pasted lines with BR separators become individual blocks. Numeric indentation survives HTML sanitizing and copying to Gmail; unrelated style/event attributes are removed.
+
+Verification covers selected-line boundaries, nested bullets, caret operations, MIME encoding, banner/indent preservation, fresh access denial, recipient selection, declined permissions, wrong-account connection, duplicate clicks, uncertain results, expired tokens, logout and stale acknowledgements. Browser verification uses synthetic recipients and a mock transport and never sends real mail.
+
+The public /email-privacy notice describes this feature’s Gmail data use and connection controls. Google OAuth branding uses that notice and the existing NEST homepage. Enabling Gmail API and declaring scopes alone do not grant any user’s mailbox access; each sender must connect and authorize through Google.
