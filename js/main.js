@@ -126,32 +126,32 @@ const sopsData = {
     content: `
       <div class="ca-landing">
         <div class="ca-row">
-            <div class="ca-item" onmouseover="showCA('curious')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('curious')" onmouseleave="hideCA()">
                 <img src="assets/curiouscentricity.png" alt="Curiouscentricity">
             </div>
-            <div class="ca-item" onmouseover="showCA('shared')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('shared')" onmouseleave="hideCA()">
                 <img src="assets/shared_understanding.png" alt="Shared Understanding">
             </div>
-            <div class="ca-item" onmouseover="showCA('allin')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('allin')" onmouseleave="hideCA()">
                 <img src="assets/all_in_all_heard.png" alt="All in, All heard">
             </div>
         </div>
         <div class="ca-row">
-            <div class="ca-item" onmouseover="showCA('teamship')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('teamship')" onmouseleave="hideCA()">
                 <img src="assets/teamship.png" alt="Teamship">
             </div>
             <div class="ca-title-wrapper">
                 <img src="assets/ca_title.png" alt="NEST Community Agreements">
             </div>
-            <div class="ca-item" onmouseover="showCA('objective')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('objective')" onmouseleave="hideCA()">
                 <img src="assets/objective_leadership.png" alt="Objective Leadership">
             </div>
         </div>
         <div class="ca-row">
-            <div class="ca-item" onmouseover="showCA('accountability')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('accountability')" onmouseleave="hideCA()">
                 <img src="assets/accountability.png" alt="Accountability">
             </div>
-            <div class="ca-item" onmouseover="showCA('living')" onmouseout="hideCA()">
+            <div class="ca-item" onmouseenter="showCA('living')" onmouseleave="hideCA()">
                 <img src="assets/living_document.png" alt="Living Document">
             </div>
         </div>
@@ -613,18 +613,27 @@ const caDescriptions = {
 
 const defaultCAText = `<strong style="color: var(--primary-orange); font-size: 1.2rem;">NEST™ Motto:</strong><br><em style="font-size: 1.2rem;">Never leave an Eagle behind.</em><br><br><span style="font-size: 1.2rem; color: var(--text-muted);">Hover over a core value above to see its description.</span>`;
 
-window.showCA = function(key) {
+let caTextAnimation;
+function updateCAText(content) {
     const display = document.getElementById('ca-text-display');
-    if(display && caDescriptions[key]) {
-        display.innerHTML = caDescriptions[key];
+    if (!display || display.dataset.caContent === content) return;
+    caTextAnimation?.cancel();
+    display.innerHTML = content;
+    display.dataset.caContent = content;
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        caTextAnimation = display.animate(
+            [{ opacity: 0 }, { opacity: 1 }],
+            { duration: 280, easing: 'ease-out' }
+        );
     }
+}
+
+window.showCA = function(key) {
+    if (caDescriptions[key]) updateCAText(caDescriptions[key]);
 };
 
 window.hideCA = function() {
-    const display = document.getElementById('ca-text-display');
-    if(display) {
-        display.innerHTML = defaultCAText;
-    }
+    updateCAText(defaultCAText);
 };
 
 /* =========================
@@ -735,7 +744,7 @@ const soarData = {
             </tr>
             <tr>
                 <th>Working Time</th>
-                <td>Be a student expert to someone who needs help. Say or do something that makes someone else feel appreciated.</td>
+                <td><a class="db-link" onclick="openDbMeter(event)">dB: 90</a>. Be a student expert to someone who needs help. Say or do something that makes someone else feel appreciated.</td>
             </tr>
             <tr>
                 <th>Electronics</th>
