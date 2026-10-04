@@ -11,3 +11,12 @@
 .soar-embedded .soar-letter{font-size:2rem;padding:12px;width:64px;height:64px;border-radius:14px;flex-shrink:0;transform:none}
 .soar-embedded .soar-content-area{padding:20px;min-height:calc(100dvh - 36px);max-height:none}
 @media(max-width:600px){.soar-toolbar{padding:0 16px}.soar-embedded main.soar-split-layout{padding:10px!important;gap:12px!important}.soar-embedded .soar-content-area{padding:12px}.soar-embedded .soar-sidebar{width:46px}.soar-embedded .soar-letter{font-size:1.5rem;padding:8px;width:46px;height:46px}}
+
+/* Ease the letter highlight alongside the section fade. */
+.soar-letter {
+  transition: background-color 350ms ease, color 350ms ease, border-color 350ms ease,
+              transform 350ms ease, translate 350ms ease, box-shadow 350ms ease, filter 350ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .soar-letter { transition: none; }
+}
