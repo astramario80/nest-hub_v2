@@ -19,7 +19,7 @@ export default async function handler(req,res) {
     }
     if(data.status!==200||typeof data.active!=='boolean'){console.error('Barometer bridge response rejected',{status:data.status,activeType:typeof data.active});throw new Error('Invalid barometer response');}
     if(!data.active) {
-      if(!requested)res.setHeader('Vercel-CDN-Cache-Control','public, s-maxage=60, stale-while-revalidate=300');
+      if(!requested)res.setHeader('Vercel-CDN-Cache-Control','public, s-maxage=300, stale-while-revalidate=300');
       return res.status(200).json({active:false});
     }
     if(!/^\d{4}-\d{2}-\d{2}$/.test(data.start)||!/^\d{4}-\d{2}-\d{2}$/.test(data.end)||
@@ -33,7 +33,7 @@ export default async function handler(req,res) {
       comments=data.comments;
     }
     // Only the public summary may enter the shared cache. Comment requests always reauthorize.
-    if(!requested)res.setHeader('Vercel-CDN-Cache-Control','public, s-maxage=60, stale-while-revalidate=300');
+    if(!requested)res.setHeader('Vercel-CDN-Cache-Control','public, s-maxage=300, stale-while-revalidate=300');
     return res.status(200).json({active:true,start:data.start,end:data.end,periods:data.periods,commentsAuthorized,comments,announcementReady:data.announcementReady});
   } catch(error) {
     console.error('Doughnut Barometer request failed',{kind:error?.name||'Error',reason:error?.message});

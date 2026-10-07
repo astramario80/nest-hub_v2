@@ -1,4 +1,9 @@
 (() => {
+  // Start the public check as soon as this async head script arrives. It does
+  // not need account cookies or wait for NestAuth, the menu, or other scripts.
+  const initialRequest=fetch('/api/doughnut-barometer',{credentials:'omit'})
+    .catch(()=>null);
+  function initialize() {
   const link=document.getElementById('doughnut-menu-link');
   if(!link)return;
   const cacheKey='nest-doughnut-window-v1';
@@ -31,13 +36,13 @@
   } catch { /* Ignore missing or invalid cached dates. */ }
   link.hidden=!freshWindow(verifiedWindow);
   let updating=false;
-  async function update() {
+  async function update(pendingResponse) {
     if(updating)return;
     updating=true;
     link.hidden=!freshWindow(verifiedWindow);
     try {
-      const response=await fetch('/api/doughnut-barometer');
-      if(!response.ok)throw new Error('Unavailable');
+      const response=await (pendingResponse||fetch('/api/doughnut-barometer',{credentials:'omit'}));
+      if(!response?.ok)throw new Error('Unavailable');
       const data=await response.json();
       const active=data.active===true&&inWindow(data);
       saveWindow(active?{start:data.start,end:data.end,checkedAt:Date.now()}:null);
@@ -46,6 +51,9 @@
     } catch { link.hidden=!freshWindow(verifiedWindow); }
     finally { updating=false; }
   }
-  update();
+  update(initialRequest);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)update();});
+  }
+  if(!document.getElementById('doughnut-menu-link')&&document.readyState==='loading')document.addEventListener('DOMContentLoaded',initialize,{once:true});
+  else initialize();
 })();

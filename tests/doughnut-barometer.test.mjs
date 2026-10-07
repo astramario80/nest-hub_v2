@@ -8,6 +8,22 @@ import barometerHandler from '../api/doughnut-barometer.mjs';
 const periods=['Period 7','Period 1','Period 2','Period 3','Period 4','Period 5'];
 const validSession='a'.repeat(64);
 const source=fs.readFileSync('google-spinner/DoughnutBarometer.js','utf8');
+test('menu starts its public request before the landing page exists, independently of authentication',async()=>{
+  const dom=new JSDOM('<head></head><body></body>',{runScripts:'outside-only',url:'https://gknest.org/'});
+  const {window}=dom;
+  let calls=0,resolveResponse;
+  window.NestAuth={ready:new Promise(()=>{})};
+  window.fetch=(_url,options)=>{calls++;assert.equal(options.credentials,'omit');return new Promise(resolve=>{resolveResponse=resolve;});};
+  window.eval(fs.readFileSync('js/doughnut-menu.js','utf8'));
+  assert.equal(calls,1);
+  window.document.body.innerHTML='<a id="doughnut-menu-link" hidden></a>';
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded'));
+  resolveResponse({ok:true,json:async()=>({active:true,start:'2020-01-01',end:'2099-12-31'})});
+  await new Promise(resolve=>setTimeout(resolve,0));
+  assert.equal(calls,1);
+  assert.equal(window.document.querySelector('a').hidden,false);
+  dom.window.close();
+});
 function summary(today,start,end,sessionToken) {
   let reads=0;
   const context={
@@ -204,7 +220,7 @@ test('only successful public summaries are cached; private and failed checks are
       const res=response();
       await barometerHandler({method:'GET',headers:{cookie:`__Host-nest-auth=${validSession}`},query:{comments}},res);
       assert.equal(res.code,200);
-      assert.equal(res.headers['Vercel-CDN-Cache-Control'],comments?'no-store':'public, s-maxage=60, stale-while-revalidate=300');
+      assert.equal(res.headers['Vercel-CDN-Cache-Control'],comments?'no-store':'public, s-maxage=300, stale-while-revalidate=300');
       if(!comments&&active){assert.equal(res.value.commentsAuthorized,false);assert.deepEqual(res.value.comments,[]);}
     }
     globalThis.fetch=async()=>({ok:true,status:200,json:async()=>({status:500})});

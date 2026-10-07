@@ -12,6 +12,8 @@ Publication repair: the repository now includes the existing published Service D
 
 ## Menu load performance
 
-The public API caches validated summaries at Vercel for 60 seconds, with up to 300 seconds of background revalidation. Errors and every `comments=1` request remain uncached; comments still require a fresh session check.
+The public API caches validated summaries at Vercel for five minutes, with up to 300 seconds of background revalidation. Errors and every `comments=1` request remain uncached; comments still require a fresh session check.
+
+The landing page starts its public barometer request from an async head script, before the menu is parsed. The request omits account cookies and never waits for `NestAuth.ready`; the same pending response is reused when the menu becomes available. Authentication continues independently in the background.
 
 The menu remembers only the public start/end dates and verification time for five minutes. It can reveal a recently verified button immediately, then refresh in the background. Every reveal checks the inclusive window against the current America/Los_Angeles date, including after a cached response, so a cached window cannot extend the button beyond its final day. A completely cold CDN request still waits on Google Apps Script.
