@@ -48,11 +48,13 @@ function editorGrant_(email,period,seen) {
   return parent&&grant.expires<=parent.expires?grant:null;
 }
 function trackerRole_(email,period) {
+  if(period==='CTSO')return roboticsAccess_(email)?(OWNER_EMAILS.includes(email_(email))?'administrator':'manager'):'student';
   if(globalAccess_(email))return 'administrator';
   if(manager_(email,period))return 'manager';
   return editorGrant_(email,period)?'editor':'student';
 }
 function grantEditor_(r,s,store,now) {
+  if(r.period==='CTSO')return {status:403};
   const authority=globalAccess_(s.email)||manager_(s.email,r.period),parent=authority?null:editorGrant_(s.email,r.period);
   if(!authority&&!parent)return {status:403};
   const email=email_((r.change||{}).email);
@@ -86,7 +88,7 @@ function trackerView_(data,rows,role,expires,includeArchived=false) {
 function trackerDispatch_(r,s,rows,store,now) {
   const role=trackerRole_(s.email,r.period),data=trackerRead_(r.period);
   if(!data)return {status:409,message:'This period is waiting for its initial data import.'};
-  function view(){const result=trackerView_(data,rows,role,s.expires);if(role==='editor')result.editExpires=editorGrant_(s.email,r.period).expires;
+  function view(){const result=trackerView_(data,rows,role,s.expires);result.canShare=r.period!=='CTSO';if(role==='editor')result.editExpires=editorGrant_(s.email,r.period).expires;
     if(['administrator','manager','editor'].includes(role)){const all=store.getProperties();result.grants=Object.keys(all).filter(k=>k.startsWith('grant:'+r.period+':')).map(k=>grantRecord_(store,k,now)).filter(g=>g&&editorGrant_(g.email,r.period)&&(role!=='editor'||email_(g.issuer)===email_(s.email))).map(g=>({email:g.email}));}return result;}
   if(r.action==='tracker')return view();
   if(r.action==='export' && role==='administrator')return trackerView_(data,rows,role,s.expires,true);

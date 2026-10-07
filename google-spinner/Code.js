@@ -31,6 +31,10 @@ function nestRequest_(r){
   if(['fabrication-public','auth-fabrication-view','auth-fabrication-update','auth-fabrication-email'].includes(r.action)){
     try{return json_(fabDispatch_(r));}catch(error){console.error('Fabrication action failed',r.action);return json_({status:503});}
   }
+  if(r.action==='auth-robotics'){
+    const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return json_({status:503});
+    try{return json_(roboticsDispatch_(r));}catch(_){return json_({status:503});}finally{lock.releaseLock();}
+  }
   if(r.action==='auth-division-slides') {
     try{return json_(divisionSlidesDispatch_(r));}catch(_){return json_({status:503});}
   }

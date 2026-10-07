@@ -23,7 +23,7 @@ function divisionSlidesDispatch_(r){
    const name=String(row[3]||'').trim(),comma=name.indexOf(',');
    return {position:String(row[2]||'').trim(),name:comma>=0?name.slice(comma+1).trim()+' '+name.slice(0,comma).trim():name};
   }).filter(leader=>leader.position&&leader.name);
-  return {status:200,canManage,roles,isOwner,team,identity:{signedIn:true,email:session.email,username:session.username,expires:session.expires}};
+  return {status:200,canManage,canManageRobotics:r.period==='CTSO'&&roboticsAccess_(session.email,leaders),roles,isOwner,team,identity:{signedIn:true,email:session.email,username:session.username,expires:session.expires}};
  }
  if(!canManage)return {status:403};
  if(!/^[a-f0-9-]{36}$/.test(r.job||''))return {status:400};
