@@ -62,6 +62,9 @@
     event.preventDefault();
     if(link.hasAttribute('data-resource-exit')){
       exitOpener=link;exitOK.href=target.original;
+      const destination=link.getAttribute('data-resource-exit');
+      exitOK.textContent=destination?'Continue':'OK';
+      exitNotice.querySelector('#resource-exit-title').textContent=destination?`You are leaving the NEST™ Universe for ${destination}.`:'We are now leaving the NEST™ Universe.';
       exitNotice.showModal();exitOK.focus();
       return;
     }
