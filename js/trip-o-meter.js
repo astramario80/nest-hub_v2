@@ -146,7 +146,7 @@
   function render(result){
     clear();data=result;login.hidden=true;view.hidden=false;
     const canEdit=['administrator','manager','editor'].includes(data.role);
-    status.textContent='';exportButton.hidden=data.role!=='administrator';if(canEdit)renderTempAccess();
+    status.textContent='';exportButton.hidden=data.role!=='administrator';if(canEdit&&data.canShare!==false)renderTempAccess();
     scheduleExpiry();
     const all=[];data.students.forEach(s=>data.assignments.forEach(a=>all.push(data.scores[s.id]?.[a.id]||'')));
     const breakdown=node('details'),heading=node('summary');breakdown.className='trip-score-breakdown';heading.append(node('strong','Score breakdown'),node('span',overview(all)));breakdown.append(heading);
