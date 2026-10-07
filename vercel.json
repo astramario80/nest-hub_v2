@@ -64,6 +64,9 @@
     },
     "api/diagnostics.mjs": {
       "maxDuration": 30
+    },
+    "api/robotics.mjs": {
+      "maxDuration": 60
     }
   },
   "redirects": [
