@@ -1,5 +1,18 @@
-// Live CTSO membership stays in the original Trip-o-Meter; no snapshot is imported.
-const ROBOTICS_POW='1Mzxf0q87UHCQ5R6L0IBl2uCO_TmH-TmdcRSDIxOmBgw';
+// The website owns member status; dedicated Sheets storage is seeded once from legacy records.
+const ROBOTICS_STORAGE='Website Member Status';
+function roboticsStorage_(){
+ const id=PERIODS.CTSO,store=PropertiesService.getScriptProperties(),key='robotics-website-storage-v1:'+id;
+ if(store.getProperty(key)==='ready')return;
+ const sheets=Sheets.Spreadsheets.get(id,{fields:'sheets(properties(title))'}).sheets||[];
+ if(!sheets.some(sheet=>sheet.properties.title===ROBOTICS_STORAGE))Sheets.Spreadsheets.batchUpdate({requests:[{addSheet:{properties:{title:ROBOTICS_STORAGE,gridProperties:{rowCount:1000,columnCount:13}}}}]},id);
+ if(roboticsValues_(id,"'"+ROBOTICS_STORAGE+"'!M1")[0]?.[0]!=='website-authority-v1'){
+  const membership=roboticsValues_(id,"'NEST™MembershipStatus'!A3:E1000"),raw=roboticsValues_(id,"'FRC Roster Raw'!A2:E1000");
+  roboticsWrite_(id,[{range:"'"+ROBOTICS_STORAGE+"'!A1:E"+(membership.length+1),values:[['Active','Inactive','Name','Student ID','Email'],...membership.map(row=>Array.from({length:5},(_,i)=>row[i]??''))]},
+   {range:"'"+ROBOTICS_STORAGE+"'!H1:L"+(raw.length+1),values:[['FIRST name','Consent','Matched','Member name','FIRST email'],...raw.map(row=>Array.from({length:5},(_,i)=>row[i]??''))]},
+   {range:"'"+ROBOTICS_STORAGE+"'!M1",values:[['website-authority-v1']]}]);
+ }
+ store.setProperty(key,'ready');
+}
 function roboticsAccess_(identity,leaders){
  if(OWNER_EMAILS.includes(email_(identity)))return true;
  const address=memberEmail_(identity,'CTSO');
@@ -14,9 +27,9 @@ function roboticsName_(value){
 }
 function roboticsValues_(id,range){return Sheets.Spreadsheets.Values.get(id,range,{valueRenderOption:'UNFORMATTED_VALUE'}).values||[];}
 function roboticsState_(){
+ roboticsStorage_();
  const id=PERIODS.CTSO,roster=rows_('CTSO');
- const membership=roboticsValues_(id,"'NEST™MembershipStatus'!A3:E1000"),raw=roboticsValues_(id,"'FRC Roster Raw'!A2:E1000");
- const pow=roboticsValues_(ROBOTICS_POW,"'MembershipForm'!A2:E1000");
+ const membership=roboticsValues_(id,"'"+ROBOTICS_STORAGE+"'!A2:E1000"),raw=roboticsValues_(id,"'"+ROBOTICS_STORAGE+"'!H2:L1000");
  const members=membership.map((row,index)=>{
   if(!row[2])return null;
   const candidates=roster.filter(person=>roboticsName_(person[0])===roboticsName_(row[2]));
@@ -24,18 +37,23 @@ function roboticsState_(){
   // ID and email inconsistencies are visible and excluded from reminder delivery.
   const email=matched?email_(matched[1]):'',identityVerified=!!email&&studentId&&email===studentId+'@students.bethelsd.org';
   const accepted=raw.filter(record=>record[0]&&((record[4]&&email_(record[4])===email)||roboticsName_(record[3]||record[0])===roboticsName_(row[2])));
-  const powMatches=pow.map((record,i)=>({record,row:i+2})).filter(item=>String(item.record[3]||'').trim()===studentId&&roboticsName_(item.record[2])===roboticsName_(row[2]));
-  return {id:hash_(studentId+'|'+roboticsName_(row[2])),row:index+3,name:String(row[2]),studentId,email,active:row[0]===true,inactive:row[1]===true,
+  return {id:hash_(studentId+'|'+roboticsName_(row[2])),row:index+2,name:String(row[2]),studentId,email,active:row[0]===true,inactive:row[1]===true,
    joined:accepted.length===1,waiver:accepted.length===1?(['YES','NO'].includes(String(accepted[0][1]).toUpperCase())?String(accepted[0][1]).toUpperCase()==='YES':null):null,
-   identityVerified,firstAmbiguous:accepted.length>1,powRow:powMatches.length===1?powMatches[0].row:null,
-   warning:accepted.length>1?'Multiple FIRST records need review':!matched?'Not uniquely matched to the CTSO roster':!identityVerified?'Student ID and roster email need review':powMatches.length!==1?'Program of Work record needs review':''};
+   identityVerified,firstAmbiguous:accepted.length>1,canChangeStatus:true,
+   warning:accepted.length>1?'Multiple FIRST records need review':!matched?'Not uniquely matched to the CTSO roster':!identityVerified?'Student ID and roster email need review':''};
  }).filter(Boolean);
- if(new Set(members.map(member=>member.id)).size!==members.length)throw new Error('Duplicate membership IDs');
- const revision=hash_(JSON.stringify({membership,raw,pow,roster}));
- return {membership,raw,pow,members,revision};
+ const identities=new Map();members.forEach(member=>identities.set(member.id,(identities.get(member.id)||0)+1));
+ members.forEach(member=>{
+  if(identities.get(member.id)<2)return;
+  member.id=hash_(member.id+'|row:'+member.row);
+  member.identityVerified=false;member.canChangeStatus=false;
+  member.warning='Duplicate membership record — review the membership records before editing or sending reminders';
+ });
+ const revision=hash_(JSON.stringify({membership,raw,roster}));
+ return {membership,raw,members,revision};
 }
 function roboticsView_(state){
- const members=state.members.map(({row,powRow,...member})=>({...member,canChangeStatus:!!powRow}));
+ const members=state.members.map(({row,...member})=>member);
  const current=members.filter(member=>member.active);
  return {status:200,revision:state.revision,members,summary:{active:current.length,joined:current.filter(m=>m.joined).length,waivers:current.filter(m=>m.waiver===true).length,
   needJoin:current.filter(m=>!m.joined).length,needWaiver:current.filter(m=>m.joined&&!m.waiver).length},
@@ -43,21 +61,6 @@ function roboticsView_(state){
   unmatched:state.raw.filter(row=>row[0]&&!members.some(m=>roboticsName_(m.name)===roboticsName_(row[3]||row[0]))).map(row=>String(row[0]))};
 }
 function roboticsWrite_(id,data){if(data.length)Sheets.Spreadsheets.Values.batchUpdate({valueInputOption:'RAW',data},id);}
-function roboticsSummary_(state){
- const members=state.members.filter(m=>m.email),view=roboticsView_(state),s=view.summary;
- const rows=members.map(m=>[m.name,m.joined?'✅':'🚫',m.joined?(m.waiver?'✅':'🚫'):'N/A']);
- const count=Math.max(rows.length,state.membership.length,1);
- roboticsWrite_(PERIODS.CTSO,[{range:"'NEST™MembershipStatus'!H1:J"+(count+1),values:[['Member','FRC Membership','Parent waiver signed'],...Array.from({length:count},(_,i)=>rows[i]||['','',''])]},
-  {range:"'NEST™MembershipStatus'!L1:M5",values:[['Total Students in Club:',s.active],['Total on FRC Roster:',s.joined],['Total with Parent Waiver:',s.waivers],['Students Need to Join FRC:',members.filter(m=>m.active&&!m.joined).map(m=>m.name).join(' | ')],['Students Need Parent Waiver:',members.filter(m=>m.active&&m.joined&&!m.waiver).map(m=>m.name).join(' | ')]]}]);
-}
-function roboticsRefresh_(state){
- // POW owns membership, exactly as in the original Refresh from Program of Work.
- const valid=state.pow.filter(row=>row[2]);
- if(!valid.length)return {status:409};
- const rows=Array.from({length:Math.max(valid.length,state.membership.length)},(_,i)=>valid[i]?Array.from({length:5},(_,j)=>valid[i][j]??''):['','','','','']);
- roboticsWrite_(PERIODS.CTSO,[{range:"'NEST™MembershipStatus'!A3:E"+(rows.length+2),values:rows}]);
- const fresh=roboticsState_();roboticsSummary_(fresh);return roboticsView_(fresh);
-}
 function roboticsImport_(r,state){
  const parsed=TripOMeter_parseAcceptedYouth_(TripOMeter_prepareRosterLines_(r.text));
  if(!parsed.length||parsed.length>999)return {status:400};
@@ -67,9 +70,9 @@ function roboticsImport_(r,state){
   return [person.name,person.consentSigned?'YES':person.foundConsent?'NO':'UNKNOWN',matched?'✅':'❌',matched?matched.name:'No match',person.email||''];
  });
  const count=Math.max(rows.length,state.raw.length),values=Array.from({length:count},(_,i)=>rows[i]||['','','','','']);
- roboticsWrite_(PERIODS.CTSO,[{range:"'FRC Roster Raw'!A1:E"+(count+1),values:[['Student Name (from Roster)','Consent Signed?','Matched to CTSO?','CTSO Name','FIRST email'],...values]}]);
+ roboticsWrite_(PERIODS.CTSO,[{range:"'"+ROBOTICS_STORAGE+"'!H1:L"+(count+1),values:[['Student Name (from Roster)','Consent Signed?','Matched to CTSO?','CTSO Name','FIRST email'],...values]}]);
  PropertiesService.getScriptProperties().setProperty('robotics-imported-at',new Date().toISOString());
- const fresh=roboticsState_();roboticsSummary_(fresh);return roboticsView_(fresh);
+ const fresh=roboticsState_();return roboticsView_(fresh);
 }
 function roboticsMessage_(name,kind){
  const first=String(name).includes(',')?String(name).split(',').slice(1).join(' ').trim():String(name).split(/\s+/)[0];
@@ -111,15 +114,13 @@ function roboticsDispatch_(r){
  const state=roboticsState_();if(r.operation==='view')return roboticsView_(state);
  if(['preview','send'].includes(r.operation))return roboticsNotify_(r,state,session,store);
  if(r.revision!==state.revision)return {status:409};
- if(r.operation==='refresh')return roboticsRefresh_(state);
+ if(r.operation==='refresh')return roboticsView_(state); // Old clients reload without importing external data.
  if(r.operation==='import'){try{return roboticsImport_(r,state);}catch(error){if(/Youth Members|Accepted|youth members|accepted/.test(error.message))return {status:400};throw error;}}
  const member=state.members.find(m=>m.id===r.member);
- if(!member||!member.powRow||typeof r.active!=='boolean')return {status:400};
+ if(!member||!member.canChangeStatus||typeof r.active!=='boolean')return {status:400};
  const values=[[r.active,!r.active]];
- // Write POW first. If the local write fails, Refresh from POW completes reconciliation.
- roboticsWrite_(ROBOTICS_POW,[{range:"'MembershipForm'!A"+member.powRow+':B'+member.powRow,values}]);
- roboticsWrite_(PERIODS.CTSO,[{range:"'NEST™MembershipStatus'!A"+member.row+':B'+member.row,values}]);
- const fresh=roboticsState_();roboticsSummary_(fresh);return roboticsView_(fresh);
+ roboticsWrite_(PERIODS.CTSO,[{range:"'"+ROBOTICS_STORAGE+"'!A"+member.row+':B'+member.row,values}]);
+ const fresh=roboticsState_();return roboticsView_(fresh);
 }
 
 // FIRST Dashboard parser supplied with the original Trip-o-Meter.
