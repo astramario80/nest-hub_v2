@@ -3,7 +3,14 @@ const ROBOTICS_SIGNUP_FORM='1ROTm1QXYvOzRUh3TVeNDQNhXmxRrYxNayzxZHvBI1cg';
 const ROBOTICS_CALENDAR='c_2b422570f48c710a09f9a4ad62f01b3a99eba983da39e7cc648454dcf129a079@group.calendar.google.com';
 const ROBOTICS_CALENDAR_LINK='https://calendar.google.com/calendar/u/0?cid=Y18yYjQyMjU3MGY0OGM3MTBhMDlmOWE0YWQ2MmYwMWIzYTk5ZWJhOTgzZGEzOWU3Y2M2NDg0NTRkY2YxMjlhMDc5QGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20';
 function roboticsPrivateId_(){return PropertiesService.getScriptProperties().getProperty('robotics-private-storage')||'';}
-function roboticsRoster_(){const byEmail=new Map();Object.keys(PERIODS).forEach(period=>rows_(period).forEach(row=>{const key=email_(row[1]);if(!key)return;const old=byEmail.get(key);if(old&&roboticsName_(old[0])!==roboticsName_(row[0]))throw new Error('Roster identity conflict');byEmail.set(key,row);} ));return [...byEmail.values()];}
+function roboticsRoster_(){
+ const periods=Object.keys(PERIODS),byEmail=new Map();
+ const data=Sheets.Spreadsheets.Values.batchGet(NEST_DATABASE,{ranges:periods.map(p=>"'"+(p==='CTSO'?'CTSO':'Period '+p)+"'!A2:C1000"),valueRenderOption:'FORMATTED_VALUE'}).valueRanges;
+ if(!Array.isArray(data)||data.length!==periods.length)throw new Error('Roster unavailable');
+ data.forEach(range=>(range.values||[]).filter(row=>row[0]&&/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).forEach(row=>{
+  const key=email_(row[2]),old=byEmail.get(key);if(old&&roboticsName_(old[0])!==roboticsName_(row[0]))throw new Error('Roster identity conflict');byEmail.set(key,[String(row[0]).trim(),key]);
+ }));return [...byEmail.values()];
+}
 function roboticsPrivateRows_(){const id=roboticsPrivateId_();return id?roboticsValues_(id,"'Members'!A2:B10000").map((row,index)=>({key:String(row[0]),row:index+2,record:JSON.parse(row[1])})):[];}
 function roboticsPrivateSave_(entry){
  const text=JSON.stringify(entry.record);if(text.length>45000)throw new Error('Profile exceeds storage limit');
@@ -33,7 +40,7 @@ function roboticsOnboardingView_(state,identity){
   candidate:state.members.some(m=>m.email===e.record.respondent)?null:roboticsRoster_().filter(row=>email_(row[1])===e.record.respondent).map(row=>({id:hash_(String(row[1]).split('@')[0]+'|'+roboticsName_(row[0])),name:String(row[0])}))[0]||null,
   progress:protocols.filter(p=>p.active).filter(p=>e.record.checks?.[p.id]?.done).length,total:protocols.filter(p=>p.active).length,
   notification:e.record.historical?'Historical import':!e.record.mailPlan?'Pending':e.record.mailPlan.some(m=>e.record.mail?.[hash_(m.email)]?.state!=='sent')?'Needs review':'Sent'}));
- return {...(manager?roboticsView_(state):{}),status:200,manager,ready:!!roboticsPrivateId_(),requests:manager?requests:[],protocols:manager?protocols:[],protocolRevision:manager?roboticsProtocolRevision_():null,
+ return {...(manager?roboticsView_(state):{}),status:200,manager,ready:!!roboticsPrivateId_(),requests:manager?requests:[],protocols:manager?protocols:[],protocolRevision:manager?hash_(JSON.stringify(protocols)):null,
   members:manager?roboticsView_(state).members:[],ownMember:own.length===1?{id:own[0].id,name:own[0].name}:null};
 }
 function roboticsProfileView_(entry,member){
