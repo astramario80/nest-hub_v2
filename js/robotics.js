@@ -44,7 +44,6 @@
  }
  q('[data-robotics-load]').addEventListener('click',()=>run('view'));
  q('[data-robotics-search]').addEventListener('input',()=>{if(data)renderMembers();});
- q('[data-robotics-refresh]').addEventListener('click',()=>{if(data&&window.confirm('Refresh all club membership records from the Program of Work?'))run('refresh',{revision:data.revision});});
  q('[data-robotics-import]').addEventListener('click',()=>{if(data&&q('[data-robotics-roster]').value.trim())run('import',{revision:data.revision,text:q('[data-robotics-roster]').value});});
  q('[data-robotics-preview]').addEventListener('click',()=>{invalidatePreview();run('preview',{kind:q('[data-robotics-kind]').value});});
  q('[data-robotics-kind]').addEventListener('change',invalidatePreview);
