@@ -74,3 +74,11 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
 /* Tracker belongs to the HQ content surface. */
 .division-hq-content .trip-access { color: #fff; }
 .division-hq-content .trip-table-scroll { height: 65vh; height: 65dvh; min-height: 320px; }
+
+.robotics-workspace {display:grid;gap:1rem;max-width:100%;}
+.robotics-workspace table {width:100%;border-collapse:collapse;}
+.robotics-workspace th,.robotics-workspace td {padding:.7rem;text-align:left;border-bottom:1px solid #d4dce6;}
+.robotics-workspace label {display:grid;gap:.4rem;margin:.8rem 0;}
+.robotics-workspace textarea {width:100%;box-sizing:border-box;}
+.robotics-workspace pre {white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;}
+.robotics-workspace details {padding:1rem;border:1px solid #d4dce6;border-radius:12px;}

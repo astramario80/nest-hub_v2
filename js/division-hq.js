@@ -9,7 +9,7 @@
     scripts.set(src,promise);return promise;
   }
   function startTool(key){
-    const src={tripometer:'/js/trip-o-meter.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
+    const src={tripometer:'/js/trip-o-meter.js',robotics:'/js/robotics.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
     const target=panel(key);target.querySelector('[data-tool-retry]')?.remove();
     loadScript(src).catch(()=>{
       const retry=document.createElement('button');retry.type='button';retry.dataset.toolRetry='';retry.textContent='Could not load this section. Try again';retry.addEventListener('click',()=>startTool(key),{once:true});target.append(retry);
@@ -27,8 +27,9 @@
     startTool(key);
     document.dispatchEvent(new CustomEvent('nest-hq-tab-change',{detail:{tab:key}}));
   }
-  window.NestDivisionHQ={allowed:false,get active(){return active;},setAccess(canOpen,canManage=false){
+  window.NestDivisionHQ={allowed:false,get active(){return active;},setAccess(canOpen,canManage=false,canManageRobotics=false){
     const wasAllowed=this.allowed;this.allowed=canOpen;
+    const robotics=tabs.find(tab=>tab.dataset.hqTab==='robotics');if(robotics)robotics.hidden=!canOpen||!canManageRobotics;
     const hiring=tabs.find(tab=>tab.dataset.hqTab==='hiring');hiring.hidden=!canOpen||!canManage||!panel('hiring');
     if(!canOpen){
       page.querySelectorAll('[role=tabpanel]').forEach(section=>section.hidden=true);
