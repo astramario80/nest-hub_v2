@@ -75,10 +75,14 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
 .division-hq-content .trip-access { color: #fff; }
 .division-hq-content .trip-table-scroll { height: 65vh; height: 65dvh; min-height: 320px; }
 
-.robotics-workspace {display:grid;gap:1rem;max-width:100%;}
-.robotics-workspace table {width:100%;border-collapse:collapse;}
-.robotics-workspace th,.robotics-workspace td {padding:.7rem;text-align:left;border-bottom:1px solid #d4dce6;}
+.robotics-workspace {display:grid;gap:1rem;max-width:100%;font-size:clamp(1rem,.85rem + .35vw,1.3rem);line-height:1.5;}
+.robotics-workspace table {width:100%;border-collapse:collapse;color:#f5f8fc;}
+.robotics-workspace th,.robotics-workspace td {padding:.7rem;text-align:left;border-bottom:1px solid rgba(255,255,255,.2);color:#f5f8fc;}
+.robotics-workspace th {color:#fff;}
+.robotics-workspace input,.robotics-workspace select,.robotics-workspace textarea {background:#fff;color:#17284a;border:1px solid #9fb5d6;border-radius:6px;padding:.5rem;font:inherit;}
+.robotics-workspace select:disabled {background:#e7edf5;color:#425679;opacity:1;}
 .robotics-workspace label {display:grid;gap:.4rem;margin:.8rem 0;}
 .robotics-workspace textarea {width:100%;box-sizing:border-box;}
 .robotics-workspace pre {white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;}
 .robotics-workspace details {padding:1rem;border:1px solid #d4dce6;border-radius:12px;}
+.division-hq-tabs [role=tab] {font-size:clamp(1rem,.8rem + .3vw,1.25rem);}
