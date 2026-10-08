@@ -31,7 +31,7 @@ async function handler(req,res){
    const roles=new Set((Array.isArray(result.roles)?result.roles:[]).map(roleKey));
    const canEdit=role=>result.isOwner===true||result.canManage===true||roles.has(roleKey(role));
    const team=(Array.isArray(result.team)?result.team:[]).filter(leader=>typeof leader.position==='string'&&typeof leader.name==='string').map(({position,name})=>({position:roleKey(position)==='fabrication supervisor'?'Fabrication Supervisor':position,name}));
-   return res.status(200).json({identity:verifiedIdentity(result.identity),team,canManage:result.canManage===true,canManageRobotics:period==='CTSO'&&result.canManageRobotics===true,manager:{id:DIVISIONS[period].slides,role:'Manager Slideshow',canEdit:canEdit(period==='CTSO'?'Chief Executive Officer':'Division Manager')},leaders:LEADER_SLIDES[period].map(slide=>({...slide,canEdit:canEdit(slide.role)}))});
+   return res.status(200).json({identity:verifiedIdentity(result.identity),team,canManage:result.canManage===true,canManageRobotics:period==='CTSO'&&result.canManageRobotics===true,canViewRobotics:period==='CTSO'&&result.canViewRobotics===true,manager:{id:DIVISIONS[period].slides,role:'Manager Slideshow',canEdit:canEdit(period==='CTSO'?'Chief Executive Officer':'Division Manager')},leaders:LEADER_SLIDES[period].map(slide=>({...slide,canEdit:canEdit(slide.role)}))});
   }
   if(!['queued','running','completed','failed'].includes(result.state)||result.job!==job)throw new Error('Invalid slide update response');
   return res.status(200).json({job,state:result.state,updatedAt:result.updatedAt||null});

@@ -1,5 +1,5 @@
 import {COOKIE,cookies,validToken,originAllowed,bridge} from '../lib/nest-auth.mjs';
-const operations=new Set(['view','status','refresh','import','preview','send']);
+const operations=new Set(['view','status','refresh','import','preview','send','onboarding','profile','profile-save','checklist','protocol-save','activate-request']);
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
  res.setHeader('X-Content-Type-Options','nosniff');
@@ -14,6 +14,21 @@ export default async function handler(req,res){
  const session=cookies(req)[COOKIE];if(!validToken(session))return res.status(401).json({error:'Sign in to NEST.'});
  // No caller can select a spreadsheet, division, identity, or arbitrary email recipient.
  const payload={action:'auth-robotics',session,operation:body.operation};
+ if(['profile','profile-save','checklist','activate-request'].includes(body.operation)){
+  if(body.member!==undefined&&!/^[a-f0-9]{64}$/.test(body.member))return res.status(400).json({error:'Choose a member.'});
+  if(body.request!==undefined&&!/^[a-f0-9]{64}$/.test(body.request))return res.status(400).json({error:'Choose a signup.'});
+  if(!body.member&&!body.request)return res.status(400).json({error:'Choose a member or signup.'});
+  Object.assign(payload,{member:body.member,request:body.request});
+ }
+ if(['profile-save','checklist','protocol-save','activate-request'].includes(body.operation)){
+  if(!/^[a-f0-9]{64}$/.test(body.revision||''))return res.status(400).json({error:'Reload before saving.'});payload.revision=body.revision;
+ }
+ if(body.operation==='profile-save')payload.fields=body.fields;
+ if(body.operation==='protocol-save')payload.protocols=body.protocols;
+ if(body.operation==='checklist')Object.assign(payload,{step:body.step,done:body.done});
+ if(body.operation==='activate-request'){
+  if(!/^[a-f0-9]{64}$/.test(body.memberRevision||''))return res.status(400).json({error:'Reload membership before activating.'});payload.memberRevision=body.memberRevision;
+ }
  if(body.operation==='status'){
   if(!/^[a-f0-9]{64}$/.test(body.member||'')||typeof body.active!=='boolean')return res.status(400).json({error:'Choose a member and status.'});
   Object.assign(payload,{member:body.member,active:body.active});
@@ -32,8 +47,8 @@ export default async function handler(req,res){
  }
  try{
   const result=await bridge(payload,50000);
-  if(result.status!==200){const status=[400,401,403,409,429].includes(result.status)?result.status:503;
-   return res.status(status).json({error:({400:'Check your entry. The roster must include Youth Members → Accepted.',401:'Your sign-in has expired.',403:'Only the CTSO CEO, CFO, COO, and Mario can manage Robotics.',409:'The records changed or this preview expired. Reload and preview again.',429:'The daily email limit has been reached.',503:'Robotics is temporarily unavailable. Please try again.'})[status]});}
+  if(result.status!==200){const status=[400,401,403,404,409,429].includes(result.status)?result.status:503;
+   return res.status(status).json({error:({400:'Check your entry. The roster must include Youth Members → Accepted.',401:'Your sign-in has expired.',403:'You do not have access to this member or action.',404:'This profile is not available. Reload membership.',409:'The records changed or this preview expired. Reload and preview again.',429:'The daily email limit has been reached.',503:'Robotics is temporarily unavailable. Please try again.'})[status]});}
   return res.status(200).json(result);
  }catch{return res.status(503).json({error:'Robotics is temporarily unavailable. Check saved status before retrying an action.'});}
 }

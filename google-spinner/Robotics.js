@@ -19,7 +19,7 @@ function roboticsAccess_(identity,leaders){
  if(!rows_('CTSO').some(row=>email_(row[1])===address))return false;
  const roles=leaders||nestAccessValues_(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
  return roles.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()==='CTSO'&&email_(row[4])===address&&
-  /^chief (executive|financial|operations) officers?$/i.test(String(row[2]||'').trim()));
+  /^(chief (executive|financial|operations) officers?)$/i.test(String(row[2]||'').trim()));
 }
 function roboticsName_(value){
  const name=String(value||'').trim(),parts=name.split(',');
@@ -28,7 +28,7 @@ function roboticsName_(value){
 function roboticsValues_(id,range){return Sheets.Spreadsheets.Values.get(id,range,{valueRenderOption:'UNFORMATTED_VALUE'}).values||[];}
 function roboticsState_(){
  roboticsStorage_();
- const id=PERIODS.CTSO,roster=rows_('CTSO');
+ const id=PERIODS.CTSO,roster=typeof roboticsRoster_==='function'?roboticsRoster_():rows_('CTSO');
  const membership=roboticsValues_(id,"'"+ROBOTICS_STORAGE+"'!A2:E1000"),raw=roboticsValues_(id,"'"+ROBOTICS_STORAGE+"'!H2:L1000");
  const members=membership.map((row,index)=>{
   if(!row[2])return null;
@@ -109,7 +109,10 @@ function roboticsNotify_(r,state,session,store){
 }
 function roboticsDispatch_(r){
  const store=PropertiesService.getScriptProperties(),session=authSession_(r.session,store,Date.now());
- if(!session)return {status:401};if(!roboticsAccess_(session.email))return {status:403};
+ if(!session)return {status:401};
+ if(r.operation==='view'&&typeof roboticsOnboardingView_==='function')return roboticsOnboardingView_(roboticsState_(),session.email);
+ if(['onboarding','profile','profile-save','checklist','protocol-save','activate-request'].includes(r.operation))return roboticsOnboardingDispatch_(r,roboticsState_(),session);
+ if(!(typeof roboticsManagementAccess_==='function'?roboticsManagementAccess_(session.email):roboticsAccess_(session.email)))return {status:403};
  if(!['view','status','refresh','import','preview','send'].includes(r.operation))return {status:400};
  const state=roboticsState_();if(r.operation==='view')return roboticsView_(state);
  if(['preview','send'].includes(r.operation))return roboticsNotify_(r,state,session,store);
