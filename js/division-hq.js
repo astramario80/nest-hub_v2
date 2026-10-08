@@ -27,9 +27,9 @@
     startTool(key);
     document.dispatchEvent(new CustomEvent('nest-hq-tab-change',{detail:{tab:key}}));
   }
-  window.NestDivisionHQ={allowed:false,get active(){return active;},setAccess(canOpen,canManage=false,canManageRobotics=false){
+  window.NestDivisionHQ={allowed:false,get active(){return active;},setAccess(canOpen,canManage=false,canManageRobotics=false,canViewRobotics=false){
     const wasAllowed=this.allowed;this.allowed=canOpen;
-    const robotics=tabs.find(tab=>tab.dataset.hqTab==='robotics');if(robotics)robotics.hidden=!canOpen||!canManageRobotics;
+    const robotics=tabs.find(tab=>tab.dataset.hqTab==='robotics');if(robotics)robotics.hidden=!canOpen||!(canManageRobotics||canViewRobotics);
     const hiring=tabs.find(tab=>tab.dataset.hqTab==='hiring');hiring.hidden=!canOpen||!canManage||!panel('hiring');
     if(!canOpen){
       page.querySelectorAll('[role=tabpanel]').forEach(section=>section.hidden=true);
