@@ -87,3 +87,13 @@ test('historical import uses bounded sheet reads and batched writes, including s
  reads=0;writes=0;h.c.roboticsSetupOnboarding();assert.ok(reads<=5);assert.equal(writes,0);assert.equal(triggers.length,2);
  assert.equal(h.records.map(r=>JSON.parse(r[1])).filter(r=>r.memberId).length,1);
 });
+
+test('conflicting roster identities are excluded without blocking unrelated members or granting private access',()=>{
+ const h=school();h.c.PERIODS['1']='period1';
+ h.c.Sheets.Spreadsheets.Values.batchGet=()=>({valueRanges:[{values:[['Other, Name','','100001@students.bethelsd.org']]},{values:h.roster.map(r=>[r[0],'',r[1]])}]});
+ const logs=[];h.c.Logger={log:m=>logs.push(m)};
+ const roster=h.c.roboticsRoster_();assert.equal(roster.some(r=>r[1]==='100001@students.bethelsd.org'),false);assert.equal(roster.length,2);assert.match(logs[0],/1 conflicting/);
+ const state=h.c.roboticsState_();assert.equal(state.members[0].identityVerified,false);assert.equal(state.members[1].identityVerified,true);
+ h.setIdentity('100001@students.bethelsd.org');assert.equal(h.c.roboticsDispatch_({operation:'view'}).status,403);
+ h.setIdentity('mpenalver@bethelsd.org');assert.equal(h.c.roboticsDispatch_({operation:'view'}).status,200);
+});
