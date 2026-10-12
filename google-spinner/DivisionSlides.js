@@ -14,7 +14,8 @@ function divisionSlidesDispatch_(r){
  if(!session)return {status:401};
  const email=memberEmail_(session.email,r.period),isOwner=OWNER_EMAILS.includes(email_(session.email));
  const roster=rows_(r.period),members=new Set(roster.map(row=>email_(row[1])));
- if(!isOwner&&!members.has(email))return {status:403};
+ const canViewRobotics=r.period==='CTSO'&&(typeof roboticsCanView_==='function'?roboticsCanView_(session.email):roboticsAccess_(session.email));
+ if(!isOwner&&!members.has(email)&&!canViewRobotics)return {status:403};
  const leaders=(typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
  const canManage=divisionSlidesPermissions_(session.email,r.period,leaders);
  if(r.operation==='access'){
@@ -23,7 +24,7 @@ function divisionSlidesDispatch_(r){
    const name=String(row[3]||'').trim(),comma=name.indexOf(',');
    return {position:String(row[2]||'').trim(),name:comma>=0?name.slice(comma+1).trim()+' '+name.slice(0,comma).trim():name};
   }).filter(leader=>leader.position&&leader.name);
-  return {status:200,canManage,canManageRobotics:r.period==='CTSO'&&roboticsAccess_(session.email,leaders),roles,isOwner,team,identity:{signedIn:true,email:session.email,username:session.username,expires:session.expires}};
+  return {status:200,canManage,canManageRobotics:r.period==='CTSO'&&(typeof roboticsManagementAccess_==='function'?roboticsManagementAccess_(session.email,leaders):roboticsAccess_(session.email,leaders)),canViewRobotics,roles,isOwner,team,identity:{signedIn:true,email:session.email,username:session.username,expires:session.expires}};
  }
  if(!canManage)return {status:403};
  if(!/^[a-f0-9-]{36}$/.test(r.job||''))return {status:400};

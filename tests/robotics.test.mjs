@@ -23,7 +23,7 @@ function school(){
 test('only owner and current CTSO CEO/CFO/COO can manage Robotics or edit CTSO assignments',()=>{
  const h=school();for(const role of ['Chief Executive Officer','Chief Financial Officer','Chief Operations Officer','Chief Operations Officers']){
  h.setRoles([['CTSO','',role,'Ada','100001@students.bethelsd.org']]);assert.equal(h.c.roboticsAccess_('100001@students.bethelsd.org'),true);assert.equal(h.c.trackerRole_('100001@students.bethelsd.org','CTSO'),'manager');}
- for(const role of ['Executive Vice-President','Partner Liaison','Division Manager']){h.setRoles([['CTSO','',role,'Ada','100001@students.bethelsd.org']]);assert.equal(h.c.roboticsAccess_('100001@students.bethelsd.org'),false);assert.equal(h.c.trackerRole_('100001@students.bethelsd.org','CTSO'),'student');}
+ for(const role of ['Partner Liaison','Executive Vice-President','Division Manager']){h.setRoles([['CTSO','',role,'Ada','100001@students.bethelsd.org']]);assert.equal(h.c.roboticsAccess_('100001@students.bethelsd.org'),false);assert.equal(h.c.trackerRole_('100001@students.bethelsd.org','CTSO'),'student');}
  h.setRoles([['2','','Chief Financial Officer','Ada','100001@students.bethelsd.org']]);assert.equal(h.c.roboticsAccess_('100001@students.bethelsd.org'),false);
  h.setRoles([['CTSO','','Chief Financial Officer','Ada','100001@students.bethelsd.org']]);h.roster.splice(0,1);assert.equal(h.c.roboticsAccess_('100001@students.bethelsd.org'),false);assert.equal(h.c.roboticsAccess_('mpenalver@bethelsd.org'),true);
  assert.equal(h.c.grantEditor_({period:'CTSO'},{email:'mpenalver@bethelsd.org'},h.store,Date.now()).status,403);

@@ -86,3 +86,11 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
 .robotics-workspace pre {white-space:pre-wrap;overflow-wrap:anywhere;font-family:inherit;}
 .robotics-workspace details {padding:1rem;border:1px solid #d4dce6;border-radius:12px;}
 .division-hq-tabs [role=tab] {font-size:clamp(1rem,.8rem + .3vw,1.25rem);}
+
+.robotics-workspace [data-robotics-profile] {padding:1.25rem;border:1px solid #9fb5d6;border-radius:12px;overflow-wrap:anywhere;}
+.robotics-workspace [data-robotics-profile] label span {white-space:pre-wrap;}
+.robotics-workspace label:has(input[type="checkbox"]) {display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;}
+.robotics-workspace input[type="checkbox"] {width:1.2em;height:1.2em;flex:none;}
+.robotics-workspace fieldset {border:1px solid #9fb5d6;border-radius:8px;margin:1rem 0;min-width:0;}
+.robotics-workspace input {max-width:100%;box-sizing:border-box;}
+.robotics-workspace [data-robotics-requests]>div {padding:.8rem 0;border-bottom:1px solid rgba(255,255,255,.2);}

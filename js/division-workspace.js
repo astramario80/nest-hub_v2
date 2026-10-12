@@ -52,7 +52,7 @@
     dialog.querySelector('.division-window-controls').hidden=false;loadButton.hidden=!canManage;
     dialog.querySelector('.division-window-controls p').textContent=canManage?'Update the manager slideshow with this division’s latest leadership slides.':'You can view all leadership slides in your division. Only your assigned positions allow editing.';
     dialog.querySelector('[data-edit-manager]').hidden=!result.manager.canEdit;
-    dialog.querySelector('.division-window-footer').hidden=false;window.NestDivisionHQ?.setAccess(true,canManage,result.canManageRobotics===true);if(!window.NestDivisionHQ)render();
+    dialog.querySelector('.division-window-footer').hidden=false;window.NestDivisionHQ?.setAccess(true,canManage,result.canManageRobotics===true,result.canViewRobotics===true);if(!window.NestDivisionHQ)render();
   }
   async function openSlide(id,button){
     const own=++slideGeneration,current=generation;slideOpener=button;
