@@ -4,12 +4,15 @@ const ROBOTICS_CALENDAR='c_2b422570f48c710a09f9a4ad62f01b3a99eba983da39e7cc64845
 const ROBOTICS_CALENDAR_LINK='https://calendar.google.com/calendar/u/0?cid=Y18yYjQyMjU3MGY0OGM3MTBhMDlmOWE0YWQ2MmYwMWIzYTk5ZWJhOTgzZGEzOWU3Y2M2NDg0NTRkY2YxMjlhMDc5QGdyb3VwLmNhbGVuZGFyLmdvb2dsZS5jb20';
 function roboticsPrivateId_(){return PropertiesService.getScriptProperties().getProperty('robotics-private-storage')||'';}
 function roboticsRoster_(){
- const periods=Object.keys(PERIODS),byEmail=new Map();
+ const periods=Object.keys(PERIODS),byEmail=new Map(),conflicts=new Set();
  const data=Sheets.Spreadsheets.Values.batchGet(NEST_DATABASE,{ranges:periods.map(p=>"'"+(p==='CTSO'?'CTSO':'Period '+p)+"'!A2:C1000"),valueRenderOption:'FORMATTED_VALUE'}).valueRanges;
  if(!Array.isArray(data)||data.length!==periods.length)throw new Error('Roster unavailable');
  data.forEach(range=>(range.values||[]).filter(row=>row[0]&&/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(email_(row[2]))).forEach(row=>{
-  const key=email_(row[2]),old=byEmail.get(key);if(old&&roboticsName_(old[0])!==roboticsName_(row[0]))throw new Error('Roster identity conflict');byEmail.set(key,[String(row[0]).trim(),key]);
- }));return [...byEmail.values()];
+  const key=email_(row[2]),old=byEmail.get(key);if(old&&roboticsName_(old[0])!==roboticsName_(row[0])){conflicts.add(key);return;}byEmail.set(key,[String(row[0]).trim(),key]);
+ }));
+ // Conflicting names never grant access or attach profiles; unrelated members can proceed.
+ if(conflicts.size&&typeof Logger!=='undefined')Logger.log('Robotics: '+conflicts.size+' conflicting roster email identities excluded from automatic matching; review the source division rosters.');
+ return [...byEmail.values()].filter(row=>!conflicts.has(row[1]));
 }
 function roboticsPrivateRows_(){const id=roboticsPrivateId_();return id?roboticsValues_(id,"'Members'!A2:B10000").map((row,index)=>({key:String(row[0]),row:index+2,record:JSON.parse(row[1])})):[];}
 function roboticsPrivateSave_(entry){
