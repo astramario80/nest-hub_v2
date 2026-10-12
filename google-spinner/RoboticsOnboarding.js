@@ -36,8 +36,9 @@ function roboticsOnboardingView_(state,identity){
  const manager=roboticsManagementAccess_(identity),own=roboticsOwnMember_(identity,state),protocols=roboticsProtocols_();
  if(!manager&&own.length!==1)return {status:403};
  const entries=manager?roboticsPrivateRows_():roboticsPrivateRows_().filter(e=>e.record.memberId===own[0].id);
+ let candidateRoster;
  const requests=entries.filter(e=>e.record.kind==='signup').map(e=>({id:e.key,name:e.record.name,submitted:e.record.submitted,memberId:e.record.memberId||null,
-  candidate:state.members.some(m=>m.email===e.record.respondent)?null:roboticsRoster_().filter(row=>email_(row[1])===e.record.respondent).map(row=>({id:hash_(String(row[1]).split('@')[0]+'|'+roboticsName_(row[0])),name:String(row[0])}))[0]||null,
+  candidate:state.members.some(m=>m.email===e.record.respondent)?null:(candidateRoster||(candidateRoster=roboticsRoster_())).filter(row=>email_(row[1])===e.record.respondent).map(row=>({id:hash_(String(row[1]).split('@')[0]+'|'+roboticsName_(row[0])),name:String(row[0])}))[0]||null,
   progress:protocols.filter(p=>p.active).filter(p=>e.record.checks?.[p.id]?.done).length,total:protocols.filter(p=>p.active).length,
   notification:e.record.historical?'Historical import':!e.record.mailPlan?'Pending':e.record.mailPlan.some(m=>e.record.mail?.[hash_(m.email)]?.state!=='sent')?'Needs review':'Sent'}));
  return {...(manager?roboticsView_(state):{}),status:200,manager,ready:!!roboticsPrivateId_(),requests:manager?requests:[],protocols:manager?protocols:[],protocolRevision:manager?hash_(JSON.stringify(protocols)):null,
@@ -131,13 +132,20 @@ function roboticsSetupOnboarding(){
    if(protocols.length)roboticsWrite_(roboticsPrivateId_(),[{range:"'Protocols'!A2:F"+(protocols.length+1),values:protocols}]);
   }
   // Backfill without notifying historical respondents; repeated setup never resends mail.
-  form.getResponses().forEach(response=>roboticsCaptureSignup_(response,true));
-  const state=roboticsState_(),entries=roboticsPrivateRows_();
+  const entries=roboticsPrivateRows_(),importContext={entries,byKey:new Map(entries.map(e=>[e.key,e])),roster:rows_('CTSO'),pending:[],nextRow:entries.length?Math.max(...entries.map(e=>e.row))+1:2};
+  form.getResponses().forEach(response=>roboticsCaptureSignup_(response,true,importContext));
+  const state=roboticsState_();
   state.members.filter(m=>m.identityVerified&&m.canChangeStatus).forEach(member=>{
    if(entries.some(e=>e.record.memberId===member.id))return;
    const candidates=entries.filter(e=>e.record.historical&&e.record.kind==='signup'&&!e.record.memberId&&e.record.respondent===member.email).sort((a,b)=>b.record.submitted.localeCompare(a.record.submitted));
-   if(candidates.length){candidates[0].record.memberId=member.id;roboticsPrivateSave_(candidates[0]);}
+   if(candidates.length){candidates[0].record.memberId=member.id;importContext.pending.push(candidates[0]);}
   });
+  // One snapshot per setup run; batch writes avoid both read and write quotas.
+  const pending=[...new Map(importContext.pending.map(e=>[e.key,e])).values()];
+  for(let i=0;i<pending.length;i+=25){
+   const data=pending.slice(i,i+25).map(entry=>{const text=JSON.stringify(entry.record);if(text.length>45000)throw new Error('Profile exceeds storage limit');return {range:"'Members'!A"+entry.row+':B'+entry.row,values:[[entry.key,text]]};});
+   roboticsWrite_(roboticsPrivateId_(),data);
+  }
   if(!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='roboticsMembershipSubmitted'&&t.getTriggerSourceId()===ROBOTICS_SIGNUP_FORM))ScriptApp.newTrigger('roboticsMembershipSubmitted').forForm(form).onFormSubmit().create();
   if(!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='roboticsRetryPendingSignups'))ScriptApp.newTrigger('roboticsRetryPendingSignups').timeBased().everyHours(1).create();
   store.setProperty('robotics-onboarding-ready',new Date().toISOString());
@@ -149,16 +157,21 @@ function roboticsMembershipSubmitted(e){
  try{key=roboticsCaptureSignup_(e.response,false).key;}finally{lock.releaseLock();}
  roboticsSignupMail_(key);
 }
-function roboticsCaptureSignup_(response,historical){
+function roboticsCaptureSignup_(response,historical,importContext){
  const responseId=response.getId();if(!responseId)throw new Error('Submitted response ID required');
- const key=hash_('signup|'+responseId),existing=roboticsPrivateRows_().find(e=>e.key===key);if(existing)return existing;
+ const key=hash_('signup|'+responseId),existing=importContext?importContext.byKey.get(key):roboticsPrivateRows_().find(e=>e.key===key);if(existing)return existing;
  const fields=response.getItemResponses().map(ir=>{const item=ir.getItem(),type=String(item.getType()),label=item.getTitle();
   return {id:String(item.getId()),label,value:ir.getResponse(),editable:['TEXT','PARAGRAPH_TEXT'].includes(type)&&/(phone|email|address|contact|guardian|parent)/i.test(label)&&!/(consent|agree|waiver|student.?id|legal name)/i.test(label)};});
- const submitted=response.getTimestamp().toISOString(),address=email_(response.getRespondentEmail()),roster=rows_('CTSO'),matches=roster.filter(r=>email_(r[1])===address);
+ const submitted=response.getTimestamp().toISOString(),address=email_(response.getRespondentEmail()),roster=importContext?importContext.roster:rows_('CTSO'),matches=roster.filter(r=>email_(r[1])===address);
  const nameField=fields.find(f=>/^(student )?(full |legal )?name$/i.test(f.label.trim()));
  fields.unshift({id:'respondent-email',label:'Signed-in account email',value:address,editable:false});
  const name=matches.length===1?String(matches[0][0]):String(nameField?.value||fields.filter(f=>/^(your |student )?(first|last) name$/i.test(f.label.trim())).map(f=>f.value).join(' ')||address||'Unmatched signup');
- return roboticsPrivateNew_(key,{kind:'signup',name,submitted,respondent:address,fields,memberId:null,checks:{},historical,mail:{}});
+ const record={kind:'signup',name,submitted,respondent:address,fields,memberId:null,checks:{},historical,mail:{}};
+ if(importContext){
+  if(importContext.nextRow>10000)throw new Error('Private membership storage is full');
+  const entry={key,row:importContext.nextRow++,record};importContext.entries.push(entry);importContext.byKey.set(key,entry);importContext.pending.push(entry);return entry;
+ }
+ return roboticsPrivateNew_(key,record);
 }
 function roboticsSignupRecipients_(){
  const roster=new Set(rows_('CTSO').map(r=>email_(r[1]))),roles=nestAccessValues_(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
