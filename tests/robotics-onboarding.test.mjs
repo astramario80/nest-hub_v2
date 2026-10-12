@@ -70,3 +70,20 @@ test('owner setup imports historical responses silently, attaches only verified 
  const record=JSON.parse(h.records[0][1]);assert.equal(record.memberId,h.c.roboticsState_().members[0].id);assert.equal(record.historical,true);
  h.c.Session={getEffectiveUser:()=>({getEmail:()=> 'outsider@example.org'})};assert.throws(()=>h.c.roboticsSetupOnboarding(),/school owner/);
 });
+
+test('historical import uses bounded sheet reads and batched writes, including safe retry after partial failure',()=>{
+ const h=school(),triggers=[];let reads=0,writes=0,rosterReads=0;
+ const get=h.c.Sheets.Spreadsheets.Values.get,write=h.c.Sheets.Spreadsheets.Values.batchUpdate,roster=h.c.rows_;
+ h.c.Sheets.Spreadsheets.Values.get=(...args)=>{reads++;return get(...args);};
+ h.c.rows_=(...args)=>{rosterReads++;return roster(...args);};
+ let failSecond=true;h.c.Sheets.Spreadsheets.Values.batchUpdate=(...args)=>{writes++;if(failSecond&&writes===2)throw new Error('simulated interrupted import');return write(...args);};
+ h.c.Session={getEffectiveUser:()=>({getEmail:()=> 'mpenalver@bethelsd.org'})};
+ const responses=Array.from({length:80},(_,i)=>h.response('history-'+i,'100001@students.bethelsd.org'));
+ h.c.FormApp={openById:()=>({collectsEmail:()=>true,getResponses:()=>responses})};
+ h.c.ScriptApp={getProjectTriggers:()=>triggers,newTrigger:handler=>{const chain={forForm:()=>chain,onFormSubmit:()=>chain,timeBased:()=>chain,everyHours:()=>chain,create:()=>triggers.push({getHandlerFunction:()=>handler,getTriggerSourceId:()=> '1ROTm1QXYvOzRUh3TVeNDQNhXmxRrYxNayzxZHvBI1cg'})};return chain;}};
+ assert.throws(()=>h.c.roboticsSetupOnboarding(),/interrupted/);assert.equal(h.records.length,25);assert.equal(triggers.length,0);
+ failSecond=false;reads=0;writes=0;rosterReads=0;h.c.roboticsSetupOnboarding();
+ assert.equal(h.records.length,80);assert.equal(new Set(h.records.map(r=>r[0])).size,80);assert.ok(reads<=5);assert.ok(rosterReads<=2);assert.ok(writes<=4);assert.equal(h.sent.length,0);
+ reads=0;writes=0;h.c.roboticsSetupOnboarding();assert.ok(reads<=5);assert.equal(writes,0);assert.equal(triggers.length,2);
+ assert.equal(h.records.map(r=>JSON.parse(r[1])).filter(r=>r.memberId).length,1);
+});
