@@ -16,7 +16,7 @@
    const row=element('tr');const nameCell=element('td'),open=element('button',member.name);open.type='button';open.addEventListener('click',()=>run('profile',{member:member.id}));nameCell.append(open);row.append(nameCell);const cell=element('td'),select=element('select');select.dataset.memberStatus='';select.dataset.editable=String(member.canChangeStatus);select.setAttribute('aria-label',member.name+' club status');
    [['unassigned','Not set'],['active','Active'],['inactive','Inactive']].forEach(([value,label])=>{const option=element('option',label);option.value=value;option.disabled=value==='unassigned';select.append(option);});
    select.value=member.active?'active':member.inactive?'inactive':'unassigned';select.disabled=!member.canChangeStatus||busy;
-   select.addEventListener('change',()=>run('status',{member:member.id,active:select.value==='active',revision:data.revision}));cell.append(select);row.append(cell,element('td',member.joined?'Joined':'Needs to join'),element('td',!member.joined?'Not applicable':member.waiver===true?'Signed':member.waiver===false?'Needed':'Unknown — import updated roster'),element('td',member.warning||'—'));(member.inactive&&inactive?inactive:tbody).append(row);
+   select.addEventListener('change',()=>run('status',{member:member.id,active:select.value==='active',revision:data.revision}));cell.append(select);row.append(cell,element('td',member.joined?'Joined':'Needs to join'),element('td',!member.joined?'Awaiting FIRST verification':member.waiver===true?'Signed':member.waiver===false?'Needed':'Unknown — import updated roster'),element('td',member.warning||'—'));(member.inactive&&inactive?inactive:tbody).append(row);
   });
  }
  function render(result){data=result;content.hidden=false;invalidatePreview();renderOnboarding();if(data.manager===false){q('[data-robotics-members]').replaceChildren();q('[data-robotics-inactive]')?.replaceChildren();return;}renderMembers();const s=data.summary;
@@ -87,3 +87,4 @@
  window.addEventListener('pagehide',clear);
  if(window.NestDivisionHQ?.allowed&&window.NestDivisionHQ.active==='robotics')run('view');
 })();
+
