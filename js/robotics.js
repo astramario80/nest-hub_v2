@@ -12,7 +12,7 @@
  }
  function renderMembers(){
   const tbody=q('[data-robotics-members]'),inactive=q('[data-robotics-inactive]');tbody.replaceChildren();inactive?.replaceChildren();if(q('[data-robotics-inactive-count]'))q('[data-robotics-inactive-count]').textContent='('+data.members.filter(m=>m.inactive).length+')';const search=q('[data-robotics-search]').value.toLowerCase().trim();
-  data.members.filter(m=>(m.name+' '+m.studentId).toLowerCase().includes(search)).forEach(member=>{
+  data.members.filter(m=>(m.name+' '+m.studentId).toLowerCase().includes(search)).sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:'base',numeric:true})).forEach(member=>{
    const row=element('tr');const nameCell=element('td'),open=element('button',member.name);open.type='button';open.addEventListener('click',()=>run('profile',{member:member.id}));nameCell.append(open);row.append(nameCell);const cell=element('td'),select=element('select');select.dataset.memberStatus='';select.dataset.editable=String(member.canChangeStatus);select.setAttribute('aria-label',member.name+' club status');
    [['unassigned','Not set'],['active','Active'],['inactive','Inactive']].forEach(([value,label])=>{const option=element('option',label);option.value=value;option.disabled=value==='unassigned';select.append(option);});
    select.value=member.active?'active':member.inactive?'inactive':'unassigned';select.disabled=!member.canChangeStatus||busy;
@@ -87,4 +87,5 @@
  window.addEventListener('pagehide',clear);
  if(window.NestDivisionHQ?.allowed&&window.NestDivisionHQ.active==='robotics')run('view');
 })();
+
 
