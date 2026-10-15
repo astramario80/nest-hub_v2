@@ -26,7 +26,7 @@ function service() {
   const batchUpdate=({requests})=>{for(const request of requests){
     if(request.insertDimension)accounts.splice(request.insertDimension.range.startIndex-1,0,[]);
     if(request.updateCells)accounts[request.updateCells.range.startRowIndex-1]=request.updateCells.rows[0].values.map(cell=>Object.values(cell.userEnteredValue)[0]);
-    if(request.sortRange){if(failSort)throw new Error('Sort unavailable');accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));}
+    if(request.sortRange){assert.equal(request.sortRange.range.endColumnIndex,11,'Account sorts must include Linked Student Email');if(failSort)throw new Error('Sort unavailable');accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));}
   }return {};};
   const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},CacheService:{getScriptCache:()=>cache},LockService:{getScriptLock:()=>lock},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
   vm.runInContext(source,ctx);

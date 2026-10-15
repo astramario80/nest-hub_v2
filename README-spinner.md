@@ -17,3 +17,9 @@ MailApp sends from mpenalver@bethelsd.org with ASCII sender name gk NEST and sub
 Vercel holds SPINNER_BRIDGE_URL and SPINNER_BRIDGE_TOKEN. The Google endpoint rejects requests lacking the token. Only the digest is committed. Never expose the token or add browser-selectable spreadsheet IDs.
 
 School deployment ID: AKfycbygtJUtH24qVVbEFQG9OI20J7PwGrVW8KSxtomtCFzUTC7pjybBif7ruChly2ogQb7d4g. Google changes require a new version in the school-owned project; Git pushes only deploy website/API changes.
+
+## Division name imports
+
+Magic Spinner observes the SOP content placeholder, so its controls mount when the tab is opened. The Trip-o-Meter shortcut has been replaced with a member importer. Signing in auto-imports the user's own division memberships; the selector offers each accessible division and an all-accessible option. Imports replace the editable text box, reset prior spins, and remove repeated names. Signing out or changing accounts clears the list and cancels pending imports.
+
+`POST /api/spinner` with `action: rosters` calls the school bridge's `auth-spinner-rosters` action. `SpinnerRosters.js` rechecks the current NEST session and the existing member, administrator, manager, manual-account, and delegated access rules on each import. Only permitted division labels and names are returned; no emails or spreadsheet IDs are sent to the browser. Responses are private and uncached. Deploy the bridge module and dispatch route before publishing the client.

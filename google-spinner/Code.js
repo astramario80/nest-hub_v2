@@ -20,6 +20,9 @@ function doPost(e) {
 }
 function nestRequest_(r){
   if(['diagnostics-record','auth-diagnostics-read'].includes(r.action))return json_(diagnosticDispatch_(r));
+  if(r.action==='auth-spinner-rosters') {
+    try{return json_(spinnerRosters_(r.session));}catch(_){return json_({status:503});}
+  }
   if(r.action==='doughnut-barometer') {
     try{return json_(doughnutBarometer_(r.session));}catch(_){return json_({status:503});}
   }
