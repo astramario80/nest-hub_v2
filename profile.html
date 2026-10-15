@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Your NEST™ Profile</title>
   <link rel="icon" href="/assets/nest_menu_icon.png" type="image/png">
-  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/internal-workspaces.css">
+  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1"><link rel="stylesheet" href="/css/internal-workspaces.css">
   <link rel="stylesheet" href="/css/diagnostics.css">
 </head>
 <body>
@@ -49,7 +49,7 @@
               <label>Student<select name="studentEmail" id="admin-student" required disabled><option value="">Choose a period first</option></select></label>
               <label>Student district email<input id="admin-student-email" type="email" readonly aria-label="Student district email"></label>
               <label>Username<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9._-]{2,31}" autocomplete="off" required></label>
-              <label>Temporary password (12 or more characters)<input name="password" type="text" minlength="12" maxlength="128" autocomplete="off" required></label>
+              <label>Temporary password (12 or more characters)<input name="password" type="password" minlength="12" maxlength="128" autocomplete="off" required></label>
               <button type="button" id="admin-generate">Generate username and password</button>
               <label>District recovery email, if available<input name="recoveryEmail" type="email" maxlength="254" autocomplete="off"></label>
               <button type="submit">Create account</button>
@@ -81,6 +81,6 @@
       <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div></div></div>
   </div></footer>
-  <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js"></script><script src="/js/diagnostics.js"></script>
+  <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js?v=password-toggle-1"></script><script src="/js/diagnostics.js"></script>
 </body>
 </html>
