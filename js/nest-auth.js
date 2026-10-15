@@ -7,9 +7,19 @@
     return [...new Set([base || first, first + '1', first + '2'])].filter(name => /^[a-z][a-z0-9._-]{2,31}$/.test(name)).slice(0, 3);
   };
   const changed = () => document.dispatchEvent(new CustomEvent('nest-auth-change', { detail: identity }));
+  async function authFetch(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000);
+    try {
+      return await fetch(url, {...options, signal:controller.signal});
+    } catch (error) {
+      if (error.name === 'AbortError') throw new Error('NEST sign-in took too long. Please try again.');
+      throw error;
+    } finally { clearTimeout(timeout); }
+  }
   const api = async (action, extra = {}) => {
-    const response = await fetch('/api/auth', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) });
-    const data = await response.json();
+    const response = await authFetch('/api/auth', { method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, ...extra }) });
+    const data = await response.json().catch(() => { throw new Error('NEST sign-in is temporarily unavailable. Please try again.'); });
     if (!response.ok) throw new Error(data.error || 'NEST sign-in is unavailable.');
     return data;
   };
@@ -135,7 +145,7 @@
   }
   async function refresh(preserveWorkspace=false) {
     if(preserveWorkspace!==true)hiringView=null;
-    const response = await fetch('/api/auth?action=me', { credentials: 'same-origin', cache: 'no-store' });
+    const response = await authFetch('/api/auth?action=me', { credentials: 'same-origin', cache: 'no-store' });
     if (!response.ok) throw new Error('NEST sign-in is temporarily unavailable.');
     const data = await response.json();
     identity = data.signedIn ? data : null;

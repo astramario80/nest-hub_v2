@@ -267,13 +267,6 @@ const sopsData = {
     content: `
       <p><strong>Transparency is everything.</strong></p>
 
-      <p>
-        Track class progress:
-        <a href="/divisions">
-          Open Trip‑o‑Meter
-        </a>
-      </p>
-
       <section id="spinner-access" class="spinner-access" aria-label="Secure period rosters"></section>
       <div class="spinner-columns">
 

@@ -22,3 +22,6 @@
   .sops-content {padding:20px;overflow:visible;}
   .sops-content h1 {font-size:2rem;}
 }
+
+.spinner-access select {max-width:100%;min-height:44px;padding:10px 12px;margin:0 8px 12px 0;border:1px solid #71809c;border-radius:8px;background:#fff;color:#111827;font:inherit;}
+.spinner-access select:focus-visible {outline:3px solid #ffc572;outline-offset:3px;}

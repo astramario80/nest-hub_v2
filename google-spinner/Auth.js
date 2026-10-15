@@ -151,7 +151,7 @@ function authDispatch_(r) {
       CacheService.getScriptCache().remove('auth-directory-v1');
       try {
         const sheet=(Sheets.Spreadsheets.get(NEST_DATABASE,{fields:'sheets(properties(sheetId,title))'}).sheets||[]).find(s=>s.properties&&s.properties.title==='StudentNESTAccess');
-        if(sheet)Sheets.Spreadsheets.batchUpdate({requests:[{sortRange:{range:{sheetId:sheet.properties.sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:10},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}]},NEST_DATABASE);
+        if(sheet)Sheets.Spreadsheets.batchUpdate({requests:[{sortRange:{range:{sheetId:sheet.properties.sheetId,startRowIndex:1,endRowIndex:all.length+2,startColumnIndex:0,endColumnIndex:11},sortSpecs:[{dimensionIndex:0,sortOrder:'ASCENDING'}]}}]},NEST_DATABASE);
       }catch(error){console.error('NEST account sort failed',String(error&&error.message||error).slice(0,300));}
     } finally {
       store.deleteProperty('auth-reserve:'+hash_(name));

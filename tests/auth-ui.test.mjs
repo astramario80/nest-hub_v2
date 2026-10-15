@@ -56,3 +56,24 @@ test('failed hiring preload offers a retry without automatically requesting the 
  w.fetch=async url=>{calls.push(url);return url.startsWith('/api/hiring')?{ok:false,status:503,json:async()=>({error:'School data is unavailable.'})}:{ok:true,json:async()=>({signedIn:true,email:'manager@students.bethelsd.org',username:'manager',expires:Date.now()+60000})};};
  try{w.eval(fs.readFileSync('js/nest-auth.js','utf8'));w.eval(fs.readFileSync('js/hiring.js','utf8'));await w.NestAuth.ready;await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.filter(url=>url.startsWith('/api/hiring')).length,1);assert.match(w.document.querySelector('#hiring-status').textContent,/School data is unavailable/);assert.equal(w.document.querySelector('#hiring-status button').textContent,'Try again');}finally{w.close();}
 });
+
+
+test('sign-in timeout releases the button and shows a retry message',async()=>{
+ const dom=new JSDOM('<body></body>',{runScripts:'outside-only',url:'https://gknest.org/'}),w=dom.window;
+ const nativeTimeout=w.setTimeout.bind(w);let finish;
+ w.fetch=async(url,options)=>{
+  if(String(url).includes('action=me'))return {ok:true,json:async()=>({signedIn:false})};
+  return new Promise((resolve,reject)=>{options.signal.addEventListener('abort',()=>{const error=new Error('aborted');error.name='AbortError';reject(error);});});
+ };
+ w.setTimeout=(fn,delay)=>delay===60000?nativeTimeout(fn,5):nativeTimeout(fn,delay);
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
+ w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+ try{
+  w.eval(fs.readFileSync('js/nest-auth.js','utf8'));await w.NestAuth.ready;
+  const form=w.document.querySelector('[data-form=login]');form.elements.username.value='mchristianson';form.elements.password.value='test-password';
+  form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));
+  await new Promise(resolve=>setTimeout(resolve,25));
+  assert.equal(form.querySelector('[type=submit]').disabled,false);
+  assert.match(w.document.querySelector('[data-message]').textContent,/took too long.*try again/i);
+ }finally{w.close();}
+});
