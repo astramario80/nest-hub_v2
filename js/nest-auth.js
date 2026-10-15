@@ -1,3 +1,34 @@
+// Shared password controls also cover profile, recovery, and dynamically loaded admin forms.
+(() => {
+  let nextId = 0;
+  function enhance(root) {
+    const fields = [...(root.matches?.('input[type="password"]') ? [root] : []), ...root.querySelectorAll('input[type="password"]')];
+    fields.forEach(input => {
+      if (input.dataset.nestPassword) return;
+      input.dataset.nestPassword = 'true';
+      if (!input.id) { let id;do { id = 'nest-password-' + (++nextId); } while (document.getElementById(id));input.id = id; }
+      const label = input.closest('label'), target = label || input;
+      const wrapper = document.createElement('div');wrapper.className = 'nest-password-field';
+      target.before(wrapper);wrapper.append(target);
+      const toggle = document.createElement('button');toggle.type = 'button';toggle.className = 'nest-password-toggle';
+      toggle.setAttribute('aria-controls', input.id);toggle.setAttribute('aria-pressed', 'false');toggle.textContent = 'Show';
+      const description = input.name === 'currentPassword' ? 'current password' : /new/i.test(input.name) || input.autocomplete === 'new-password' ? 'new password' : 'password';
+      function hide() { input.type = 'password';toggle.textContent = 'Show';toggle.setAttribute('aria-pressed', 'false');toggle.setAttribute('aria-label', 'Show ' + description); }
+      toggle.addEventListener('click', () => {
+        if (input.type === 'text') { hide();return; }
+        input.type = 'text';toggle.textContent = 'Hide';toggle.setAttribute('aria-pressed', 'true');toggle.setAttribute('aria-label', 'Hide ' + description);
+      });
+      input.form?.addEventListener('reset', hide);
+      input.closest('dialog')?.addEventListener('close', hide);
+      hide();wrapper.append(toggle);
+    });
+  }
+  enhance(document.body);
+  new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+    if (node.nodeType === 1) enhance(node);
+  }))).observe(document.body, {childList:true, subtree:true});
+})();
+
 (() => {
   let identity = null,hiringView=null;
   const usernameRule = 'Username must start with a letter and be 3–32 characters. Use letters, numbers, periods, underscores, or hyphens.';

@@ -7,7 +7,7 @@
   <meta name="description" content="NEST™ classroom music, cleanup, and transition signals synchronized with the daily bell schedule.">
   <title>NEST™ Signals</title>
   <link rel="icon" type="image/png" href="/signals-assets/nest-eagle.png">
-  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/signals-assets/styles.css">
+  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1"><link rel="stylesheet" href="/signals-assets/styles.css">
 </head>
 <body><header>
     <div class="logo-container"><a href="/" aria-label="NEST home"><img src="/assets/nest_menu_icon.png" alt="NEST™" class="logo" /></a></div>
@@ -143,7 +143,7 @@
       <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div></div></div>
   </div></footer>
-  <script src="/js/nest-auth.js"></script><script src="/js/main.js"></script>
+  <script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/main.js"></script>
   <script src="/api/signals?asset=app" defer></script>
 </body>
 </html>

@@ -28,7 +28,7 @@
       for(const account of data.accounts){
         const card=el('div',undefined,'account-entry'),title=el('h3',account.studentName||account.username);
         card.append(title,el('p',[account.period?`Period ${account.period}`:'Legacy account',account.studentEmail||'No linked student',`Username: ${account.username}`,account.recoveryEmail?`Recovery: ${account.recoveryEmail}`:'No recovery email'].join(' · ')));
-        const form=el('form',undefined,'internal-form');form.append(field('Username','username',account.username),field('New password','password','','text'));
+        const form=el('form',undefined,'internal-form');form.append(field('Username','username',account.username),field('New password','password','','password'));
         const save=el('button','Save changes');save.type='submit';form.append(save);
         form.addEventListener('submit',async event=>{
           event.preventDefault();if(!form.reportValidity())return;

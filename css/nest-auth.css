@@ -26,3 +26,9 @@
 .nest-auth-dialog form button{background:#145d89;color:#fff;font-weight:700}
 .nest-auth-dialog [data-username-help]{margin:0;color:#354660;font-size:.9rem}.nest-auth-dialog [data-username-suggestions]{padding:12px;border:1px solid #9daabc;border-radius:8px;background:#f2f8fc}.nest-auth-dialog [data-username-options]{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.nest-auth-dialog [data-username-options] button{min-height:44px;background:#fff;color:#145d89}.nest-auth-dialog [data-username-suggestions] small{display:block;color:#354660}
 .nest-auth-dialog [data-account]:not([hidden]){display:flex;flex-wrap:wrap;gap:10px}.nest-auth-dialog [data-account] button{padding:10px 14px;border:1px solid #9daabc;border-radius:8px;font:inherit;cursor:pointer}.nest-auth-dialog [data-account-close]{background:#145d89;color:#fff}
+
+.nest-password-field{display:flex;align-items:flex-end;gap:8px;min-width:0}
+.nest-password-field>label{flex:1;min-width:0}
+.nest-password-field input{box-sizing:border-box;min-width:0}
+.nest-password-field>.nest-password-toggle{flex:none;min-width:64px;min-height:44px;margin:0;padding:10px;border:1px solid #8296a8;border-radius:8px;background:#145d89;color:#fff;font:inherit;font-size:.9rem;cursor:pointer;transform:none}
+.nest-password-toggle:focus-visible{outline:3px solid #e9a83b;outline-offset:2px}
