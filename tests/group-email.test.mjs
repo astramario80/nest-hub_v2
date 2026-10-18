@@ -27,11 +27,11 @@ function ui(gmail=false){
  const dom=new JSDOM(renderDivisionPage('2',{manager:{},leaders:[],canManage:false}),{runScripts:'outside-only',url:'https://gknest.org/divisions/2#lookup'}),w=dom.window;
  w.AbortSignal=AbortSignal;w.Blob=Blob;w.TextEncoder=TextEncoder;w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.NestDivisionHQ={allowed:true,active:"lookup"};
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
- let copied=null,opened=null;w.ClipboardItem=class{constructor(data){this.data=data;}};
+ let copied=null,opened=null,tokenRequest=null;w.ClipboardItem=class{constructor(data){this.data=data;}};
  Object.defineProperty(w.navigator,'clipboard',{value:{write:async items=>copied=items[0]}});w.open=url=>opened={location:{href:url}};
- if(gmail)w.google={accounts:{oauth2:{initTokenClient:config=>({ ...config, requestAccessToken(){this.callback({access_token:'test-token',expires_in:3600,scope:'send email'});}}),hasGrantedAllScopes:()=>true}}};
+ if(gmail)w.google={accounts:{oauth2:{initTokenClient:config=>({ ...config, requestAccessToken(options){tokenRequest=options;this.callback({access_token:'test-token',expires_in:3600,scope:'send email'});}}),hasGrantedAllScopes:()=>true}}};
  w.fetch=async()=>({ok:true,json:async()=>gmail?{...records,gmailClientId:'test-client.apps.googleusercontent.com'}:records});w.eval(fs.readFileSync('js/group-email.js','utf8'));
- return {w,get copied(){return copied;},get opened(){return opened;}};
+ return {w,get copied(){return copied;},get opened(){return opened;},get tokenRequest(){return tokenRequest;}};
 }
 test('composer filters groups, copies sanitized banner HTML and opens an unsent Gmail draft',async()=>{
  const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);
@@ -156,4 +156,41 @@ test('a configured public Gmail client ID is returned only with an authorized ro
  const previous=process.env.EMAIL_GOOGLE_CLIENT_ID;process.env.EMAIL_GOOGLE_CLIENT_ID='email-client.apps.googleusercontent.com';
  try{const permitted=await server({status:200,roles:['Safety Officer']});assert.equal(permitted.res.data.gmailClientId,'email-client.apps.googleusercontent.com');const denied=await server({status:200,roles:[]});assert.equal(denied.res.data.gmailClientId,undefined);}
  finally{if(previous===undefined)delete process.env.EMAIL_GOOGLE_CLIENT_ID;else process.env.EMAIL_GOOGLE_CLIENT_ID=previous;}
+});
+
+test('the composer keeps its banner for delivery and provides additional formatting controls',async()=>{
+ const {w}=ui();await tick();const d=w.document;
+ assert.equal(d.querySelector('.group-email-banner'),null);assert.match(d.querySelector('.group-email-banner-note').textContent,/included in the email/);
+ for(const command of ['underline','strikeThrough','insertOrderedList','justifyLeft','justifyCenter','justifyRight','removeFormat','unlink','undo','redo'])assert.ok(d.querySelector(`[data-email-command="${command}"]`));
+ for(const name of ['block','color','highlight'])assert.ok(d.querySelector(`[data-email-${name}]`));w.close();
+});
+test('sent HTML retains safe colors, highlights, alignment, headings and underlining while removing active or layout styles',async()=>{
+ const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('[data-email-subject]').value='Formatting check';
+ q('.group-email-message').innerHTML='<h2 style="text-align:center;color:#1459a3;position:fixed" onclick="bad()">Team</h2><div style="background-color:#fff3a3;font-style:italic;background-image:url(https://tracking.invalid)"><u>Underlined</u><s>Old</s><span style="color:rgb(10, 20, 30);text-decoration:underline">Colored</span></div><font color="#ff0000" face="Georgia" size="4">Red</font><img src="https://tracking.invalid/image"><script>bad()</script>';
+ q('[data-email-copy]').click();await tick();const html=await app.copied.data['text/html'].text();assert.match(html,/text-align: center/);assert.match(html,/color: rgb\(20, 89, 163\)/);assert.match(html,/background-color: rgb\(255, 243, 163\)/);assert.match(html,/<u>Underlined<\/u>/);assert.match(html,/<s>Old<\/s>/);assert.match(html,/color="#ff0000"/);assert.match(html,/nest-email-banner.png/);assert.doesNotMatch(html,/tracking.invalid|position:|onclick|<script/);w.close();
+});
+test('Gmail API setup, missing send scope and school-policy rejections have actionable safe details and preserve the draft',async()=>{
+ for(const [reason,expected,code] of [['accessNotConfigured',/Gmail API is disabled/,'gmail-api-disabled'],['insufficientPermissions',/Connect Gmail again/,'gmail-send-permission'],['domainPolicy',/district Google administrator/,'gmail-school-policy']]){
+  const {w,sends}=await gmailApp({ok:false,status:403,json:async()=>({error:{errors:[{reason}],message:'PRIVATE MESSAGE MUST NOT BE COPIED'}})});let copied='';w.navigator.clipboard.writeText=async text=>{copied=text;};
+  w.document.querySelector('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.match(w.document.querySelector('[data-email-status]').textContent,expected);assert.equal(w.document.querySelector('[data-email-new]').hidden,true);assert.match(w.document.querySelector('.group-email-message').textContent,/Hello team/);
+  w.document.querySelector('[data-email-error-copy]').click();await tick();assert.match(copied,new RegExp(code));assert.match(copied,/status: 403/);for(const privateText of ['PRIVATE MESSAGE','test-token','leader@','Hello team'])assert.equal(copied.includes(privateText),false);w.close();
+ }
+});
+test('a missing Gmail send grant is explicitly requested again on the next connection attempt',async()=>{
+ const {app,w}=await gmailApp({ok:false,status:403,json:async()=>({error:{errors:[{reason:'insufficientPermissions'}]}})});
+ try{w.document.querySelector('[data-email-send]').click();await tick();w.document.querySelector('[data-email-connect]').click();await tick();assert.equal(app.tokenRequest.prompt,'consent select_account');}finally{w.close();}
+});
+
+test('a self-test addresses only the connected sender and preserves the team draft for review',async()=>{
+ const {w,sends}=await gmailApp();const q=s=>w.document.querySelector(s);
+ try{q('[data-email-test]').click();q('[data-email-test]').click();await tick();assert.equal(sends.length,1);
+  const mime=Buffer.from(JSON.parse(sends[0].body).raw,'base64url').toString('utf8');assert.match(mime,/To: leader@students.bethelsd.org\r\n/);assert.doesNotMatch(mime,/To: .*member@/);const subject=mime.match(/Subject: ([\s\S]*?)\r\nDate:/)[1];assert.equal([...subject.matchAll(/=\?UTF-8\?B\?([^?]+)\?=/g)].map(m=>Buffer.from(m[1],'base64').toString('utf8')).join(''),'[TEST] Team café 🦅');
+  assert.match(q('[data-email-status]').textContent,/Test email sent only to/);assert.match(q('.group-email-message').textContent,/Hello team/);assert.equal(q('[data-email-send]').disabled,false);
+ }finally{w.close();}
+});
+test('manager and assistant-manager group access supports direct sends after Google connection',async()=>{
+ for(const role of ['Division Manager','Assistant Manager']){
+  const access=await server({status:200,canManage:true,roles:[role]});assert.equal(access.res.code,200);assert.deepEqual(access.res.data.members,records.members);
+  const {w,sends}=await gmailApp();try{w.document.querySelector('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.match(w.document.querySelector('[data-email-status]').textContent,/Email sent from/);}finally{w.close();}
+ }
 });
