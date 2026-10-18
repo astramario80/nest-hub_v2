@@ -25,3 +25,6 @@
 .trip-table-scroll th,.trip-table-scroll td{font-size:1em}
 .trip-table-scroll small,.trip-leadership-role{font-size:.85em}
 .trip-name-header .trip-student-sort,.trip-name-header .trip-role-toggle,.trip-temp-access form label,.trip-grants li{font-size:.9em}
+
+/* Keep assignment headings readable on the dark tracker background in every division. */
+.trip-table-scroll thead th[data-assignment],.trip-access .trip-column-drag,.trip-column-drag span:last-child{color:#fff}

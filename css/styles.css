@@ -3311,3 +3311,19 @@ button:not(:disabled):focus-visible, .division-page-actions a:focus-visible,
         translate: none;
     }
 }
+
+/* Bridge the Quick Access gap and allow a short pause when the pointer strays. */
+.header-dropdown.menu-hover-open:not(.menu-dismissed) > .dropdown-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+.header-dropdown > .dropdown-content::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: -12px;
+    right: -12px;
+    height: 14px;
+}
