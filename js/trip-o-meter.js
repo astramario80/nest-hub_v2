@@ -186,7 +186,7 @@
         if(canEdit){const select=node('select');select.dataset.student=student.id;select.dataset.assignment=a.id;select.setAttribute('aria-label',student.name+' — '+a.title);const options=['',...scores];if(value&&!options.includes(value))options.push(value);
           options.forEach(score=>{const option=node('option',score||'Not scored');option.value=score;if(score===value)option.selected=true;if(score&&!scores.includes(score))option.disabled=true;select.append(option);});
           select.addEventListener('change',()=>{cell.dataset.score=select.value;queueScore({student:student.id,assignment:a.id,score:select.value});});
-          if(student===visibleStudents[0]){const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Apply first score down '+a.title+' column');fill.title='Use the down arrow beside the first score in a column to fill its unscored cells. If the first score is Not scored, the arrow can clear that column after confirmation.';fill.addEventListener('click',()=>fillColumn(a,select.value,student.id));group.append(select,fill);cell.append(group);}else cell.append(select);
+          const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Fill empty '+a.title+' scores below '+student.name);fill.title='Copy this score into empty cells below this row. Existing scores stay unchanged.';fill.addEventListener('click',()=>fillColumn(a,select.value,student.id));group.append(select,fill);cell.append(group);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
     });table.append(body);scroll.append(table);view.append(scroll);
@@ -219,26 +219,27 @@
     scoreControls();clearTimeout(queueTimer);if(!savingScores)queueTimer=setTimeout(flushScores,150);
   }
   function queueScore(edit){queueScores([edit]);}
-  function fillColumn(assignment,firstScore,firstStudentId){
+  function fillColumn(assignment,sourceScore,sourceStudentId){
     if(!layoutReady()||!data.students.length)return;
-    if(firstScore&&!scores.includes(firstScore)){status.textContent='This imported score cannot be copied. Choose a standard score first.';return;}
-    const clear=!firstScore;
-    const targets=data.students.filter(student=>{
-      const current=data.scores[student.id]?.[assignment.id]||'';
-      return clear?Boolean(current):student.id!==firstStudentId&&!current;
-    });
-    if(!targets.length){status.textContent=clear?'This column is already clear.':'There are no unscored cells in this column.';return;}
-    if(clear&&!window.confirm(`Clear all ${targets.length} saved score${targets.length===1?'':'s'} in “${assignment.title}”? This cannot be undone.`))return;
-    queueScores(targets.map(student=>({student:student.id,assignment:assignment.id,score:clear?'':firstScore})));
+    if(!sourceScore){status.textContent='Choose a score in this row before filling empty cells below it.';return;}
+    if(!scores.includes(sourceScore)){status.textContent='This imported score cannot be copied. Choose a standard score first.';return;}
+    const displayed=sortedStudents(),sourceIndex=displayed.findIndex(student=>student.id===sourceStudentId);
+    if(sourceIndex<0)return;
+    const targets=displayed.slice(sourceIndex+1).filter(student=>!(data.scores[student.id]?.[assignment.id]||''));
+    if(!targets.length){status.textContent='There are no unscored cells below this row in this column.';return;}
+    queueScores(targets.map(student=>({student:student.id,assignment:assignment.id,score:sourceScore,fillOnly:true})));
   }
   async function flushScores(){
     if(savingScores||saveError||!scoreQueue.length||!data)return;
     if(expired())return;
     clearTimeout(queueTimer);queueTimer=null;
+    // A refreshed revision may contain scores entered by another grader.
+    scoreQueue=scoreQueue.filter(edit=>!edit.fillOnly||!(data.scores[edit.student]?.[edit.assignment]||''));
+    if(!scoreQueue.length){retryCount=0;scoreControls();return;}
     savingScores=true;const current=version,batch=scoreQueue.slice(0,8);inFlightCount=batch.length;
     try{
       let result;
-      try{result=await api('tracker-update',{revision:data.revision,change:{type:'scores',edits:batch}});}
+      try{result=await api('tracker-update',{revision:data.revision,change:{type:'scores',edits:batch.map(({fillOnly,...edit})=>edit)}});}
       catch(error){
         if(![409,429,503].includes(error.status)&&error.name!=='TimeoutError')throw error;
         const fresh=await api('tracker');
