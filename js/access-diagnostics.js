@@ -1,5 +1,5 @@
 (() => {
- const original=window.fetch.bind(window),areas={'/api/auth':'auth','/api/service-requests':'service','/api/hiring':'hiring','/api/spinner':'tracker','/api/signals':'signals','/api/division':'division','/api/leadership':'leadership','/api/fabrication':'fabrication','/api/lunch':'lunch','/api/account':'profile'};let queue=[],sending=false,timer;
+ const original=window.fetch.bind(window),areas={'/api/auth':'auth','/api/service-requests':'service','/api/hiring':'hiring','/api/spinner':'tracker','/api/signals':'signals','/api/division':'division','/api/group-email':'division','/api/leadership':'leadership','/api/fabrication':'fabrication','/api/lunch':'lunch','/api/account':'profile'};let queue=[],sending=false,timer;
  try{queue=JSON.parse(sessionStorage.getItem('nest-access-metadata')||'[]').slice(-100);}catch{}
  function stash(){try{sessionStorage.setItem('nest-access-metadata',JSON.stringify(queue));}catch{}}
  function add(event){queue.push(event);queue=queue.slice(-100);stash();clearTimeout(timer);timer=setTimeout(flush,2000);}
@@ -18,5 +18,6 @@
   const started=performance.now();let status=0,requestId='';
   try{const response=await original(input,options);status=response.status;requestId=response.headers?.get('X-NEST-Request-ID')||'';return response;}finally{add({time:new Date().toISOString(),area,operation,status,requestId,account:window.NestAuth?.identity?.username||'',durationMs:Math.min(180000,Math.round(performance.now()-started))});}
  };
+ window.NestAccessDiagnostics=Object.freeze({record(operation,status,durationMs){if(!window.NestAuth?.identity?.signedIn||!/^group-email-(connect|send|test-send)$/.test(operation)||!Number.isInteger(status)||status<0||status>599||!Number.isFinite(durationMs))return;add({time:new Date().toISOString(),area:'division',operation,status,requestId:'',account:window.NestAuth.identity.username||'',durationMs:Math.max(0,Math.min(180000,Math.round(durationMs)))});}});
  document.addEventListener('nest-auth-change',()=>{clearTimeout(timer);if(!window.NestAuth?.identity?.signedIn){queue=[];stash();}else flush();});window.addEventListener('online',flush);
 })();

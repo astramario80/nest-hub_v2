@@ -13,3 +13,15 @@ Indent/outdent keeps the selected range while moving multiple paragraphs or list
 Verification covers selected-line boundaries, nested bullets, caret operations, MIME encoding, banner/indent preservation, fresh access denial, recipient selection, declined permissions, wrong-account connection, duplicate clicks, uncertain results, expired tokens, logout and stale acknowledgements. Browser verification uses synthetic recipients and a mock transport and never sends real mail.
 
 The public /email-privacy notice describes this feature’s Gmail data use and connection controls. Google OAuth branding uses that notice and the existing NEST homepage. Enabling Gmail API and declaring scopes alone do not grant any user’s mailbox access; each sender must connect and authorize through Google.
+
+## October 17 composer and send diagnostics
+
+The NEST banner appears only in copied/delivered HTML; the composition window shows a short delivery note. Formatting now includes underline, strike-through, numbered lists, headings/quotes, alignment, text and highlight colors, remove-link, clear formatting, undo and redo. Only an explicit safe set of styles and semantic tags survives sanitizing; event handlers, active content, tracking images and arbitrary layout styles remain excluded.
+
+Division managers and assistant managers retain current live leadership access and can send after connecting their own permitted Gmail account. The sender and every chosen recipient are revalidated before each attempt. A self-test option sends only to the connected verified sender, adds [TEST] to its subject and preserves the team draft. No self-test is sent automatically.
+
+Known Google errors distinguish disabled Gmail API, missing send consent, school policy, expired tokens and sending limits. Missing send permission requests explicit consent on the next Connect action. Drafts survive rejection; uncertain delivery still blocks automatic retries. Copy error details contains only stage, fixed result code, HTTP status and time, never addresses, message contents or tokens. Access and send timing/status are recorded under Division in the existing private diagnostics.
+
+Verification:38 focused tests pass; full suite367/369 retains the same two pre-existing resource-viewer/eagle-menu failures. A real Chrome preview with sample data verified underline, heading and alignment controls and banner-free composition. The school account connected to Gmail successfully; no live message was sent without explicit approval. The school Google account cannot inspect the OAuth Cloud project and the existing CLI Cloud login needs reauthentication, so the Gmail API project setup cannot currently be independently confirmed.
+
+Composer shortcuts: Tab/Shift+Tab and Cmd/Ctrl+] / Cmd/Ctrl+[ use the same selected-paragraph and bullet indentation logic as the toolbar. Escape then Tab exits the editor; another Escape can close the dialog. Shortcuts stay inside the message area, preserve the selection, and are disabled during sending. Chrome UI interactions independently confirmed Tab, Shift+Tab and Mac bracket keys.

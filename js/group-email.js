@@ -6,16 +6,17 @@
     const button=document.createElement('button');button.type='button';button.className='group-email-launch';button.textContent='Email group';button.hidden=true;
     lookup.querySelector('.leadership-controls').append(button);
     const dialog=document.createElement('dialog');dialog.className='group-email-dialog';dialog.setAttribute('aria-labelledby','group-email-title');
-    dialog.innerHTML=`<div class="group-email-heading"><h2 id="group-email-title">Email group</h2><button type="button" data-email-close aria-label="Close email window">×</button></div><div class="group-email-fields"><label>Division<select data-email-division>${divisions.map(p=>`<option value="${p}">${label(p)}</option>`).join('')}</select></label><label>Group<select data-email-group><option value="leadership">Leadership teams</option><option value="position">By leadership position</option><option value="members">All members of selected divisions</option><option value="specific">Specific students</option></select></label><label data-email-position-label hidden>Position<select data-email-position></select></label></div><label>Find a recipient<input data-email-search type="search" placeholder="Search name or school email"></label><p data-email-count></p><div class="group-email-recipients" data-email-recipients></div><label class="group-email-subject">Subject<input data-email-subject maxlength="180" autocomplete="off"></label><div class="group-email-toolbar" role="group" aria-label="Message formatting"><button type="button" data-email-command="bold"><strong>Bold</strong></button><button type="button" data-email-command="italic"><em>Italic</em></button><button type="button" data-email-command="insertUnorderedList">Bullet points</button><button type="button" data-email-command="indent">Indent</button><button type="button" data-email-command="outdent">Outdent</button><button type="button" data-email-link>Insert hyperlink</button><select data-email-font aria-label="Font style"><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Courier New">Courier New</option></select><select data-email-size aria-label="Font size"><option value="2">Small</option><option value="3" selected>Normal</option><option value="4">Large</option><option value="5">Extra large</option></select></div><a class="group-email-banner-link" href="https://gknest.org/" target="_blank" rel="noopener noreferrer" aria-label="Visit the NEST™ homepage"><img class="group-email-banner" src="/assets/nest-email-banner.png" alt="NEST™ email banner"></a><div class="group-email-message" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Email message"></div><p class="group-email-notice">Connect your Gmail account, review the recipients and send your formatted message directly here. <a href="/email-privacy" target="_blank" rel="noopener noreferrer">Gmail privacy</a>.</p><div class="group-email-connection"><button type="button" data-email-connect disabled>Connect Gmail</button><button type="button" data-email-disconnect hidden>Disconnect Gmail</button><span data-email-sender role="status" aria-live="polite">Gmail is not connected.</span></div><p data-email-status role="status" aria-live="polite"></p><div class="group-email-actions"><button type="button" data-email-send disabled>Send email</button><button type="button" data-email-new hidden>New email</button><button type="button" data-email-open disabled>Copy formatted message and open Gmail</button><button type="button" data-email-copy disabled>Copy formatted message</button></div>`;
+    dialog.innerHTML=`<div class="group-email-heading"><h2 id="group-email-title">Email group</h2><button type="button" data-email-close aria-label="Close email window">×</button></div><div class="group-email-fields"><label>Division<select data-email-division>${divisions.map(p=>`<option value="${p}">${label(p)}</option>`).join('')}</select></label><label>Group<select data-email-group><option value="leadership">Leadership teams</option><option value="position">By leadership position</option><option value="members">All members of selected divisions</option><option value="specific">Specific students</option></select></label><label data-email-position-label hidden>Position<select data-email-position></select></label></div><label>Find a recipient<input data-email-search type="search" placeholder="Search name or school email"></label><p data-email-count></p><div class="group-email-recipients" data-email-recipients></div><label class="group-email-subject">Subject<input data-email-subject maxlength="180" autocomplete="off"></label><div class="group-email-toolbar" role="group" aria-label="Message formatting"><button type="button" data-email-command="bold"><strong>Bold</strong></button><button type="button" data-email-command="italic"><em>Italic</em></button><button type="button" data-email-command="underline"><u>Underline</u></button><button type="button" data-email-command="strikeThrough"><s>Strike through</s></button><button type="button" data-email-command="insertUnorderedList">Bullet points</button><button type="button" data-email-command="insertOrderedList">Numbered list</button><button type="button" data-email-command="indent">Indent</button><button type="button" data-email-command="outdent">Outdent</button><button type="button" data-email-link>Insert hyperlink</button><select data-email-font aria-label="Font style"><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Courier New">Courier New</option></select><select data-email-size aria-label="Font size"><option value="2">Small</option><option value="3" selected>Normal</option><option value="4">Large</option><option value="5">Extra large</option></select><select data-email-block aria-label="Paragraph style"><option value="p">Paragraph</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="blockquote">Quote</option></select><label class="group-email-color">Text color<input type="color" data-email-color value="#172238" aria-label="Text color"></label><label class="group-email-color">Highlight<input type="color" data-email-highlight value="#fff3a3" aria-label="Highlight color"></label><button type="button" data-email-command="justifyLeft">Align left</button><button type="button" data-email-command="justifyCenter">Center</button><button type="button" data-email-command="justifyRight">Align right</button><button type="button" data-email-command="removeFormat">Clear formatting</button><button type="button" data-email-command="unlink">Remove link</button><button type="button" data-email-command="undo">Undo</button><button type="button" data-email-command="redo">Redo</button></div><div class="group-email-message" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Email message" aria-describedby="group-email-shortcuts"></div><p class="group-email-shortcuts" id="group-email-shortcuts">Indent: Tab or Cmd/Ctrl+]. Outdent: Shift+Tab or Cmd/Ctrl+[. Press Escape, then Tab to move out of the message.</p><p class="group-email-notice">Connect your Gmail account, review the recipients and send your formatted message directly here. <a href="/email-privacy" target="_blank" rel="noopener noreferrer">Gmail privacy</a>.</p><div class="group-email-connection"><button type="button" data-email-connect disabled>Connect Gmail</button><button type="button" data-email-disconnect hidden>Disconnect Gmail</button><span data-email-sender role="status" aria-live="polite">Gmail is not connected.</span></div><p class="group-email-banner-note">The NEST™ banner will be included in the email you send.</p><p data-email-status role="status" aria-live="polite"></p><button type="button" data-email-error-copy hidden>Copy error details</button><div class="group-email-actions"><button type="button" data-email-send disabled>Send email</button><button type="button" data-email-test disabled>Send test to myself</button><button type="button" data-email-new hidden>New email</button><button type="button" data-email-open disabled>Copy formatted message and open Gmail</button><button type="button" data-email-copy disabled>Copy formatted message</button></div>`;
     document.body.append(dialog);
     const q=s=>dialog.querySelector(s),periodSelect=q('[data-email-division]'),group=q('[data-email-group]'),position=q('[data-email-position]'),recipients=q('[data-email-recipients]'),message=q('.group-email-message'),status=q('[data-email-status]');
-    let data=null,period='',generation=0,selectedRange=null;
+    let data=null,period='',generation=0,selectedRange=null,leaveEditorOnTab=false;
     const gmailScope='https://www.googleapis.com/auth/gmail.send',emailScope='https://www.googleapis.com/auth/userinfo.email';
     const gmail={client:null,clientId:'',token:'',email:'',expires:0,connecting:false,sending:false,delivery:'draft',epoch:0,timer:null};
-    let googleLibrary=null;
+    let googleLibrary=null,lastFailure=null,requestConsent=false;
     const connected=()=>Boolean(gmail.token)&&gmail.expires>Date.now()+15000;
     function gmailControls(){
       q('[data-email-send]').disabled=!data||!chosen().length||!connected()||gmail.sending||gmail.delivery!=='draft';
+      q('[data-email-test]').disabled=!data||!connected()||gmail.sending||gmail.delivery!=='draft';
       q('[data-email-send]').textContent=gmail.sending?'Sending…':gmail.delivery==='sent'?'Email sent':gmail.delivery==='unknown'?'Check Sent folder':'Send email';
       q('[data-email-connect]').disabled=!gmail.client||!data||gmail.connecting||gmail.sending;
       q('[data-email-connect]').textContent=gmail.connecting?'Connecting…':connected()?'Change Gmail account':'Connect Gmail';
@@ -24,6 +25,23 @@
     }
     function disconnectGmail(){gmail.epoch++;clearTimeout(gmail.timer);gmail.token='';gmail.email='';gmail.expires=0;gmail.connecting=false;q('[data-email-sender]').textContent='Gmail is not connected.';gmailControls();}
     function googleError(code){return code==='popup_closed'?'Gmail connection was canceled.':code==='popup_failed_to_open'?'Allow the Google sign-in popup, then click Connect Gmail again.':'Google did not authorize Gmail sending. Try Connect Gmail again; if your school blocks access, contact your district administrator.';}
+    function clearFailure(){lastFailure=null;q('[data-email-error-copy]').hidden=true;}
+    function failure(stage,statusCode,code){
+      lastFailure={stage,status:Number(statusCode)||0,code:/^[a-z0-9_-]{1,60}$/i.test(code||'')?code:'unknown',time:new Date().toISOString()};q('[data-email-error-copy]').hidden=false;
+    }
+    q('[data-email-error-copy]').addEventListener('click',async()=>{
+      if(!lastFailure)return;const report='NEST™ team email\n'+Object.entries(lastFailure).map(([key,value])=>key+': '+value).join('\n')+'\nNo message text, recipients, or credentials included.';
+      try{await navigator.clipboard.writeText(report);status.textContent='Error details copied. Your draft is still here.';}catch{status.textContent='Copying is unavailable. Error: '+lastFailure.code+' (HTTP '+lastFailure.status+'). Your draft is still here.';}
+    });
+    function gmailRejection(httpStatus,result){
+      const reasons=[...(result?.error?.errors||[]).map(e=>e.reason),...(result?.error?.details||[]).map(e=>e.reason)].filter(v=>typeof v==='string');
+      if(httpStatus===401)return {code:'gmail-expired',message:'Your Gmail connection expired. Connect again to send.',reconnect:true};
+      if(reasons.some(r=>['accessNotConfigured','SERVICE_DISABLED'].includes(r)))return {code:'gmail-api-disabled',message:'The Gmail API is disabled for the NEST Google project. A NEST administrator must enable it before in-page sending can work. Your draft is still here.'};
+      if(reasons.some(r=>['insufficientPermissions','ACCESS_TOKEN_SCOPE_INSUFFICIENT'].includes(r)))return {code:'gmail-send-permission',message:'Google has not granted permission to send email. Connect Gmail again and allow sending. Your draft is still here.',reconnect:true,consent:true};
+      if(reasons.includes('domainPolicy'))return {code:'gmail-school-policy',message:'Your school Google policy blocks this app from sending email. A district Google administrator must approve NEST Gmail sending. Your draft is still here.'};
+      if(httpStatus===429||reasons.some(r=>['rateLimitExceeded','userRateLimitExceeded','dailyLimitExceeded'].includes(r)))return {code:'gmail-sending-limit',message:'Google’s sending limit was reached. Wait before trying again. Your draft is still here.'};
+      return {code:'gmail-rejected-'+httpStatus,message:httpStatus===403?'Google blocked sending. Gmail may need school approval or Google setup. Your draft is still here. Use Copy error details to share the failure.':'Gmail rejected this email. Review the recipients and message before trying again.'};
+    }
     function googleReady(){
       if(window.google?.accounts?.oauth2)return Promise.resolve();
       if(googleLibrary)return googleLibrary;
@@ -51,7 +69,8 @@
       gmail.client.callback=async response=>{
         if(epoch!==gmail.epoch||!identity()||!data)return;
         try{
-          if(response.error||!response.access_token||!window.google.accounts.oauth2.hasGrantedAllScopes(response,gmailScope,emailScope))throw new Error(googleError(response.error));
+          if(response.error||!response.access_token)throw new Error(googleError(response.error));
+          if(!window.google.accounts.oauth2.hasGrantedAllScopes(response,gmailScope,emailScope)){requestConsent=true;throw new Error('Google did not authorize Gmail sending. Connect again and allow permission to send email.');}
           const r=await fetch('https://www.googleapis.com/oauth2/v2/userinfo',{headers:{Authorization:'Bearer '+response.access_token},signal:AbortSignal.timeout(15000)});
           const profile=await r.json();if(epoch!==gmail.epoch||!identity())return;
           const email=String(profile.email||'').toLowerCase();
@@ -59,32 +78,32 @@
           const nestEmail=String(window.NestAuth.identity.email||'').toLowerCase();
           if(nestEmail&&!nestEmail.startsWith('manual:')&&email!==nestEmail)throw new Error('Connect the Gmail account you use for NEST sign-in: '+nestEmail+'.');
           const seconds=Number(response.expires_in);if(!Number.isFinite(seconds)||seconds<=30)throw new Error('Your Gmail connection expired. Connect again.');
-          gmail.token=response.access_token;gmail.email=email;gmail.expires=Date.now()+seconds*1000;
+          clearFailure();requestConsent=false;gmail.token=response.access_token;gmail.email=email;gmail.expires=Date.now()+seconds*1000;
           q('[data-email-sender]').textContent='Sending as '+email;
           gmail.timer=setTimeout(()=>{disconnectGmail();q('[data-email-sender]').textContent='Gmail connection expired. Connect again to send.';},Math.min(seconds*1000-15000,2147483647));
-        }catch(error){if(epoch===gmail.epoch){disconnectGmail();q('[data-email-sender]').textContent=error.message;}}
+        }catch(error){if(epoch===gmail.epoch){disconnectGmail();failure('connect',0,'gmail-connect-failed');q('[data-email-sender]').textContent=error.message;}}
         finally{if(epoch===gmail.epoch){gmail.connecting=false;gmailControls();}}
       };
-      try{gmail.client.requestAccessToken({prompt:'select_account'});}catch{gmail.connecting=false;q('[data-email-sender]').textContent='Google sign-in could not open. Click Connect Gmail again.';gmailControls();}
+      try{gmail.client.requestAccessToken({prompt:requestConsent?'consent select_account':'select_account'});}catch{gmail.connecting=false;q('[data-email-sender]').textContent='Google sign-in could not open. Click Connect Gmail again.';gmailControls();}
     });
     q('[data-email-disconnect]').addEventListener('click',disconnectGmail);
     q('[data-email-new]').addEventListener('click',()=>{
       if(gmail.sending)return;
       if(gmail.delivery==='unknown'&&!window.confirm('Check your Gmail Sent folder before starting another email. Continue with a new message?'))return;
-      gmail.delivery='draft';message.replaceChildren();selectedRange=null;q('[data-email-subject]').value='';status.textContent='';gmailControls();q('[data-email-subject]').focus();
+      gmail.delivery='draft';clearFailure();message.replaceChildren();selectedRange=null;q('[data-email-subject]').value='';status.textContent='';gmailControls();q('[data-email-subject]').focus();
     });
 
     const identity=()=>Boolean(window.NestAuth?.identity?.signedIn)&&(!window.NestDivisionHQ||window.NestDivisionHQ.allowed);
     const chosen=()=>[...recipients.querySelectorAll('input:checked')].map(el=>el.value);
     function count(){const n=chosen().length;q('[data-email-count]').textContent=n+' recipient'+(n===1?'':'s')+' selected';q('[data-email-open]').disabled=q('[data-email-copy]').disabled=!n||!data||gmail.sending;gmailControls();}
-    async function records(p){const r=await fetch('/api/group-email?period='+encodeURIComponent(p),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(120000)});const result=await r.json();if(!r.ok)throw new Error(result.error||'Email groups could not load.');return result;}
+    async function records(p){const r=await fetch('/api/group-email?period='+encodeURIComponent(p)+'&action=group-email-access',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(120000)});const result=await r.json();if(!r.ok)throw Object.assign(new Error(result.error||'Email groups could not load.'),{status:r.status});return result;}
     function members(){if(!data)return [];let list=group.value==='members'||group.value==='specific'?data.members:data.leaders.filter(l=>group.value!=='position'||l.position===position.value);return [...new Map(list.map(m=>[m.email,m])).values()];}
     function render(preselected){
       q('[data-email-position-label]').hidden=group.value!=='position';recipients.replaceChildren();
       members().forEach(m=>{const row=document.createElement('label'),box=document.createElement('input'),text=document.createElement('span');box.type='checkbox';box.value=m.email;box.checked=preselected?preselected.has(m.email):group.value!=='specific';text.textContent=m.name+' · '+m.email;box.addEventListener('change',count);row.append(box,text);recipients.append(row);});count();search();
     }
     function search(){const term=q('[data-email-search]').value.trim().toLowerCase();recipients.querySelectorAll('label').forEach(row=>row.hidden=!row.textContent.toLowerCase().includes(term));}
-    function resetAccess(){disconnectGmail();gmail.client=null;gmail.delivery='draft';selectedRange=null;delete lookup.dataset.emailEnabled;generation++;data=null;button.hidden=true;recipients.replaceChildren();position.replaceChildren();message.replaceChildren();q('[data-email-subject]').value='';count();if(dialog.open)dialog.close();}
+    function resetAccess(){clearFailure();disconnectGmail();gmail.client=null;gmail.delivery='draft';selectedRange=null;delete lookup.dataset.emailEnabled;generation++;data=null;button.hidden=true;recipients.replaceChildren();position.replaceChildren();message.replaceChildren();q('[data-email-subject]').value='';count();if(dialog.open)dialog.close();}
     async function check(p){
       if(!divisions.includes(p)||!identity()||(window.NestDivisionHQ&&window.NestDivisionHQ.active!=='lookup'&&!dialog.open))return;
       const selectedPosition=position.value,specificSelection=group.value==='specific'?new Set(chosen()):undefined;
@@ -190,56 +209,88 @@
       remember();message.focus();if(selectedRange&&message.contains(selectedRange.commonAncestorContainer)){const selection=window.getSelection();selection.removeAllRanges();selection.addRange(selectedRange);}
       if(name==='indent'||name==='outdent')indentation(name);else document.execCommand(name,false,value);remember();
     }
+    message.addEventListener('keydown',event=>{
+      if(event.defaultPrevented||event.isComposing||gmail.sending||message.contentEditable==='false')return;
+      if(event.key==='Escape'){
+        if(!leaveEditorOnTab){event.preventDefault();event.stopPropagation();leaveEditorOnTab=true;status.textContent='Press Tab to leave the message, or Escape again to close this window.';}
+        return;
+      }
+      if(event.key==='Tab'&&leaveEditorOnTab){leaveEditorOnTab=false;return;}
+      leaveEditorOnTab=false;
+      const tab=event.key==='Tab'&&!event.ctrlKey&&!event.metaKey&&!event.altKey;
+      const bracket=(event.ctrlKey||event.metaKey)&&!event.altKey&&(['[',']'].includes(event.key)||['BracketLeft','BracketRight'].includes(event.code));
+      if(!tab&&!bracket)return;
+      event.preventDefault();event.stopPropagation();command(tab?(event.shiftKey?'outdent':'indent'):(event.key==='['||event.code==='BracketLeft'?'outdent':'indent'));
+    });
+    message.addEventListener('blur',()=>{leaveEditorOnTab=false;});
+    q('[data-email-command="indent"]').setAttribute('aria-keyshortcuts','Tab Control+] Meta+]');
+    q('[data-email-command="outdent"]').setAttribute('aria-keyshortcuts','Shift+Tab Control+[ Meta+[');
     q('.group-email-toolbar').addEventListener('mousedown',event=>{remember();if(event.target.closest('button'))event.preventDefault();});
     dialog.querySelectorAll('[data-email-command]').forEach(el=>el.addEventListener('click',()=>command(el.dataset.emailCommand)));
     q('[data-email-font]').addEventListener('change',event=>command('fontName',event.target.value));q('[data-email-size]').addEventListener('change',event=>command('fontSize',event.target.value));
+    q('[data-email-block]').addEventListener('change',event=>command('formatBlock',event.target.value));
+    q('[data-email-color]').addEventListener('input',event=>command('foreColor',event.target.value));
+    q('[data-email-highlight]').addEventListener('input',event=>command('hiliteColor',event.target.value));
     q('[data-email-link]').addEventListener('click',()=>{const raw=window.prompt('Hyperlink address (https://…)');if(!raw)return;try{const u=new URL(raw);if(!['https:','http:','mailto:'].includes(u.protocol))throw new Error();command('createLink',u.href);}catch{status.textContent='Use an https, http, or email link.';}});
     function formatted(){
       const copy=document.createElement('div');copy.innerHTML=message.innerHTML;
-      const allowed=new Set(['P','DIV','BR','B','STRONG','I','EM','UL','OL','LI','BLOCKQUOTE','A','SPAN','FONT']);
+      const allowed=new Set(['P','DIV','BR','B','STRONG','I','EM','UL','OL','LI','BLOCKQUOTE','A','SPAN','FONT','U','S','STRIKE','DEL','H1','H2','H3']);
       const dangerous=new Set(['SCRIPT','STYLE','IFRAME','OBJECT','SVG','IMG','FORM','INPUT']);
-      [...copy.querySelectorAll('*')].reverse().forEach(el=>{if(dangerous.has(el.tagName)){el.remove();return;}if(!allowed.has(el.tagName)){el.replaceWith(...el.childNodes);return;}const indent=Math.max(0,Math.min(20,Number(el.dataset.emailIndent)||0));for(const attr of [...el.attributes]){if(!(el.tagName==='A'&&attr.name==='href')&&!(el.tagName==='FONT'&&['face','size'].includes(attr.name)))el.removeAttribute(attr.name);}if(indent&&['P','DIV','LI'].includes(el.tagName))el.style.marginLeft=(indent*32)+'px';if(el.tagName==='A'&&!/^(https?:|mailto:)/i.test(el.getAttribute('href')||''))el.removeAttribute('href');});
+      const color=value=>/^(?:#[0-9a-f]{3}(?:[0-9a-f]{3})?|rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+(?:\s*,\s*[\d.]+)?\s*\)|transparent|black|white|red|blue|green|yellow)$/i.test(value||'')?value:'';
+      [...copy.querySelectorAll('*')].reverse().forEach(el=>{
+        if(dangerous.has(el.tagName)){el.remove();return;}if(!allowed.has(el.tagName)){el.replaceWith(...el.childNodes);return;}
+        const indent=Math.max(0,Math.min(20,Number(el.dataset.emailIndent)||0)),style=el.style;
+        const preserved={color:color(style.color),backgroundColor:color(style.backgroundColor),textAlign:['left','center','right','justify'].includes(style.textAlign||el.getAttribute('align'))?(style.textAlign||el.getAttribute('align')):'',fontWeight:/^(normal|bold|[1-9]00)$/.test(style.fontWeight)?style.fontWeight:'',fontStyle:['normal','italic'].includes(style.fontStyle)?style.fontStyle:'',textDecoration:/^(underline|line-through)( (underline|line-through))?$/.test(style.textDecoration)?style.textDecoration:'',fontFamily:/^(Arial|Verdana|Georgia|Times New Roman|Courier New)(, ?(serif|sans-serif|monospace))?$/i.test(style.fontFamily.replace(/["']/g,''))?style.fontFamily:'',fontSize:/^(small|medium|large|x-large|[1-4][0-9]px)$/.test(style.fontSize)?style.fontSize:''};
+        const font=el.tagName==='FONT'?{face:el.getAttribute('face'),size:el.getAttribute('size'),color:color(el.getAttribute('color'))}:null;
+        const href=el.tagName==='A'&&/^(https?:|mailto:)/i.test(el.getAttribute('href')||'')?el.getAttribute('href'):'';
+        for(const attr of [...el.attributes])el.removeAttribute(attr.name);
+        if(href)el.setAttribute('href',href);
+        if(font){if(/^(Arial|Verdana|Georgia|Times New Roman|Courier New)$/i.test(font.face||''))el.setAttribute('face',font.face);if(/^[1-7]$/.test(font.size||''))el.setAttribute('size',font.size);if(font.color)el.setAttribute('color',font.color);}
+        for(const [key,value] of Object.entries(preserved))if(value)el.style[key]=value;
+        if(indent&&['P','DIV','LI'].includes(el.tagName))el.style.marginLeft=(indent*32)+'px';
+      });
       return {html:'<div style="width:100%"><a href="https://gknest.org/" style="display:block;width:100%" target="_blank" rel="noopener noreferrer"><img src="https://gknest.org/assets/nest-email-banner.png" alt="NEST™ — Visit our homepage" width="100%" style="display:block;width:100%;max-width:100%;height:auto;border:0"></a><div style="font-family:Arial,sans-serif;font-size:16px;line-height:1.6">'+copy.innerHTML+'</div></div>',text:'NEST™\n'+(message.innerText||message.textContent)};
     }
     function base64(text){const bytes=new TextEncoder().encode(text);let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);return window.btoa(binary);}
-    function mailMessage(emails,subject,draft,sender){
-      if(emails.some(email=>!/^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(email)||email.length>254))throw new Error('Choose valid school email recipients.');
+    function mailMessage(emails,subject,draft,sender,testing=false){
+      if(!(testing&&emails.length===1&&emails[0]===sender)&&emails.some(email=>!/^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(email)||email.length>254))throw new Error('Choose valid school email recipients.');
       const id=window.crypto.randomUUID(),boundary='nest_'+id;
       const characters=Array.from(subject),words=[];for(let i=0;i<characters.length;i+=11)words.push('=?UTF-8?B?'+base64(characters.slice(i,i+11).join(''))+'?=');
       const body=text=>(base64(text).match(/.{1,76}/g)||[]).join('\r\n');
       const mime=['From: '+sender,'To: '+emails.join(',\r\n '),'Subject: '+words.join('\r\n '),'Date: '+new Date().toUTCString(),'Message-ID: <'+id+'@gknest.org>','MIME-Version: 1.0','Content-Type: multipart/alternative; boundary="'+boundary+'"','','--'+boundary,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',body(draft.text),'--'+boundary,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',body(draft.html),'--'+boundary+'--',''].join('\r\n');
       return base64(mime).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
     }
-    async function sendEmail(){
+    async function sendEmail(testing=false){
       if(gmail.sending||gmail.delivery!=='draft'||!data||!identity())return;
       if(!connected()){disconnectGmail();status.textContent='Connect your Gmail account before sending.';return;}
-      const emails=chosen(),subject=q('[data-email-subject]').value.trim();if(!emails.length||!subject||!message.textContent.trim()){status.textContent='Choose recipients and add a subject and message.';return;}
+      const emails=testing?[gmail.email]:chosen(),subject=q('[data-email-subject]').value.trim();if(!emails.length||!subject||!message.textContent.trim()){status.textContent='Choose recipients and add a subject and message.';return;}
       const own=generation,epoch=gmail.epoch,targetPeriod=period,draft=formatted(),sender=gmail.email,token=gmail.token;
       const controls=[...dialog.querySelectorAll('input,select,.group-email-toolbar button,[data-email-open],[data-email-copy]')],disabled=controls.map(el=>el.disabled);
       gmail.sending=true;controls.forEach(el=>el.disabled=true);message.contentEditable='false';gmailControls();status.textContent='Rechecking your team access…';
-      let attempted=false;
+      let attempted=false,observedStatus=0;const started=performance.now();clearFailure();
       try{
         const fresh=await records(targetPeriod);
         if(own!==generation||epoch!==gmail.epoch||!identity())throw new Error('Access changed. Reconnect Gmail and reopen the email window.');
-        const valid=new Set(fresh.members.map(m=>m.email));if(emails.some(email=>!valid.has(email)))throw new Error('The group changed. Choose the recipients again.');
+        const valid=new Set(fresh.members.map(m=>m.email));if(!(testing&&emails.length===1&&emails[0]===sender)&&emails.some(email=>!valid.has(email)))throw new Error('The group changed. Choose the recipients again.');
         if(!connected())throw new Error('Your Gmail connection expired. Connect again to send.');
-        const raw=mailMessage(emails,subject,draft,sender);status.textContent='Sending your email…';attempted=true;
+        const raw=mailMessage(emails,testing?'[TEST] '+subject:subject,draft,sender,testing);status.textContent='Sending your email…';attempted=true;
         const response=await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({raw}),credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(45000)});
-        // A clear 4xx rejection is safe to retry after correcting the issue.
+        observedStatus=response.status;let result;try{result=await response.json();}catch{}
+        if(own!==generation||!identity())return;
+        // A clear rejection preserves the draft and may be corrected safely.
         if(response.status>=400&&response.status<500){
-          attempted=false;
-          if(response.status===401){disconnectGmail();throw new Error('Your Gmail connection expired. Connect again to send.');}
-          if(response.status===403)throw new Error('Google blocked sending. Gmail may need school approval or Google setup, or your account may have reached its sending limit. Your message is still here.');
-          throw new Error('Gmail rejected this email. Review the recipients and message before trying again.');
+          attempted=false;const rejection=gmailRejection(response.status,result);failure('send',response.status,rejection.code);
+          if(rejection.reconnect)disconnectGmail();if(rejection.consent)requestConsent=true;
+          throw new Error(rejection.message);
         }
-        const result=await response.json();if(own!==generation||!identity())return;if(!response.ok||typeof result.id!=='string'||!result.id)throw new Error('Delivery could not be confirmed.');
-        gmail.delivery='sent';if(epoch===gmail.epoch&&identity())status.textContent='Email sent from '+sender+' to '+emails.length+' recipient'+(emails.length===1?'':'s')+'. You can find it in Gmail Sent.';
+        if(own!==generation||!identity())return;if(!response.ok||typeof result?.id!=='string'||!result.id)throw new Error('Delivery could not be confirmed.');
+        gmail.delivery=testing?'draft':'sent';if(epoch===gmail.epoch&&identity())status.textContent=testing?'Test email sent only to '+sender+'. Your team has not been emailed; your draft is ready to review.':'Email sent from '+sender+' to '+emails.length+' recipient'+(emails.length===1?'':'s')+'. You can find it in Gmail Sent.';
       }catch(error){
-        if(attempted&&own===generation&&identity()){gmail.delivery='unknown';if(identity())status.textContent='Delivery could not be confirmed. Check your Gmail Sent folder before sending another email. This message will not be sent again automatically.';}
-        else if(own===generation&&identity())status.textContent=error.message;
-      }finally{gmail.sending=false;controls.forEach((el,i)=>el.disabled=disabled[i]);message.contentEditable='true';count();}
+        if(attempted&&own===generation&&identity()){gmail.delivery='unknown';failure('send',0,'delivery-unconfirmed');if(identity())status.textContent='Delivery could not be confirmed. Check your Gmail Sent folder before sending another email. This message will not be sent again automatically.';}
+        else if(own===generation&&identity()){if(!lastFailure)failure('access',error.status,'team-access-recheck');status.textContent=error.message;}
+      }finally{if(own===generation&&identity())window.NestAccessDiagnostics?.record(testing?'group-email-test-send':'group-email-send',gmail.delivery==='sent'||testing&&!lastFailure?200:gmail.delivery==='unknown'?(observedStatus>=400?observedStatus:502):(observedStatus||lastFailure?.status||0),performance.now()-started);gmail.sending=false;controls.forEach((el,i)=>el.disabled=disabled[i]);message.contentEditable='true';count();}
     }
-    q('[data-email-send]').addEventListener('click',sendEmail);
+    q('[data-email-send]').addEventListener('click',()=>sendEmail(false));q('[data-email-test]').addEventListener('click',()=>sendEmail(true));
     async function handoff(open){
       const emails=chosen(),subject=q('[data-email-subject]').value.trim();if(!data||!emails.length||!identity())return;
       if(!subject||!message.textContent.trim()){status.textContent='Add a subject and message before opening your draft.';return;}

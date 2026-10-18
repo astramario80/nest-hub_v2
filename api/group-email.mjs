@@ -1,8 +1,9 @@
+import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, districtEmail } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 
 // Only live leaders of the chosen division can retrieve its email groups.
-export default async function handler(req,res){
+async function handler(req,res){
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
   res.setHeader('X-Content-Type-Options','nosniff');
@@ -33,3 +34,5 @@ export default async function handler(req,res){
     return res.status(200).json({period,divisions:included,members:[...members.values()],leaders,gmailClientId:process.env.EMAIL_GOOGLE_CLIENT_ID||process.env.SERVICE_GOOGLE_CLIENT_ID||''});
   }catch(error){console.error('Email group lookup failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Email groups could not load. Please try again.'});}
 }
+
+export default withDiagnostics('division',handler);
