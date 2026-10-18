@@ -4,3 +4,7 @@ node_modules/
 !.env.example
 .clasp.json
 .vercel
+
+school-readback/
+school-stage/
+school-verified/
