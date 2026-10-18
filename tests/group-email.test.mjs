@@ -194,3 +194,22 @@ test('manager and assistant-manager group access supports direct sends after Goo
   const {w,sends}=await gmailApp();try{w.document.querySelector('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.match(w.document.querySelector('[data-email-status]').textContent,/Email sent from/);}finally{w.close();}
  }
 });
+
+test('Tab and Shift+Tab indent only the selected composer paragraphs and preserve the selection',async()=>{
+ const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<p>One</p><p>Two</p><p>Three</p>';const paragraphs=[...editor.children];
+ try{selectText(w,paragraphs[0],paragraphs[1]);const tab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});editor.dispatchEvent(tab);assert.equal(tab.defaultPrevented,true);assert.equal(paragraphs[0].style.marginLeft,'32px');assert.equal(paragraphs[1].style.marginLeft,'32px');assert.equal(paragraphs[2].style.marginLeft,'');assert.equal(w.getSelection().toString(),'OneTwo');
+  const outdent=new w.KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true});editor.dispatchEvent(outdent);assert.equal(outdent.defaultPrevented,true);assert.equal(paragraphs[0].style.marginLeft,'');assert.equal(paragraphs[1].style.marginLeft,'');
+ }finally{w.close();}
+});
+test('Control and Command bracket shortcuts use the same bullet nesting rules as the toolbar',async()=>{
+ for(const modifier of ['ctrlKey','metaKey']){
+  const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<ul><li>Parent</li><li>Child</li><li>After</li></ul>';const [parent,child,after]=editor.querySelectorAll('li');
+  try{selectText(w,child,child,2,2);const key=(value,code)=>new w.KeyboardEvent('keydown',{key:value,code,[modifier]:true,bubbles:true,cancelable:true});const indentKey=key(']','BracketRight');editor.dispatchEvent(indentKey);assert.equal(indentKey.defaultPrevented,true);assert.equal(child.parentElement.parentElement,parent);assert.equal(after.parentElement,parent.parentElement);editor.dispatchEvent(key('[','BracketLeft'));assert.equal(child.parentElement,parent.parentElement);assert.equal(w.getSelection().isCollapsed,true);}finally{w.close();}
+ }
+});
+test('Escape then Tab leaves the composer without trapping focus, and shortcuts do not affect other fields',async()=>{
+ const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<p>Text</p>';selectText(w,editor.firstChild,editor.firstChild,1,1);
+ try{const escape=new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true});editor.dispatchEvent(escape);assert.equal(escape.defaultPrevented,true);const tab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});editor.dispatchEvent(tab);assert.equal(tab.defaultPrevented,false);assert.equal(editor.firstChild.style.marginLeft,'');
+  const subject=w.document.querySelector('[data-email-subject]'),subjectTab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});subject.dispatchEvent(subjectTab);assert.equal(subjectTab.defaultPrevented,false);assert.match(w.document.getElementById(editor.getAttribute('aria-describedby')).textContent,/Escape, then Tab/);
+ }finally{w.close();}
+});
