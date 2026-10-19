@@ -19,6 +19,9 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(['finished-list-view','auth-finished-list-add'].includes(r.action)){
+    try{return json_(finishedDispatch_(r));}catch(_){return json_({status:503});}
+  }
   if(['diagnostics-record','auth-diagnostics-read'].includes(r.action))return json_(diagnosticDispatch_(r));
   if(r.action==='auth-spinner-rosters') {
     try{return json_(spinnerRosters_(r.session));}catch(_){return json_({status:503});}
