@@ -1042,6 +1042,11 @@ document.addEventListener('click', event => {
 })();
 
 // Share the eagle navigation across pages using the standard NEST header.
+// Include static embeds and frames added later by tabs or resource viewers.
+const embedSizeScript=document.createElement('script');
+embedSizeScript.src='/js/embed-size.js';
+document.body.append(embedSizeScript);
+
 if (document.querySelector('header .logo-container') && !document.body.classList.contains('soar-embedded')) {
   const eagleMenuScript=document.createElement('script');
   eagleMenuScript.src='/js/eagle-menu.js';
