@@ -15,3 +15,13 @@ Validation:81 focused tests pass. Full suite354 of356 pass; the two unchanged fa
 Assignment and student-name columns now resize down to 64px (previously 120px and 130px). The table no longer stretches small columns to fill its viewport. Narrow columns wrap their headings and stack score/fill controls. Assignment widths remain shared per period; student-name width remains a browser preference per signed-in account and period. Existing widths and upper limits are preserved.
 
 The school Tracker validation must be released alongside the frontend to accept the new lower bound. The live bundled Code module is patched in place, preserving all other school modules and the manifest.
+
+## October 19 Finished List editing and skills
+
+The authenticated NEST owner/supervisor can now add and edit Finished List resources alongside the previously authorized current positions. Role and membership checks run again for every write. Edits preserve original activity instructions and use resource versions plus request IDs to prevent stale overwrites and duplicate retries.
+
+Skill choices come from NEST Database → Location_Lists_Inventory_OSPI_21stCenturySkills!R2:R1002. Resources accept multiple skills; text search includes them and the category dropdown filters by any selected skill. All 17 original activities receive initial skill assignments and local icons, with official website icons where available. Existing custom descriptions, uploaded icons, and chosen tags are preserved when enriching older saved data.
+
+Editors may upload PNG/JPEG/WebP icons. The browser creates a 128px raster thumbnail, and both servers validate bounded raster payloads or local icon paths. The shared header and footer remain visible while the Finished List workspace scrolls. Website icons are self-hosted with sources recorded in assets/finished-list/SOURCES.md.
+
+Validation: 17 focused tests cover supervisor access, role revocation, skill/category search, migration, version conflicts, idempotent updates, upload conversion and image validation. Desktop and 390px browser checks confirm fixed navigation, multiple skill editing and saving. The full suite retains only its two previously documented unrelated failures. Browser file selection is restricted by the Chrome extension's file-URL setting; the conversion/save pipeline is tested separately without changing that setting.

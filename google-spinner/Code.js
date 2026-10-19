@@ -19,7 +19,7 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
-  if(['finished-list-view','auth-finished-list-add'].includes(r.action)){
+  if(['finished-list-view','auth-finished-list-add','auth-finished-list-update'].includes(r.action)){
     try{return json_(finishedDispatch_(r));}catch(_){return json_({status:503});}
   }
   if(['diagnostics-record','auth-diagnostics-read'].includes(r.action))return json_(diagnosticDispatch_(r));

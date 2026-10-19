@@ -4,22 +4,23 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
 import {JSDOM} from 'jsdom';
-import handler,{validEntry} from '../api/finished-list.mjs';
+import handler,{validEntry,validIcon} from '../api/finished-list.mjs';
 
 const source=fs.readFileSync('google-spinner/FinishedList.js','utf8'),script=fs.readFileSync('js/finished-list.js','utf8');
 const id='15d1a8ab-0e5f-49e2-a94a-74a093d2b1f0';
-const entry={requestId:id,title:'Build a story',url:'https://scratch.mit.edu/',description:'Practice sequencing and programming by making a story.'};
+const skills=['Think Creatively','Create Media','Communicate Clearly','Solve Problems'];
+const entry={skills:['Think Creatively'],icon:'',requestId:id,title:'Build a story',url:'https://scratch.mit.edu/',description:'Practice sequencing and programming by making a story.'};
 const hash=value=>createHash('sha256').update(value).digest('hex');
 function school(){
   const properties=new Map(),store={getProperty:key=>properties.get(key),setProperty:(key,value)=>properties.set(key,value)};
   const state={leaders:[],members:new Map(),files:new Map(),writes:0,locked:false,email:'member@students.bethelsd.org',lockAvailable:true};
   const save=blob=>{state.writes++;state.files.set('list-file',blob);};
-  const context=vm.createContext({console,Date,PERIODS:{1:'one',2:'two',3:'three',4:'four',5:'five',7:'seven',CTSO:'robotics'},LEADERSHIP_DATABASE:'leadership',
-    Sheets:{Spreadsheets:{Values:{get:()=>({values:state.leaders})}}},email_:value=>String(value||'').trim().toLowerCase(),
+  const context=vm.createContext({console,Date,PERIODS:{1:'one',2:'two',3:'three',4:'four',5:'five',7:'seven',CTSO:'robotics'},LEADERSHIP_DATABASE:'leadership',NEST_DATABASE:'database',OWNER_EMAILS:['mpenalver@bethelsd.org'],
+    Sheets:{Spreadsheets:{Values:{get:(_id,range)=>({values:range.includes('!R2:')?skills.map(skill=>[skill]):state.leaders})}}},email_:value=>String(value||'').trim().toLowerCase(),
     memberEmail_:(identity,period)=>identity==='manual:member'&&period==='2'?'linked@students.bethelsd.org':identity,
     rows_:period=>state.members.get(period)||[],hash_:hash,authSession_:value=>value==='valid'?{email:state.email}:null,
     PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>state.locked=state.lockAvailable,releaseLock:()=>state.locked=false})},
-    Utilities:{newBlob:text=>text},ScriptApp:{getOAuthToken:()=> 'test-token'},trackerFolder_:()=> 'folder',
+    Utilities:{newBlob:text=>text,base64Decode:value=>[...Buffer.from(value,'base64')]},ScriptApp:{getOAuthToken:()=> 'test-token'},trackerFolder_:()=> 'folder',
     UrlFetchApp:{fetch:()=>({getResponseCode:()=>200,getContentText:()=>state.files.get('list-file')})},
     Drive:{Files:{create:(_meta,blob)=>{assert.equal(state.locked,true);save(blob);return {id:'list-file'};},update:(_meta,_id,blob)=>{assert.equal(state.locked,true);save(blob);}}}
   });
@@ -29,7 +30,7 @@ function school(){
   return {state,role,call,allowed:identity=>context.finishedAllowed_(identity)};
 }
 
-test('only the requested current positions may add; ownership alone grants no access',()=>{
+test('the supervisor and requested current positions may edit; unrelated roles stay denied',()=>{
   const app=school();
   for(const [role,period] of [['Software Technician','2'],['Software Technician','CTSO'],['Division Manager','2'],['Assistant Manager','7'],['Chief Executive Officer','CTSO'],['Chief Financial Officer','CTSO'],['Chief Operations Officer','CTSO'],['Chief Operations Officers','CTSO'],['Chief Operating Officer','CTSO']]){
     app.role(role,period);assert.equal(app.allowed(app.state.email),true,role);
@@ -37,7 +38,7 @@ test('only the requested current positions may add; ownership alone grants no ac
   for(const [role,period] of [['Student','2'],['Software Technician','Advisory'],['Partner Liaison','2'],['Fabrication Supervisor','2'],['Executive Vice-President','CTSO'],['Chief Executive Officer','2'],['Chief Financial Officer','2'],['Chief Operations Officer','2'],['Division Manager','CTSO'],['Assistant Manager','CTSO']]){
     app.role(role,period);assert.equal(app.allowed(app.state.email),false,role+' '+period);
   }
-  app.state.leaders=[];assert.equal(app.allowed('mpenalver@bethelsd.org'),false);
+  app.state.leaders=[];assert.equal(app.allowed('mpenalver@bethelsd.org'),true);
   app.role('Software Technician');app.state.members.clear();assert.equal(app.allowed(app.state.email),false);
 });
 
@@ -100,7 +101,7 @@ test('API rejects unsigned and cross-site writes before contacting the school br
 test('API sends only allowed fields and projects safe public data with private no-store caching',async()=>{
   const old=globalThis.fetch,previous={url:process.env.SPINNER_BRIDGE_URL,token:process.env.SPINNER_BRIDGE_TOKEN};
   process.env.SPINNER_BRIDGE_URL='https://script.google.com/test';process.env.SPINNER_BRIDGE_TOKEN='test';let payload;
-  globalThis.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({status:200,canAdd:true,entries:[{id,title:entry.title,url:entry.url,description:entry.description,actor:'secret',email:'private@example.org'}]})};};
+  globalThis.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({status:200,canAdd:true,canEdit:true,skills,entries:[{id,title:entry.title,url:entry.url,description:entry.description,icon:'',skills:entry.skills,version:1,actor:'secret',email:'private@example.org'}]})};};
   try{
     const res=response();await handler({method:'POST',headers,body:{...entry,canAdd:true,actor:'spoof'}},res);
     assert.equal(res.code,200);assert.equal(payload.canAdd,undefined);assert.equal(payload.actor,undefined);assert.equal(payload.action,'auth-finished-list-add');
@@ -135,14 +136,87 @@ test('a failed add keeps its draft and retry ID, then shows the persisted resour
       if(fail){fail=false;return {ok:false,status:503,json:async()=>({error:'Please retry'})};}
       entries.push({id:body.requestId,...body});
     }
-    return {ok:true,json:async()=>({entries:structuredClone(entries),canAdd:true})};
+    return {ok:true,json:async()=>({entries:structuredClone(entries),canAdd:true,canEdit:true,skills})};
   });
   try{
     await tick();assert.equal(q('#finished-add').hidden,false);
-    const form=q('form');form.elements.title.value=entry.title;form.elements.url.value=entry.url;form.elements.description.value=entry.description;
+    const form=q('form');form.elements.title.value=entry.title;form.elements.url.value=entry.url;form.elements.description.value=entry.description;q('#finished-skills input').checked=true;
     form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();assert.equal(form.elements.title.value,entry.title);
     form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();assert.equal(writes[0].requestId,writes[1].requestId);
     assert.equal(form.elements.title.value,'');assert.equal(w.document.querySelectorAll('.finished-card').length,1);assert.match(q('#finished-status').textContent,/was added/);
     w.NestAuth.identity=null;w.document.dispatchEvent(new w.Event('nest-auth-change'));assert.equal(q('#finished-add').hidden,true);
   }finally{w.close();}
+});
+
+test('supervisor updates existing activities, preserves instructions, and rejects stale or changed retries',()=>{
+ const app=school();app.state.email='mpenalver@bethelsd.org';
+ const before=app.call({action:'finished-list-view',session:'valid'});assert.equal(before.canEdit,true);
+ const original=before.entries.find(e=>e.id==='original-9');
+ const update={...entry,action:'auth-finished-list-update',session:'valid',id:original.id,version:1,title:original.title,url:original.url,description:original.description,skills:['Think Creatively','Create Media'],icon:'/assets/finished-list/pixton.svg'};
+ const saved=app.call(update);assert.equal(saved.status,200);const after=saved.entries.find(e=>e.id===original.id);assert.equal(after.version,2);assert.equal(after.instructions,original.instructions);assert.deepEqual(after.skills,update.skills);assert.equal(after.icon,update.icon);assert.equal(saved.entries.length,17);
+ assert.equal(app.call(update).status,200);assert.equal(app.state.writes,1);
+ assert.equal(app.call({...update,title:'Changed retry'}).status,409);
+ assert.equal(app.call({...update,requestId:'25d1a8ab-0e5f-49e2-a94a-74a093d2b1f0'}).status,409);assert.equal(app.state.writes,1);
+ app.state.email='member@students.bethelsd.org';assert.equal(app.call({...update,version:2}).status,403);assert.equal(app.state.writes,1);
+});
+
+test('old persisted resources gain defaults without overwriting custom descriptions or chosen tags',()=>{
+ const app=school();app.role('Software Technician');app.call({action:'auth-finished-list-add',session:'valid',...entry});
+ const state=JSON.parse(app.state.files.get('list-file')),pixton=state.entries.find(e=>e.id==='original-9');delete pixton.skills;delete pixton.icon;delete pixton.version;pixton.description='Teacher-specific purpose';app.state.files.set('list-file',JSON.stringify(state));
+ let restored=app.call({action:'finished-list-view'}).entries.find(e=>e.id===pixton.id);assert.equal(restored.description,'Teacher-specific purpose');assert.ok(restored.skills.includes('Think Creatively'));assert.equal(restored.icon,'/assets/finished-list/pixton.svg');assert.equal(restored.version,1);
+ pixton.skills=['Communicate Clearly'];pixton.icon='';app.state.files.set('list-file',JSON.stringify(state));restored=app.call({action:'finished-list-view'}).entries.find(e=>e.id===pixton.id);assert.deepEqual(restored.skills,['Communicate Clearly']);assert.equal(restored.icon,'');
+});
+
+test('skills must come from the live database and existing offline project ideas stay editable',()=>{
+ const app=school();app.state.email='mpenalver@bethelsd.org';
+ for(const chosen of [[],['Not in the database'],['Think Creatively','Think Creatively']])assert.equal(app.call({action:'auth-finished-list-add',session:'valid',...entry,skills:chosen}).status,400);
+ const original=app.call({action:'finished-list-view'}).entries.find(e=>e.id==='original-6');
+ const update={...entry,action:'auth-finished-list-update',session:'valid',id:original.id,version:1,url:'',title:original.title};assert.equal(app.call(update).status,200);
+ assert.equal(app.call({...entry,action:'auth-finished-list-add',session:'valid',url:''}).status,400);
+ assert.equal(app.call({...update,id:'original-9'}).status,400);
+});
+
+test('icon validation accepts bounded raster uploads and local assets while rejecting SVG uploads and external URLs',()=>{
+ const app=school();app.role('Software Technician');
+ const png='data:image/png;base64,'+Buffer.from([137,80,78,71,13,10,26,10,0,0,0,0]).toString('base64');
+ const webp='data:image/webp;base64,'+Buffer.from('RIFF0000WEBPVP8 ').toString('base64');
+ for(const icon of [png,webp,'/assets/finished-list/pixton.svg']){assert.equal(validIcon(icon),true);assert.equal(app.call({...entry,requestId:crypto.randomUUID(),action:'auth-finished-list-add',session:'valid',icon}).status,200);}
+ for(const icon of ['https://example.org/logo.png','data:image/svg+xml;base64,'+Buffer.from('<svg onload="alert(1)"/>').toString('base64'),'data:image/png;base64,'+Buffer.from('not really an image').toString('base64'),'/assets/finished-list/../../secret.svg',png+'A'.repeat(45000)]){
+  assert.equal(validIcon(icon),false);assert.equal(validEntry({...entry,icon}),false);assert.equal(app.call({...entry,action:'auth-finished-list-add',session:'valid',icon}).status,400);
+ }
+});
+
+test('skills are both searchable text and independently selectable categories',async()=>{
+ const entries=[{id:'one',title:'Pixton',url:'https://www.pixton.com/',description:'Make comics',skills:['Think Creatively','Create Media'],icon:'/assets/finished-list/pixton.svg',version:1},{id:'two',title:'Chess',url:'',description:'Plan ahead',skills:['Solve Problems'],version:1}];
+ const {w,q}=website(async()=>({ok:true,json:async()=>({entries,skills,canAdd:false,canEdit:false})}));
+ try{
+  await tick();assert.equal(q('.finished-card img').getAttribute('src'),'/assets/finished-list/pixton.svg');
+  q('#finished-search').value='think creatively';q('#finished-search').dispatchEvent(new w.Event('input'));assert.equal(w.document.querySelectorAll('.finished-card').length,1);assert.equal(q('.finished-card h3').textContent,'Pixton');
+  q('#finished-search').value='';q('#finished-search').dispatchEvent(new w.Event('input'));q('#finished-skill-filter').value='Create Media';q('#finished-skill-filter').dispatchEvent(new w.Event('change'));assert.equal(w.document.querySelectorAll('.finished-card').length,1);assert.match(q('#finished-category-title').textContent,/Create Media/);
+  assert.equal(q('.finished-edit'),null);
+ }finally{w.close();}
+});
+
+test('editing uses resource versions, preserves drafts after conflicts, and clears controls on access loss',async()=>{
+ const original={id:'original-9',title:'Pixton',url:'https://www.pixton.com/',description:'Make comics',skills:['Think Creatively','Create Media'],icon:'/assets/finished-list/pixton.svg',version:3};let permission=true;const requests=[];
+ const {w,q}=website(async(_url,options)=>{if(options.method==='POST'){requests.push(JSON.parse(options.body));return {ok:false,status:409,json:async()=>({error:'This resource changed. Your draft is kept.'})};}return {ok:true,json:async()=>({entries:[original],skills,canAdd:permission,canEdit:permission})};});
+ try{
+  await tick();q('.finished-edit').click();assert.equal(q('form').elements.title.value,'Pixton');assert.equal(q('#finished-icon-preview').getAttribute('src'),original.icon);assert.equal(w.document.querySelectorAll('#finished-skills input:checked').length,2);
+  q('form').elements.description.value='Updated purpose';q('form').dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();assert.equal(requests[0].version,3);assert.equal(requests[0].id,original.id);assert.equal(requests[0].operation,'update');assert.equal(q('form').elements.description.value,'Updated purpose');
+  q('form').dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();assert.equal(requests[0].requestId,requests[1].requestId);
+  permission=false;q('#finished-refresh').click();await tick();assert.equal(q('.finished-edit'),null);assert.equal(q('#finished-add').hidden,true);
+ }finally{w.close();}
+});
+
+test('icon chooser resizes a raster before saving, previews it, and rejects oversized uploads',async()=>{
+ const uploaded='data:image/webp;base64,'+Buffer.from('RIFF0000WEBPVP8 ').toString('base64'),writes=[];let canvas,closed=0;
+ const {w,q}=website(async(_url,options)=>{if(options.method==='POST')writes.push(JSON.parse(options.body));return {ok:true,json:async()=>({entries:[],skills,canAdd:true,canEdit:true})};});
+ try{
+  await tick();w.createImageBitmap=async()=>({width:1024,height:512,close(){closed++;}});
+  w.HTMLCanvasElement.prototype.getContext=function(){canvas=this;return {drawImage(){}};};w.HTMLCanvasElement.prototype.toDataURL=()=>uploaded;
+  const chooser=q('#finished-icon-file'),image=new w.File(['raster'],'icon.png',{type:'image/png'});Object.defineProperty(chooser,'files',{configurable:true,value:[image]});chooser.dispatchEvent(new w.Event('change'));await tick();
+  assert.equal(canvas.width,128);assert.equal(canvas.height,64);assert.equal(closed,1);assert.equal(q('#finished-icon-preview').src,uploaded);assert.equal(q('#finished-icon-preview').hidden,false);
+  const form=q('#finished-form');form.elements.title.value=entry.title;form.elements.url.value=entry.url;form.elements.description.value=entry.description;q('#finished-skills input').checked=true;form.dispatchEvent(new w.Event('submit',{cancelable:true}));await tick();assert.equal(writes[0].icon,uploaded);
+  Object.defineProperty(chooser,'files',{configurable:true,value:[new w.File([new Uint8Array(5*1024*1024+1)],'large.png',{type:'image/png'})]});chooser.dispatchEvent(new w.Event('change'));await tick();assert.match(q('#finished-status').textContent,/smaller than 5 MB/);assert.equal(q('#finished-save').disabled,false);
+ }finally{w.close();}
 });
