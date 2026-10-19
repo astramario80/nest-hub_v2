@@ -3327,3 +3327,12 @@ button:not(:disabled):focus-visible, .division-page-actions a:focus-visible,
     right: -12px;
     height: 14px;
 }
+
+/* Shared expansion controls for inline websites, forms and slides. */
+button.nest-embed-expand{display:block;align-self:flex-end;width:max-content;max-width:100%;min-height:44px;margin:8px 0;padding:8px 14px;border:1px solid #ffb575;border-radius:8px;background:#172238;color:#fff;font:600 14px/1.4 Montserrat,Arial,sans-serif;cursor:pointer}
+button.nest-embed-expand:focus-visible{outline:3px solid #ffd498;outline-offset:3px}
+body.nest-embed-expanded{overflow:hidden}
+.nest-expanded-embed{position:fixed!important;inset:0!important;z-index:2147483646!important;display:block!important;box-sizing:border-box!important;width:100vw!important;max-width:none!important;height:100dvh!important;min-height:0!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#172238!important;overflow:hidden!important;transform:none!important}
+.nest-expanded-embed>:not(.nest-expanded-frame):not(.nest-active-expand){display:none!important}
+.nest-expanded-embed>iframe.nest-expanded-frame{position:absolute!important;inset:56px 0 0!important;display:block!important;width:100%!important;max-width:none!important;height:calc(100% - 56px)!important;min-height:0!important;max-height:none!important;margin:0!important;border:0!important;border-radius:0!important;background:white}
+.nest-expanded-embed>button.nest-active-expand{position:absolute;top:6px;right:12px;z-index:1;margin:0;min-height:44px}
