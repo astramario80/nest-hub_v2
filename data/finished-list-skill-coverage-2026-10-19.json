@@ -1,0 +1,66 @@
+[
+  {
+    "requestId": "6471b947-bd42-4293-8be3-fca54012fe55",
+    "title": "Solo · Google Sheets project planner",
+    "url": "https://docs.google.com/spreadsheets/",
+    "skills": [
+      "Manage Goals & Time",
+      "Manage Projects"
+    ],
+    "icon": "/assets/finished-list/google-sheets.png",
+    "description": "Solo activity. Plan a small project you can complete: define its goal, break it into tasks, estimate time, and schedule milestones in Google Sheets. Track actual progress and revise the plan when necessary. Finish by submitting your planner and completed result, comparing estimated versus actual time, and explaining one planning adjustment."
+  },
+  {
+    "requestId": "c6e5ba14-82a9-474c-aa90-fd4148eb8a41",
+    "title": "Partner · Google Docs peer review",
+    "url": "https://docs.google.com/document/",
+    "skills": [
+      "Collaborate with Others",
+      "Interact Effectively"
+    ],
+    "icon": "/assets/finished-list/google-docs.png",
+    "description": "Partner activity. Exchange drafts with a classmate and use Google Docs comments or suggestions to give specific, constructive feedback. Discuss suggestions respectfully, respond to your partner, and revise your work together. Finish by submitting the revised document and a brief reflection showing how each partner contributed and which feedback improved the result."
+  },
+  {
+    "requestId": "463af09e-47e7-41f9-a6b9-be309b6a16bd",
+    "title": "Solo · Tinkercad change-of-brief challenge",
+    "url": "https://www.tinkercad.com/learn/circuits",
+    "skills": [
+      "Adapt to Change",
+      "Be Flexible"
+    ],
+    "icon": "/assets/finished-list/tinkercad.ico",
+    "description": "Solo activity. Build a working circuit in Tinkercad, then ask your teacher or a classmate to change one requirement or remove an available component. Revise the design to meet the new brief and test it again. Finish by submitting before-and-after evidence, explaining your tradeoffs, and describing how you changed your approach rather than abandoning the goal."
+  },
+  {
+    "requestId": "f0bf836d-4eba-4be3-ab4f-592a76a661c1",
+    "title": "Partner · MakeCode peer workshop",
+    "url": "https://makecode.microbit.org/",
+    "skills": [
+      "Guide and Lead Others"
+    ],
+    "icon": "/assets/finished-list/makecode.png",
+    "description": "Partner activity. Plan and lead a five-minute MakeCode mini-lesson with a clear learning goal. Guide a classmate through building a small program, ask questions instead of taking over, and let your partner demonstrate the skill independently. Finish by submitting your lesson outline, partner feedback, and a reflection explaining one change that would improve your instruction."
+  },
+  {
+    "requestId": "4a82633e-8462-43e8-b3f9-fd53e72e31d1",
+    "title": "Team · Twine collaborative storytelling",
+    "url": "https://twinery.org/",
+    "skills": [
+      "Work Creatively with Others",
+      "Work Effectively in Diverse Teams"
+    ],
+    "icon": "/assets/finished-list/twine.png",
+    "description": "Team activity for three or more students with differing strengths, viewpoints, or role experiences. Co-design a branching workplace story, combine ideas from every teammate, and rotate writing, design, and testing roles. Finish by submitting the story and a contribution record. Each member should explain how another viewpoint influenced the work and how the team respectfully resolved a disagreement."
+  },
+  {
+    "requestId": "cc58862c-cc6b-4798-8bc5-4bc0e331b12e",
+    "title": "Solo · PhET independent investigation",
+    "url": "https://phet.colorado.edu/en/simulations/browse?levels=high-school&type=html",
+    "skills": [
+      "Work Independently"
+    ],
+    "icon": "/assets/finished-list/phet.png",
+    "description": "Solo activity. Choose a scientific question you can investigate with a high-school PhET simulation. Create your own plan, make a prediction, change one variable at a time, and record observations without following a step-by-step experiment. Finish by submitting your question, evidence, conclusion, and a reflection on a decision or obstacle you handled independently. Use the simulation help when needed."
+  }
+]

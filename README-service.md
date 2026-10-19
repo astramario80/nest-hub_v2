@@ -35,3 +35,7 @@ Validation: 21 Finished List tests pass, including denied/stale deletions, persi
 ## Finished List eight-tool expansion
 
 Added Tinkercad Circuits, Microsoft MakeCode for micro:bit, PhET, Datawrapper, Checkology, Zooniverse, Twine and Desmos 3D through the existing authorized resource workflow. Each entry includes a project prompt, finish requirement, selected database skills and a self-hosted official tool or publisher icon. The content and stable retry IDs are recorded in data/finished-list-expansion-2026-10-19.json. Existing resources, custom icons and prior deletions remain unchanged.
+
+## Finished List skill coverage activities
+
+Six additional Solo, Partner and Team activities cover the ten previously unused skill categories: Google Sheets project planning, Google Docs peer review, a changed-brief Tinkercad challenge, a MakeCode peer workshop, Twine team storytelling and an independent PhET investigation. Their activity prompts require evidence of the skill rather than relying on a tool name alone. Definitions and stable request IDs are recorded in data/finished-list-skill-coverage-2026-10-19.json; additions use the existing authorized resource workflow.
