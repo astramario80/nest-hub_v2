@@ -35,3 +35,5 @@ Official website icons identify the linked tools. Company names and marks belong
 
 - google-sheets: https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png
 - google-docs: https://www.gstatic.com/images/branding/product/2x/docs_2020q4_48dp.png
+
+- `zoho-projects.svg`: official Zoho Projects logo from https://www.zohowebstatic.com/sites/zweb/images/productlogos/projects.svg (2026-10-19). Retains the original vector logo group, removes the wordmark, and uses a square viewBox for the card icon.
