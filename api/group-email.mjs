@@ -2,7 +2,7 @@ import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, districtEmail } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 
-// Student recipients stay division-scoped; managers/executives may reach building leadership.
+// Student recipients stay division-scoped; all current leaders may reach building leadership.
 async function handler(req,res){
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
@@ -21,9 +21,8 @@ async function handler(req,res){
     if(access.some(a=>![200,403].includes(a.status)))throw new Error('Division access unavailable');
     const included=access.filter(a=>a.status===200&&(a.isOwner===true||a.canManage===true||Array.isArray(a.roles)&&a.roles.some(role=>typeof role==='string'&&role.trim()))).map(a=>a.period);
     if(!included.length)return res.status(403).json({error:'Email groups are available only to the divisions where you are on the leadership team.'});
-    const canReachBuildingLeadership=access.some(a=>a.status===200&&(a.isOwner===true||a.canManage===true||a.period==='CTSO'&&a.canManageRobotics===true||Array.isArray(a.roles)&&a.roles.some(role=>a.period==='CTSO'?/^(chief (executive|financial|operations|operating) officers?|executive vice-president)$/i.test(String(role).trim()):/^(division manager|assistant manager)$/i.test(String(role).trim()))));
+    const canReachBuildingLeadership=included.length>0;
     if(audience==='leadership'){
-      if(!canReachBuildingLeadership)return res.status(403).json({error:'Building-wide leadership email is available to Division Managers, Assistant Managers, and NEST Robotics executives.'});
       const directory=await bridge({action:'auth-leadership-directory',session},25000);
       if(directory.status!==200||!Array.isArray(directory.leaders))throw new Error('Leadership directory unavailable');
       const leaders=directory.leaders.filter(l=>districtEmail(l.email)&&typeof l.position==='string'&&l.position.trim()&&/^(Period (1|2|3|4|5|7)|NEST Robotics)$/.test(l.division)).map(l=>({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position,division:l.division}));

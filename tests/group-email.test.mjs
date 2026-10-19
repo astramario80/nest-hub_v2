@@ -228,15 +228,15 @@ test('HQ composer is embedded in Communications and preserves the draft and sele
  }finally{w.close();}
 });
 
-test('managers and Robotics executives can retrieve building leadership without receiving other student rosters',async()=>{
- for(const role of ['Division Manager','Assistant Manager','Chief Executive Officer','Chief Financial Officer','Chief Operations Officers','Executive Vice-President']){
+test('all assigned division leaders can retrieve building leadership without receiving other student rosters',async()=>{
+ for(const role of ['Division Manager','Assistant Manager','Safety Officer','Software Technician','Partner Liaison','Division DJ','Chief Executive Officer','Chief Financial Officer','Chief Operations Officers','Executive Vice-President']){
   const target=role.startsWith('Chief')||role.startsWith('Executive')?'CTSO':'2';
   const access=p=>p===target?{status:200,roles:[role]}:{status:403};
   const building=await server(access,'all','leadership');assert.equal(building.res.code,200,role);assert.equal(building.res.data.leaders.length,2);assert.equal(building.res.data.members.length,2);
   assert.equal(building.res.data.members.some(m=>m.email==='member@students.bethelsd.org'),false);assert.equal(building.calls.includes('tracker'),false);
   const scoped=await server(access,'all');assert.deepEqual(scoped.res.data.divisions,[target]);assert.equal(scoped.calls.filter(action=>action==='tracker').length,1);
  }
- const denied=await server(p=>p==='2'?{status:200,roles:['Safety Officer']}:{status:403},'all','leadership');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('auth-leadership-directory'),false);
+ const denied=await server(p=>p==='2'?{status:200,roles:[]}:{status:403},'all','leadership');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('auth-leadership-directory'),false);
  const invalid=await server({status:200,canManage:true},'2','leadership');assert.equal(invalid.res.code,400);
 });
 
