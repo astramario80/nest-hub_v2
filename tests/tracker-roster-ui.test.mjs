@@ -38,3 +38,18 @@ test('student name width, name order, and role visibility persist for the signed
   finally{next.dom.window.close();}
  }finally{dom.window.close();}
 });
+
+
+test('student column can shrink to 64 pixels and keeps that width after reopening',async()=>{
+ const {dom,w,q}=page();
+ try{
+  await tick();
+  const pointer=(target,type,x)=>{const event=new w.Event(type,{bubbles:true,cancelable:true});Object.defineProperties(event,{pointerId:{value:1},button:{value:0},clientX:{value:x}});target.dispatchEvent(event);};
+  pointer(q('.trip-name-resize'),'pointerdown',190);pointer(w,'pointermove',0);pointer(w,'pointerup',0);
+  assert.equal(q('colgroup col:first-child').style.width,'64px');
+  assert.equal(q('.trip-name-header').classList.contains('trip-compact-column'),true);
+  const next=page(w.localStorage.getItem('nest-tracker-display:teacher:1'));
+  try{await tick();assert.equal(next.q('colgroup col:first-child').style.width,'64px');}
+  finally{next.dom.window.close();}
+ }finally{dom.window.close();}
+});

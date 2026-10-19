@@ -152,8 +152,8 @@ test('score batches validate every edit before writing and advance one revision'
 test('editors can resize, reorder, rename and delete columns with their scores',()=>{
  const s=service();signIn(s,'mpenalver@bethelsd.org');const student=s.ctx.hash_('student@example.org');
  const change=(revision,value)=>s.call({...base,action:'tracker-update',revision,change:value});
- assert.equal(change(1,{type:'resize',assignment:'a',width:119}).status,400);
- assert.equal(change(1,{type:'resize',assignment:'a',width:280}).assignments[0].width,280);
+ assert.equal(change(1,{type:'resize',assignment:'a',width:63}).status,400);
+ assert.equal(change(1,{type:'resize',assignment:'a',width:64}).assignments[0].width,64);
  assert.equal(change(2,{type:'assignment',title:'Project'}).assignments.length,2);
  assert.equal(change(3,{type:'reorder',order:['a','a']}).status,400);
  assert.deepEqual(change(3,{type:'reorder',order:[String(1000000000),'a']}).assignments.map(a=>a.title),['Project','Safety']);

@@ -22,7 +22,7 @@ test('HQ has connected accessible tabs and loads slides and the application only
   assert.equal(w.document.querySelectorAll('[role=tabpanel]:not([hidden])').length,1);
   assert.equal(w.document.querySelector('iframe[src]'),null);assert.equal(calls.length,0);
   assert.equal(w.document.querySelector('[data-hq-lookup]').dataset.hqLookup,'2');
-  assert.ok(w.document.querySelector('script[src="/js/trip-o-meter.js"]'));assert.equal(w.document.querySelector('script[src="/js/leadership.js"]'),null);choose(w,'lookup');assert.ok(w.document.querySelector('script[src="/js/leadership.js"]'));assert.equal(w.document.querySelector('script[src="/js/hiring.js"]'),null);
+  assert.ok(w.document.querySelector('script[src="/js/trip-o-meter.js?v=column-width-64"]'));assert.equal(w.document.querySelector('script[src="/js/leadership.js"]'),null);choose(w,'lookup');assert.ok(w.document.querySelector('script[src="/js/leadership.js"]'));assert.equal(w.document.querySelector('script[src="/js/hiring.js"]'),null);
   choose(w,'meetings');assert.match(w.document.querySelector('.division-window-stage iframe').src,/manager-deck/);assert.equal(w.location.hash,'#meetings');
   choose(w,'employment');assert.match(w.document.querySelector('[data-application-src]').src,/viewform\?embedded=true/);
   assert.equal(w.document.querySelectorAll('#hq-panel-employment .job-card').length,10);

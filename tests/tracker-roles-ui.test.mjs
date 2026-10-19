@@ -173,5 +173,11 @@ test('dragging a heading reorders columns and dragging its edge saves the new wi
   w.dispatchEvent(new w.KeyboardEvent('keydown',{bubbles:true,key:'Escape'}));
   assert.equal(q('colgroup col:nth-child(2)').style.width,'230px');
   assert.equal(changes.length,2);
+  pointer(q('.trip-movable-column .trip-column-resize'),'pointerdown',350);pointer(w,'pointermove',0);
+  assert.equal(q('colgroup col:nth-child(2)').style.width,'64px');
+  assert.equal(q('thead th[data-assignment]').classList.contains('trip-compact-column'),true);
+  pointer(w,'pointerup',0);await tick();
+  assert.deepEqual(changes[2],{type:'resize',assignment:'b',width:64});
+  assert.equal(q('colgroup col:nth-child(2)').style.width,'64px');
  }finally{w.close();}
 });

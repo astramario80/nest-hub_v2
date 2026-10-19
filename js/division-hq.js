@@ -9,7 +9,7 @@
     scripts.set(src,promise);return promise;
   }
   function startTool(key){
-    const src={tripometer:'/js/trip-o-meter.js',robotics:'/js/robotics.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
+    const src={tripometer:'/js/trip-o-meter.js?v=column-width-64',robotics:'/js/robotics.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
     const target=panel(key);target.querySelector('[data-tool-retry]')?.remove();
     loadScript(src).catch(()=>{
       const retry=document.createElement('button');retry.type='button';retry.dataset.toolRetry='';retry.textContent='Could not load this section. Try again';retry.addEventListener('click',()=>startTool(key),{once:true});target.append(retry);
