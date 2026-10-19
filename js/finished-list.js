@@ -34,12 +34,12 @@
   }
   function controls(){add.hidden=!(canAdd||canEdit);signIn.hidden=Boolean(window.NestAuth?.identity);refresh.disabled=busy||preparingIcon;form.querySelectorAll('input,textarea,button').forEach(element=>element.disabled=busy||preparingIcon);host.querySelectorAll('.finished-edit').forEach(element=>element.disabled=busy||preparingIcon);}
   function iconPreview(){preview.hidden=!icon;if(icon)preview.src=icon;else preview.removeAttribute('src');q('#finished-icon-remove').hidden=!icon;}
-  function resetEditor(){form.reset();editing=null;icon='';pending=null;iconGeneration++;preparingIcon=false;iconPreview();skillSummary();q('#finished-save').textContent='Add to Finished List';q('#finished-cancel').hidden=true;form.elements.url.required=true;add.querySelector('summary').textContent='Add a learning resource';}
+  function resetEditor(){form.reset();editing=null;icon='';pending=null;iconGeneration++;preparingIcon=false;iconPreview();skillSummary();q('#finished-save').textContent='Add to Finished List';q('#finished-cancel').hidden=true;q('#finished-delete').hidden=true;form.elements.url.required=true;add.querySelector('summary').textContent='Add a learning resource';}
   function editEntry(entry){
     if(busy||preparingIcon)return;
     if(editing&&editing.id!==entry.id&&!window.confirm('Replace your current draft with this resource?'))return;
     resetEditor();editing={id:entry.id,version:entry.version};form.elements.title.value=entry.title;form.elements.url.value=entry.url;form.elements.url.required=Boolean(entry.url);form.elements.description.value=entry.description;
-    picker.querySelectorAll('input').forEach(input=>input.checked=entry.skills?.includes(input.value));skillSummary();icon=entry.icon||'';iconPreview();q('#finished-save').textContent='Save changes';q('#finished-cancel').hidden=false;add.querySelector('summary').textContent='Edit learning resource';add.open=true;add.scrollIntoView?.({block:'start',behavior:'smooth'});form.elements.title.focus();
+    picker.querySelectorAll('input').forEach(input=>input.checked=entry.skills?.includes(input.value));skillSummary();icon=entry.icon||'';iconPreview();q('#finished-save').textContent='Save changes';q('#finished-cancel').hidden=false;q('#finished-delete').hidden=false;add.querySelector('summary').textContent='Edit learning resource';add.open=true;add.scrollIntoView?.({block:'start',behavior:'smooth'});form.elements.title.focus();
   }
   async function request(options={}){
     const response=await fetch('/api/finished-list',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(55000),...options});
@@ -52,6 +52,7 @@
     try{
       await window.NestAuth?.ready;if(own!==generation)return;
       const result=await request();if(own!==generation)return;show(result);status.textContent='';
+      if(pending?.fields.operation==='delete'&&!entries.some(entry=>entry.id===pending.fields.id)){resetEditor();add.open=false;status.textContent='The tool was deleted from the Finished List.';}
       if(pending&&entries.some(entry=>entry.id===(pending.fields.id||pending.id)&&['title','description','url','icon','skills'].every(key=>JSON.stringify(entry[key]||'')===JSON.stringify(pending.fields[key]||'')))){resetEditor();status.textContent='Your resource is saved in the Finished List.';}
     }catch(error){if(own===generation)status.textContent=error.message;}
     finally{if(own===generation){busy=false;controls();}}
@@ -67,6 +68,19 @@
   });
   q('#finished-icon-remove').addEventListener('click',()=>{icon='';iconGeneration++;iconPreview();});
   q('#finished-cancel').addEventListener('click',()=>{resetEditor();add.open=false;controls();status.textContent='Editing canceled.';});
+  q('#finished-delete').addEventListener('click',async()=>{
+    if(busy||preparingIcon||!canEdit||!editing)return;
+    const title=entries.find(entry=>entry.id===editing.id)?.title||'this tool';
+    if(!window.confirm('Delete “'+title+'” from the Finished List? This removes its link, description, icon, and skill tags for everyone. This cannot be undone.'))return;
+    const fields={operation:'delete',...editing},key=JSON.stringify(fields);
+    if(pending?.key!==key)pending={key,id:crypto.randomUUID(),fields};
+    const own=++generation;busy=true;controls();status.textContent='Deleting tool…';
+    try{
+      const result=await request({method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...fields,requestId:pending.id})});
+      if(own!==generation)return;show(result);resetEditor();add.open=false;render();status.textContent='The tool was deleted from the Finished List.';
+    }catch(error){if(own===generation){if([401,403].includes(error.status)){canAdd=false;canEdit=false;render();controls();}status.textContent=error.message;}}
+    finally{if(own===generation){busy=false;controls();}}
+  });
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(busy||preparingIcon||!(editing?canEdit:canAdd)||!form.reportValidity())return;
     const fields={operation:editing?'update':'add',...(editing||{}),title:form.elements.title.value.trim(),url:form.elements.url.value.trim(),description:form.elements.description.value.trim(),skills:selectedSkills(),icon};

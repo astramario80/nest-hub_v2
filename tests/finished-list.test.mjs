@@ -220,3 +220,45 @@ test('icon chooser resizes a raster before saving, previews it, and rejects over
   Object.defineProperty(chooser,'files',{configurable:true,value:[new w.File([new Uint8Array(5*1024*1024+1)],'large.png',{type:'image/png'})]});chooser.dispatchEvent(new w.Event('change'));await tick();assert.match(q('#finished-status').textContent,/smaller than 5 MB/);assert.equal(q('#finished-save').disabled,false);
  }finally{w.close();}
 });
+
+test('deletion checks live permissions and versions, removes stored content, and safely handles retries',()=>{
+ const app=school();app.state.email='mpenalver@bethelsd.org';
+ const request={action:'auth-finished-list-delete',session:'valid',id:'original-9',version:1,requestId:id};
+ assert.equal(app.call({...request,session:'expired'}).status,401);
+ app.state.email='member@students.bethelsd.org';assert.equal(app.call(request).status,403);assert.equal(app.state.writes,0);
+ app.role('Software Technician');assert.equal(app.call({...request,version:2}).status,409);assert.equal(app.state.writes,0);
+ const result=app.call(request);assert.equal(result.status,200);assert.equal(result.entries.length,16);assert.equal(result.entries.some(e=>e.id==='original-9'),false);assert.equal(app.state.writes,1);
+ const stored=JSON.parse(app.state.files.get('list-file'));assert.equal(stored.entries.some(e=>e.id==='original-9'),false);assert.equal(JSON.stringify(stored).includes('pixton.svg'),false);assert.equal(JSON.stringify(result).includes('deleted'),false);
+ assert.equal(app.call(request).status,200);assert.equal(app.state.writes,1);assert.equal(app.call({action:'finished-list-view'}).entries.length,16);
+ assert.equal(app.call({...request,requestId:crypto.randomUUID()}).status,404);
+ app.state.leaders=[];assert.equal(app.call(request).status,403);
+});
+
+test('a delayed add retry cannot resurrect a tool after deletion',()=>{
+ const app=school();app.role('Software Technician');assert.equal(app.call({...entry,action:'auth-finished-list-add',session:'valid'}).status,200);
+ assert.equal(app.call({action:'auth-finished-list-delete',session:'valid',id,version:1,requestId:crypto.randomUUID()}).status,200);
+ assert.equal(app.call({...entry,action:'auth-finished-list-add',session:'valid'}).status,409);
+ assert.equal(app.call({action:'finished-list-view'}).entries.some(e=>e.id===id),false);
+});
+
+test('delete API routes only target metadata, and rejects missing versions before contacting the bridge',async()=>{
+ const old=globalThis.fetch,previous={url:process.env.SPINNER_BRIDGE_URL,token:process.env.SPINNER_BRIDGE_TOKEN};let calls=0;
+ process.env.SPINNER_BRIDGE_URL='https://script.google.com/test';process.env.SPINNER_BRIDGE_TOKEN='test';
+ globalThis.fetch=async(_url,options)=>{calls++;const payload=JSON.parse(options.body);assert.equal(payload.action,'auth-finished-list-delete');assert.equal(payload.id,'original-9');assert.equal(payload.title,undefined);return {ok:true,json:async()=>({status:200,canAdd:true,canEdit:true,skills,entries:[]})};};
+ try{
+  let res=response();await handler({method:'POST',headers,body:{operation:'delete',id:'original-9',version:1,requestId:id,title:'Ignored'}},res);assert.equal(res.code,200);
+  res=response();await handler({method:'POST',headers,body:{operation:'delete',id:'original-9',requestId:id}},res);assert.equal(res.code,400);assert.equal(calls,1);
+ }finally{globalThis.fetch=old;for(const [key,value] of [['SPINNER_BRIDGE_URL',previous.url],['SPINNER_BRIDGE_TOKEN',previous.token]])if(value===undefined)delete process.env[key];else process.env[key]=value;}
+});
+
+test('editor deletion requires confirmation, survives an uncertain save, and clears after refresh',async()=>{
+ const original={id:'original-9',title:'Pixton',url:'https://www.pixton.com/',description:'Make comics',skills:['Think Creatively'],icon:'',version:2};let deleted=false;const writes=[];
+ const {w,q}=website(async(_url,options)=>{if(options.method==='POST'){writes.push(JSON.parse(options.body));deleted=true;return {ok:false,status:503,json:async()=>({error:'Please retry'})};}return {ok:true,json:async()=>({entries:deleted?[]:[original],skills,canAdd:true,canEdit:true})};});
+ try{
+  await tick();assert.equal(q('#finished-delete').hidden,true);q('.finished-edit').click();assert.equal(q('#finished-delete').hidden,false);
+  w.confirm=message=>{assert.match(message,/Pixton/);return false;};q('#finished-delete').click();await tick();assert.equal(writes.length,0);assert.equal(q('#finished-form').elements.title.value,'Pixton');
+  w.confirm=()=>true;q('#finished-delete').click();await tick();assert.equal(writes[0].operation,'delete');assert.equal(writes[0].version,2);assert.equal(q('#finished-form').elements.title.value,'Pixton');
+  q('#finished-delete').click();await tick();assert.equal(writes[0].requestId,writes[1].requestId);
+  q('#finished-refresh').click();await tick();assert.match(q('#finished-status').textContent,/was deleted/);assert.equal(q('#finished-delete').hidden,true);assert.equal(q('#finished-add').open,false);assert.equal(w.document.querySelectorAll('.finished-card').length,0);
+ }finally{w.close();}
+});

@@ -12,6 +12,7 @@ export function validIcon(value){
   return match[1]==='png'?bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])):match[1]==='jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP';
 }
 const validSkills=value=>Array.isArray(value)&&value.length>0&&value.length<=24&&new Set(value).size===value.length&&value.every(skill=>typeof skill==='string'&&skill.trim()===skill&&skill.length>0&&skill.length<=120);
+export const validTarget=value=>value&&typeof value==='object'&&!Array.isArray(value)&&/^(original-\d+|[a-f0-9-]{36})$/i.test(value.id||'')&&Number.isInteger(value.version)&&value.version>0&&uuid.test(value.requestId||'');
 export function validEntry(value){
   if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.title!=='string'||!value.title.trim()||value.title.trim().length>120||typeof value.description!=='string'||!value.description.trim()||value.description.trim().length>1500||typeof value.url!=='string'||value.url.length>2000||!uuid.test(value.requestId||'')||!validSkills(value.skills)||!validIcon(value.icon||''))return false;
   if(value.operation==='update'&&(!/^(original-\d+|[a-f0-9-]{36})$/i.test(value.id||'')||!Number.isInteger(value.version)||value.version<1))return false;
@@ -29,8 +30,8 @@ async function handler(req,res){
     if(!validToken(session))return fail(401,'Sign in to NEST to edit resources.');
     if(!String(req.headers['content-type']||'').startsWith('application/json'))return fail(400,'Invalid request.');
     let body=req.body;try{if(typeof body==='string')body=JSON.parse(body);}catch{return fail(400,'Invalid request.');}
-    if(!body||JSON.stringify(body).length>65000||!validEntry(body))return fail(400,'Check the title, link, learning purpose, skills, and icon.');
-    payload={action:body.operation==='update'?'auth-finished-list-update':'auth-finished-list-add',session,title:body.title.trim(),url:body.url.trim(),description:body.description.trim(),skills:body.skills,icon:body.icon||'',requestId:body.requestId,...(body.operation==='update'?{id:body.id,version:body.version}:{})};
+    if(!body||JSON.stringify(body).length>65000||!(body.operation==='delete'?validTarget(body):validEntry(body)))return fail(400,'Check the title, link, learning purpose, skills, and icon.');
+    payload=body.operation==='delete'?{action:'auth-finished-list-delete',session,id:body.id,version:body.version,requestId:body.requestId}:{action:body.operation==='update'?'auth-finished-list-update':'auth-finished-list-add',session,title:body.title.trim(),url:body.url.trim(),description:body.description.trim(),skills:body.skills,icon:body.icon||'',requestId:body.requestId,...(body.operation==='update'?{id:body.id,version:body.version}:{})};
   }
   try{
     const data=await bridge(payload,50000);
