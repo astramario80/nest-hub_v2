@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1" />
   <link rel="stylesheet" href="/css/resource-viewer.css" />
-  <link rel="stylesheet" href="/css/finished-list.css?v=delete-tool-1" />
+  <link rel="stylesheet" href="/css/finished-list.css?v=activity-modes-1" />
 </head>
 <body class="finished-shell">
   <header>
@@ -28,13 +28,14 @@
   <main class="finished-page" id="finished-list">
     <div class="finished-intro"><p class="finished-eyebrow">NEST™ · KEEP LEARNING</p><h1>Finished your project?<br><span>Choose what comes next.</span></h1>
     <p>Explore something new, practice a skill, or build on work you enjoyed.</p><p class="finished-checkin">Check in with Mr. Penalver before starting a new project so your extra work can receive credit.</p></div>
-    <div class="finished-tools"><label for="finished-search">Find an activity<input id="finished-search" type="search" placeholder="Search tools, learning purposes, or skills…"></label><label>21st century skill<select id="finished-skill-filter"><option value="">All skills</option></select></label><button type="button" id="finished-refresh">Refresh list</button><button type="button" id="finished-signin" hidden>Sign in to add resources</button></div>
+    <div class="finished-tools"><label for="finished-search">Find an activity<input id="finished-search" type="search" placeholder="Search tools, learning purposes, or skills…"></label><label>21st century skill<select id="finished-skill-filter"><option value="">All skills</option></select></label><label>Work style<select id="finished-mode-filter"><option value="">All work styles</option><option value="solo">Solo</option><option value="partner">Partner</option><option value="team">Team</option></select></label><button type="button" id="finished-refresh">Refresh list</button><button type="button" id="finished-signin" hidden>Sign in to add resources</button></div>
     <p id="finished-status" role="status" aria-live="polite">Opening the Finished List…</p>
     <details class="finished-add" id="finished-add" hidden><summary>Add a learning resource</summary>
       <form id="finished-form"><p>Share a resource and explain what someone can learn by using it.</p>
       <label>Link title<input name="title" type="text" required maxlength="120" placeholder="e.g. Build an interactive story with Scratch"></label>
       <label>Website link<input name="url" type="url" required maxlength="2000" placeholder="https://…"></label>
-      <label>Learning purpose<textarea name="description" required maxlength="1500" rows="4" placeholder="What skill will this develop, and what could someone create or practice?"></textarea></label>
+      <label>Learning purpose<textarea name="description" required maxlength="1500" rows="4" placeholder="Practice… Create or investigate… Submit your result and reflect on an improvement."></textarea></label>
+      <label>Work style<select name="mode" required><option value="solo">Solo · one learner</option><option value="partner">Partner · two learners</option><option value="team">Team · three or more learners</option></select></label><p class="finished-purpose-help">Use about 45–60 words: name the skill to practice, describe the task, and explain what to submit or reflect on.</p>
       <details class="finished-skill-picker"><summary id="finished-skill-summary">Choose 21st century skills</summary><fieldset id="finished-skills"><legend>Choose one or more skills</legend></fieldset></details>
       <div class="finished-icon-editor"><label>Tool icon<input type="file" id="finished-icon-file" accept="image/png,image/jpeg,image/webp"></label><p>Upload a PNG, JPEG, or WebP (up to 5 MB). It will be resized for the list.</p><img id="finished-icon-preview" alt="Icon preview" hidden><button type="button" id="finished-icon-remove" hidden>Remove icon</button></div>
       <div class="finished-form-actions"><button type="submit" id="finished-save">Add to Finished List</button><button type="button" id="finished-cancel" hidden>Cancel editing</button><button type="button" id="finished-delete" hidden>Delete tool</button></div></form>
@@ -60,6 +61,6 @@
   <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script>
   <script src="/js/main.js"></script>
   <script src="/js/resource-viewer.js"></script>
-  <script src="/js/finished-list.js?v=delete-tool-1"></script>
+  <script src="/js/finished-list.js?v=activity-modes-1"></script>
 </body>
 </html>

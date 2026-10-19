@@ -1,0 +1,272 @@
+[
+  {
+    "id": "original-1",
+    "version": 2,
+    "title": "Khan Academy courses",
+    "description": "Practice self-directed learning by choosing a Khan Academy lesson connected to your interests, another class, or a skill you want to strengthen. Complete its lesson and practice questions, then apply one idea in your own example. Submit a progress screenshot, your example, and a short reflection explaining what improved and what you will practice next.",
+    "mode": "solo",
+    "previousDescription": "Strengthen subject knowledge, prepare for AP courses, or explore computer science and practical life skills.",
+    "previousTitle": "Khan Academy courses"
+  },
+  {
+    "id": "original-2",
+    "version": 1,
+    "title": "WeaveSilk generative art",
+    "description": "Practice creative thinking by exploring symmetry, color, and composition in WeaveSilk. Create two different designs around the same theme, then refine the version that communicates your idea most clearly. Submit both designs, identify the visual choices you changed, and explain how one revision made the final artwork more effective for its intended audience.",
+    "mode": "solo",
+    "previousDescription": "Explore symmetry, color, and composition by creating a piece of generative art.",
+    "previousTitle": "WeaveSilk generative art"
+  },
+  {
+    "id": "original-3",
+    "version": 1,
+    "title": "Sketchpad digital drawing",
+    "description": "Practice digital drawing and visual communication by illustrating an idea in Sketchpad. Plan a simple composition, experiment with layers and drawing tools, and refine your work after checking its clarity. Submit the finished image, an earlier version or sketch, and a brief explanation of how your choices help a viewer understand the intended message.",
+    "mode": "solo",
+    "previousDescription": "Practice digital drawing and communicate an idea through an original sketch.",
+    "previousTitle": "Sketchpad digital drawing"
+  },
+  {
+    "id": "original-4",
+    "version": 1,
+    "title": "MIT App Inventor",
+    "description": "Practice programming and collaborative problem-solving by designing a useful app in MIT App Inventor with a partner. Agree on its purpose, divide design and coding tasks, and test the main interaction together. Submit the project or demonstration, a record of each contribution, and an explanation of one bug you fixed or improvement you made.",
+    "mode": "partner",
+    "previousDescription": "Develop computational thinking by designing and building a mobile app.",
+    "previousTitle": "MIT App Inventor"
+  },
+  {
+    "id": "original-6",
+    "version": 1,
+    "title": "Create a documentary",
+    "description": "Practice research, storytelling, and teamwork by producing a short documentary or clearly identified mockumentary with three or more classmates. Assign research, filming, and editing roles, verify factual claims where relevant, and revise after a test screening. Submit the finished video, sources and contribution notes, and an explanation of one change that improved its message.",
+    "mode": "team",
+    "previousDescription": "Practice research, scripting, filming, and editing to explain a topic or tell a documentary-style story.",
+    "previousTitle": "Create a documentary"
+  },
+  {
+    "id": "original-7",
+    "version": 3,
+    "title": "Voki talking avatar",
+    "description": "Practice clear communication by scripting and recording a Voki avatar presentation about a topic you understand. Organize the message for a specific audience, rehearse its wording, and revise for accuracy and clarity. Submit the avatar link or recording, your script, and a short explanation of one revision that made the presentation easier to follow.",
+    "mode": "solo",
+    "previousDescription": "Practice clear communication by scripting an avatar presentation for your website.",
+    "previousTitle": "Voki talking avatar"
+  },
+  {
+    "id": "original-8",
+    "version": 3,
+    "title": "A themed word cloud",
+    "description": "Practice organizing and communicating ideas by creating a themed word cloud in WordClouds. Choose meaningful vocabulary, use size and color to emphasize important concepts, and adjust the layout for readability. Submit the finished image, a brief explanation of your theme and word choices, and a comparison showing how one revision made the message clearer.",
+    "mode": "solo",
+    "previousDescription": "Organize vocabulary and ideas around a theme, then use typography to communicate it visually.",
+    "previousTitle": "A themed word cloud"
+  },
+  {
+    "id": "original-9",
+    "version": 2,
+    "title": "Pixton comic strip",
+    "description": "Practice creative storytelling and visual communication by making an original Pixton comic. Plan a beginning, a meaningful event or problem, and a clear ending, then combine dialogue and images to guide the reader. Submit the finished comic, your initial outline, and a short explanation of one revision that improved the story or its clarity.",
+    "mode": "solo",
+    "previousDescription": "Develop storytelling and visual literacy by creating an original comic strip.",
+    "previousTitle": "Pixton comic strip"
+  },
+  {
+    "id": "original-10",
+    "version": 1,
+    "title": "Animated storytelling tutorial",
+    "description": "Practice visual communication and collaboration by planning a short animation with a partner, using the linked tutorial as a starting point. Choose a story, lesson, or newscast, share scripting and production tasks, and revise after someone watches it. Submit the animation, a contribution record, and an explanation of one change that improved its message.",
+    "mode": "partner",
+    "previousDescription": "Practice sequencing, storyboarding, and animation to tell a story or teach a lesson.",
+    "previousTitle": "Animated storytelling tutorial"
+  },
+  {
+    "id": "original-11",
+    "version": 2,
+    "title": "Video Generator",
+    "description": "Practice selecting and sequencing media by creating a short video in Canva for a specific audience or occasion. Choose relevant photos or clips, organize them into a clear message, and refine timing and captions. Submit the finished video, explain your audience and media choices, and describe one revision that improved its clarity or emotional effect.",
+    "mode": "solo",
+    "previousDescription": "Practice selecting and sequencing photos and video to communicate a meaningful message to an audience using Canva's video generator",
+    "previousTitle": "Video Generator"
+  },
+  {
+    "id": "original-12",
+    "version": 1,
+    "title": "Prezi for another class",
+    "description": "Practice connecting and communicating ideas by creating a Prezi presentation for another class. Select a focused topic, organize its main ideas and relationships, and support important claims with sources or examples. Submit the presentation link, identify its intended audience, and explain how one revision to the structure or visuals made the topic easier to understand.",
+    "mode": "solo",
+    "previousDescription": "Connect learning across classes by organizing and presenting another subject's ideas visually.",
+    "previousTitle": "Prezi for another class"
+  },
+  {
+    "id": "original-13",
+    "version": 1,
+    "title": "Revisit a favorite assignment",
+    "description": "Practice self-directed improvement by revisiting an assignment you enjoyed or want to strengthen. Set a specific goal, try a new approach, and compare your new work with the earlier version using clear criteria. Submit both versions, identify evidence of progress toward your goal, and explain the next step you would take to improve further.",
+    "mode": "solo",
+    "previousDescription": "Deepen a skill from a completed assignment by trying a new approach or creating a stronger version.",
+    "previousTitle": "Revisit a favorite assignment"
+  },
+  {
+    "id": "original-14",
+    "version": 1,
+    "title": "Scratch game design",
+    "description": "Practice programming, logic, and creative problem-solving by designing an original Scratch game. Plan its goal and controls, build a playable version, and use playtesting to find confusing behavior or bugs. Submit the project link, a short explanation of how its code works, and an example of a revision you made after testing the game.",
+    "mode": "solo",
+    "previousDescription": "Practice programming, logic, and debugging by creating and sharing an original game.",
+    "previousTitle": "Scratch game design"
+  },
+  {
+    "id": "original-15",
+    "version": 1,
+    "title": "Brilliant programming practice",
+    "description": "Practice logical reasoning and independent problem-solving by completing a teacher-approved programming or computing challenge on Brilliant. Record your approach, test your understanding with an original example, and revisit a question that challenged you. Submit a progress record, your example or solution, and an explanation of a mistake you corrected or a strategy you improved.",
+    "mode": "solo",
+    "previousDescription": "Build problem-solving and programming skills through an independent challenge.",
+    "previousTitle": "Brilliant programming practice"
+  },
+  {
+    "id": "original-16",
+    "version": 1,
+    "title": "Sporcle quizzes",
+    "description": "Practice evaluating information and communicating clearly by creating a subject quiz on Sporcle with a partner. Research accurate answers, write unambiguous questions, and exchange testing and feedback roles before revising the quiz. Submit the quiz link, a short source list and contribution record, and an explanation of one question you improved after someone tested it.",
+    "mode": "partner",
+    "previousDescription": "Strengthen subject recall and question-writing skills by creating and taking quizzes.",
+    "previousTitle": "Sporcle quizzes"
+  },
+  {
+    "id": "original-17",
+    "version": 1,
+    "title": "Learn chess",
+    "description": "Practice strategic reasoning and decision-making by learning chess and playing a game with a partner. Review the rules, discuss a useful opening or tactic, and take turns explaining a decision without choosing moves for each other. Submit a game record or screenshots, analyze one turning point, and explain a different move you would try next time.",
+    "mode": "partner",
+    "previousDescription": "Develop planning, pattern recognition, and strategic thinking by learning chess.",
+    "previousTitle": "Learn chess"
+  },
+  {
+    "id": "f4a71131-9025-4278-8996-ff7011bfdb82",
+    "version": 1,
+    "title": "Tinkercad Circuits engineering",
+    "description": "Practice engineering and systems thinking by designing a Tinkercad circuit that solves a practical problem. Explain the role of each main component, simulate its behavior, and revise a weakness you discover during testing. Submit the circuit link or screenshots, describe your test results, and explain how one change improved the way the components work together.",
+    "mode": "solo",
+    "previousDescription": "Develop engineering and troubleshooting skills by designing and simulating a circuit that solves a practical problem. Explain the purpose of its components and test how the circuit responds. Submit a project link or screenshot, explain one improvement you made, and identify a skill you practiced.",
+    "previousTitle": "Tinkercad Circuits engineering"
+  },
+  {
+    "id": "9d7b0d14-4e67-4b2e-b3b0-bdc8c1f767e2",
+    "version": 1,
+    "title": "Microsoft MakeCode for micro:bit",
+    "description": "Practice programming and iterative design by creating a reaction timer or simple accessibility aid in Microsoft MakeCode for micro:bit. Define the intended behavior, test the program in the browser simulator, and improve one feature. Submit the project link, explain an important part of the code, and describe a revision supported by evidence from your testing.",
+    "mode": "solo",
+    "previousDescription": "Practice programming and iterative design by creating a reaction timer or a simple accessibility aid. Test your program in the browser simulator and improve its behavior. Submit your project link, describe one revision based on testing, and identify a skill you practiced.",
+    "previousTitle": "Microsoft MakeCode for micro:bit"
+  },
+  {
+    "id": "12052780-b951-40f6-9606-654a02c83d19",
+    "version": 1,
+    "title": "PhET virtual science experiments",
+    "description": "Practice scientific reasoning with a partner using a high-school PhET simulation. Agree on a question and prediction, vary one factor at a time, and take turns collecting and checking observations. Submit your question, a results table and conclusion, document each contribution, and explain whether the evidence supported your prediction or led you to revise it.",
+    "mode": "partner",
+    "previousDescription": "Practice scientific reasoning with a high-school simulation. Make a prediction, change one variable, record what happens, and use evidence to explain your result. Submit screenshots or observations, explain one prediction you revised, and identify a skill you practiced.",
+    "previousTitle": "PhET virtual science experiments"
+  },
+  {
+    "id": "068c15e2-71f7-401b-a4c7-7b37b99ec54c",
+    "version": 1,
+    "title": "Datawrapper data storytelling",
+    "description": "Practice data literacy and visual communication by turning a public dataset into a Datawrapper chart or map. Check the source, select suitable labels and scales, and revise the display for clarity. Submit the visualization and source link, explain what the data does and does not show, and describe one change that made the presentation more accurate.",
+    "mode": "solo",
+    "previousDescription": "Develop data literacy and visual communication by turning a public dataset into a clear chart or map. Cite the source, choose appropriate labels, and explain what the data does and does not show. Submit your visualization, describe one revision that improved its clarity, and identify a skill you practiced.",
+    "previousTitle": "Datawrapper data storytelling"
+  },
+  {
+    "id": "3fce8695-eda6-4fe7-9612-4ce34f338ca5",
+    "version": 1,
+    "title": "Checkology media literacy",
+    "description": "Practice media literacy by completing a teacher-assigned Checkology activity and investigating a related claim. Examine its source, trace supporting evidence, and compare trustworthy accounts before deciding how confident you should be. Submit your evidence trail and conclusion, identify any remaining uncertainty, and explain one judgment you revised or strengthened through your checks of the information.",
+    "mode": "solo",
+    "previousDescription": "Strengthen media literacy through a teacher-assigned Checkology activity. Investigate a claim, evaluate its evidence, and document how you checked the sources. Submit your evidence trail and conclusion, explain one judgment you revised or reconsidered, and identify a skill you practiced.",
+    "previousTitle": "Checkology media literacy"
+  },
+  {
+    "id": "13bbb507-aeb9-4f3a-acc8-402970c0374e",
+    "version": 1,
+    "title": "Zooniverse research contribution",
+    "description": "Practice responsible research participation through a teacher-selected Zooniverse project. Follow its tutorial, complete at least 25 classifications carefully, and record examples where the evidence is uncertain or difficult to interpret. Submit a brief activity record, explain how you followed the project guidance, and describe one classification you reconsidered and what helped you make that decision.",
+    "mode": "solo",
+    "previousDescription": "Contribute to real research through a teacher-selected Zooniverse project. Follow its tutorial, complete at least 25 classifications, and note examples where the evidence is uncertain. Submit a brief activity record, explain one classification you reconsidered, and identify a skill you practiced.",
+    "previousTitle": "Zooniverse research contribution"
+  },
+  {
+    "id": "29672750-b24b-4e12-934d-45c73a22fd46",
+    "version": 1,
+    "title": "Twine interactive workplace story",
+    "description": "Practice creative storytelling and decision-making by building an interactive workplace scenario in Twine. Give readers at least three meaningful decisions and two possible endings, then ask someone to test how the choices work. Submit the story, explain the consequences of an important decision, and describe one revision that improved the experience or made the scenario clearer.",
+    "mode": "solo",
+    "previousDescription": "Practice storytelling and decision-making by creating an interactive workplace scenario in which readers make choices and experience their consequences. Include at least three meaningful decisions and two possible endings. Submit the story, describe one revision after someone tested it, and identify a skill you practiced.",
+    "previousTitle": "Twine interactive workplace story"
+  },
+  {
+    "id": "52293dde-6026-4118-9479-48c302bb74ce",
+    "version": 1,
+    "title": "Desmos 3D math sculpture",
+    "description": "Practice mathematical reasoning and creative design by building a sculpture in Desmos 3D. Use equations or parameters to control its shape, test how changing them affects the result, and refine your design. Submit the graph link or screenshots, explain how at least two equations influence the sculpture, and describe one revision supported by your mathematical observations.",
+    "mode": "solo",
+    "previousDescription": "Connect mathematical reasoning and creative design by building a 3D sculpture from equations. Explain how at least two equations or parameters control its shape. Submit a graph link or screenshot, describe one mathematical revision you made, and identify a skill you practiced.",
+    "previousTitle": "Desmos 3D math sculpture"
+  },
+  {
+    "id": "6471b947-bd42-4293-8be3-fca54012fe55",
+    "version": 1,
+    "title": "Google Sheets project planner",
+    "description": "Practice managing goals, time, and projects by planning a small task in Google Sheets. Break the goal into steps, estimate time, set milestones, and track actual progress as you work. Submit the planner and completed result, compare planned and actual time, and explain an adjustment you made when the project did not follow your original plan.",
+    "mode": "solo",
+    "previousDescription": "Solo activity. Plan a small project you can complete: define its goal, break it into tasks, estimate time, and schedule milestones in Google Sheets. Track actual progress and revise the plan when necessary. Finish by submitting your planner and completed result, comparing estimated versus actual time, and explaining one planning adjustment.",
+    "previousTitle": "Solo · Google Sheets project planner"
+  },
+  {
+    "id": "c6e5ba14-82a9-474c-aa90-fd4148eb8a41",
+    "version": 1,
+    "title": "Google Docs peer review",
+    "description": "Practice collaboration and respectful communication by exchanging drafts with a partner in Google Docs. Use comments and suggestions to give specific feedback, discuss different ideas, and revise together while keeping each author responsible for decisions. Submit the revised document and a contribution record, identify feedback you acted on, and explain how the exchange improved the work.",
+    "mode": "partner",
+    "previousDescription": "Partner activity. Exchange drafts with a classmate and use Google Docs comments or suggestions to give specific, constructive feedback. Discuss suggestions respectfully, respond to your partner, and revise your work together. Finish by submitting the revised document and a brief reflection showing how each partner contributed and which feedback improved the result.",
+    "previousTitle": "Partner · Google Docs peer review"
+  },
+  {
+    "id": "463af09e-47e7-41f9-a6b9-be309b6a16bd",
+    "version": 1,
+    "title": "Tinkercad change-of-brief challenge",
+    "description": "Practice adaptability by building and testing a working Tinkercad circuit, then asking a teacher or peer to change a requirement or available component. Revise your design and test whether it meets the new brief. Submit before-and-after evidence, describe the tradeoffs you considered, and explain how your response to the change improved your problem-solving approach.",
+    "mode": "solo",
+    "previousDescription": "Solo activity. Build a working circuit in Tinkercad, then ask your teacher or a classmate to change one requirement or remove an available component. Revise the design to meet the new brief and test it again. Finish by submitting before-and-after evidence, explaining your tradeoffs, and describing how you changed your approach rather than abandoning the goal.",
+    "previousTitle": "Solo · Tinkercad change-of-brief challenge"
+  },
+  {
+    "id": "f0bf836d-4eba-4be3-ab4f-592a76a661c1",
+    "version": 1,
+    "title": "MakeCode peer workshop",
+    "description": "Practice guiding and leading others by preparing a five-minute MakeCode workshop for a partner. Demonstrate a useful technique, support their practice without taking over, and ask them to apply it independently. Submit your lesson outline and partner feedback, describe their independent demonstration, and explain one change you would make to improve your guidance next time.",
+    "mode": "partner",
+    "previousDescription": "Partner activity. Plan and lead a five-minute MakeCode mini-lesson with a clear learning goal. Guide a classmate through building a small program, ask questions instead of taking over, and let your partner demonstrate the skill independently. Finish by submitting your lesson outline, partner feedback, and a reflection explaining one change that would improve your instruction.",
+    "previousTitle": "Partner · MakeCode peer workshop"
+  },
+  {
+    "id": "4a82633e-8462-43e8-b3f9-fd53e72e31d1",
+    "version": 1,
+    "title": "Twine collaborative storytelling",
+    "description": "Practice creative collaboration in a team of three or more by building a Twine story that combines different viewpoints and strengths. Include an idea from each person and rotate writing, design, and testing roles. Submit the story and contribution record, explain how another perspective influenced it, and describe how the team resolved a disagreement respectfully.",
+    "mode": "team",
+    "previousDescription": "Team activity for three or more students with differing strengths, viewpoints, or role experiences. Co-design a branching workplace story, combine ideas from every teammate, and rotate writing, design, and testing roles. Finish by submitting the story and a contribution record. Each member should explain how another viewpoint influenced the work and how the team respectfully resolved a disagreement.",
+    "previousTitle": "Team · Twine collaborative storytelling"
+  },
+  {
+    "id": "cc58862c-cc6b-4798-8bc5-4bc0e331b12e",
+    "version": 1,
+    "title": "PhET independent investigation",
+    "description": "Practice independent investigation by choosing a high-school PhET simulation and developing your own question, prediction, and test plan. Change one variable at a time and record evidence without following a step-by-step experiment. Submit your observations and conclusion, explain a decision or obstacle you handled independently, and identify any help you sought to move the investigation forward.",
+    "mode": "solo",
+    "previousDescription": "Solo activity. Choose a scientific question you can investigate with a high-school PhET simulation. Create your own plan, make a prediction, change one variable at a time, and record observations without following a step-by-step experiment. Finish by submitting your question, evidence, conclusion, and a reflection on a decision or obstacle you handled independently. Use the simulation help when needed.",
+    "previousTitle": "Solo · PhET independent investigation"
+  }
+]
