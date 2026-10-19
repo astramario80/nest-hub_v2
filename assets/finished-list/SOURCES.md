@@ -30,3 +30,8 @@ Official website icons identify the linked tools. Company names and marks belong
 - zooniverse: https://www.zooniverse.org/icon.svg
 - twine: https://twinery.org/favicon-152.png
 - desmos: https://www.desmos.com/assets/img/apps/3d/apple-touch-icon.png
+
+## Skill coverage activities
+
+- google-sheets: https://www.gstatic.com/images/branding/product/2x/sheets_2020q4_48dp.png
+- google-docs: https://www.gstatic.com/images/branding/product/2x/docs_2020q4_48dp.png
