@@ -7,11 +7,11 @@ import {renderDivisionPage} from '../api/division-page.mjs';
 const tick=()=>new Promise(r=>setTimeout(r,20));
 const records={period:'2',members:[{name:'Sample Leader',email:'leader@students.bethelsd.org'},{name:'Sample Member',email:'member@students.bethelsd.org'}],leaders:[{name:'Sample Leader',email:'leader@students.bethelsd.org',position:'Safety Officer'}]};
 const response=()=>({code:200,setHeader(){},status(c){this.code=c;return this;},json(data){this.data=data;return this;}});
-async function server(access,period="2"){
+async function server(access,period="2",audience='division'){
  const oldFetch=globalThis.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN,calls=[];
  process.env.SPINNER_BRIDGE_URL='https://bridge.example.test';process.env.SPINNER_BRIDGE_TOKEN='test';
  globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);const result=body.action==='auth-division-slides'?(typeof access==='function'?access(body.period):access):body.action==='auth-leadership-directory'?{status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]}:{status:200,period:body.period,students:[...records.members,{name:'Archived',email:'archived@students.bethelsd.org',active:false}],scores:{private:'excluded'}};return new Response(JSON.stringify(result));};
- try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period}},res);return {res,calls};}
+ try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period,audience}},res);return {res,calls};}
  finally{globalThis.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 }
 test('email groups require login and reject invalid divisions and write requests',async()=>{
@@ -23,14 +23,15 @@ test('ordinary members and other division members receive no email roster',async
 test('managers, assistants and assigned leaders receive only current selected-division recipients',async()=>{
  for(const access of [{status:200,canManage:true},{status:200,roles:['Assistant Manager']},{status:200,roles:['Safety Officer']}]){const {res}=await server(access);assert.equal(res.code,200);assert.deepEqual(res.data.members,records.members);assert.equal(res.data.leaders.length,1);assert.equal(res.data.scores,undefined);}
 });
-function ui(gmail=false){
+function ui(gmail=false,inline=false){
  const dom=new JSDOM(renderDivisionPage('2',{manager:{},leaders:[],canManage:false}),{runScripts:'outside-only',url:'https://gknest.org/divisions/2#lookup'}),w=dom.window;
- w.AbortSignal=AbortSignal;w.Blob=Blob;w.TextEncoder=TextEncoder;w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.NestDivisionHQ={allowed:true,active:"lookup"};
+ if(!inline)w.document.querySelector('[data-hq-communications]').remove();
+ w.AbortSignal=AbortSignal;w.Blob=Blob;w.TextEncoder=TextEncoder;w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.NestDivisionHQ={allowed:true,active:inline?'communications':'lookup'};
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
  let copied=null,opened=null,tokenRequest=null;w.ClipboardItem=class{constructor(data){this.data=data;}};
  Object.defineProperty(w.navigator,'clipboard',{value:{write:async items=>copied=items[0]}});w.open=url=>opened={location:{href:url}};
  if(gmail)w.google={accounts:{oauth2:{initTokenClient:config=>({ ...config, requestAccessToken(options){tokenRequest=options;this.callback({access_token:'test-token',expires_in:3600,scope:'send email'});}}),hasGrantedAllScopes:()=>true}}};
- w.fetch=async()=>({ok:true,json:async()=>gmail?{...records,gmailClientId:'test-client.apps.googleusercontent.com'}:records});w.eval(fs.readFileSync('js/group-email.js','utf8'));
+ w.fetch=async()=>({ok:true,json:async()=>gmail?{...records,canReachBuildingLeadership:true,gmailClientId:'test-client.apps.googleusercontent.com'}:{...records,canReachBuildingLeadership:true}});w.eval(fs.readFileSync('js/group-email.js','utf8'));
  return {w,get copied(){return copied;},get opened(){return opened;},get tokenRequest(){return tokenRequest;}};
 }
 test('composer filters groups, copies sanitized banner HTML and opens an unsent Gmail draft',async()=>{
@@ -211,5 +212,42 @@ test('Escape then Tab leaves the composer without trapping focus, and shortcuts 
  const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<p>Text</p>';selectText(w,editor.firstChild,editor.firstChild,1,1);
  try{const escape=new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true});editor.dispatchEvent(escape);assert.equal(escape.defaultPrevented,true);const tab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});editor.dispatchEvent(tab);assert.equal(tab.defaultPrevented,false);assert.equal(editor.firstChild.style.marginLeft,'');
   const subject=w.document.querySelector('[data-email-subject]'),subjectTab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});subject.dispatchEvent(subjectTab);assert.equal(subjectTab.defaultPrevented,false);assert.match(w.document.getElementById(editor.getAttribute('aria-describedby')).textContent,/Escape, then Tab/);
+ }finally{w.close();}
+});
+
+test('HQ composer is embedded in Communications and preserves the draft and selections across tabs',async()=>{
+ const {w}=ui(false,true);try{await tick();const q=s=>w.document.querySelector(s);
+ assert.equal(q('.group-email-launch'),null);assert.equal(q('[data-hq-communications] .group-email-inline').tagName,'SECTION');assert.equal(q('[data-email-close]').hidden,true);
+ assert.equal(q('[data-hq-lookup]').dataset.emailEnabled,undefined);
+ q('[data-email-subject]').value='Draft subject';q('.group-email-message').textContent='Draft message';q('[data-email-recipients] input').checked=false;
+ w.NestDivisionHQ.active='lookup';w.document.dispatchEvent(new w.CustomEvent('nest-hq-tab-change',{detail:{tab:'lookup'}}));
+ w.NestDivisionHQ.active='communications';w.document.dispatchEvent(new w.CustomEvent('nest-hq-tab-change',{detail:{tab:'communications'}}));
+ assert.equal(q('[data-email-subject]').value,'Draft subject');assert.equal(q('.group-email-message').textContent,'Draft message');assert.equal(q('[data-email-recipients] input').checked,false);
+ w.NestDivisionHQ.allowed=false;w.document.dispatchEvent(new w.Event('nest-hq-access-revoked'));
+ assert.equal(q('[data-email-subject]').value,'');assert.equal(q('.group-email-message').textContent,'');assert.equal(q('[data-email-recipients]').children.length,0);
+ }finally{w.close();}
+});
+
+test('all assigned division leaders can retrieve building leadership without receiving other student rosters',async()=>{
+ for(const role of ['Division Manager','Assistant Manager','Safety Officer','Software Technician','Partner Liaison','Division DJ','Chief Executive Officer','Chief Financial Officer','Chief Operations Officers','Executive Vice-President']){
+  const target=role.startsWith('Chief')||role.startsWith('Executive')?'CTSO':'2';
+  const access=p=>p===target?{status:200,roles:[role]}:{status:403};
+  const building=await server(access,'all','leadership');assert.equal(building.res.code,200,role);assert.equal(building.res.data.leaders.length,2);assert.equal(building.res.data.members.length,2);
+  assert.equal(building.res.data.members.some(m=>m.email==='member@students.bethelsd.org'),false);assert.equal(building.calls.includes('tracker'),false);
+  const scoped=await server(access,'all');assert.deepEqual(scoped.res.data.divisions,[target]);assert.equal(scoped.calls.filter(action=>action==='tracker').length,1);
+ }
+ const denied=await server(p=>p==='2'?{status:200,roles:[]}:{status:403},'all','leadership');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('auth-leadership-directory'),false);
+ const invalid=await server({status:200,canManage:true},'2','leadership');assert.equal(invalid.res.code,400);
+});
+
+test('building audience is rechecked before copying, and returning to students restores the division boundary',async()=>{
+ const app=ui(false,true),{w}=app;try{await tick();const q=s=>w.document.querySelector(s),calls=[];
+ w.fetch=async url=>{calls.push(url);const building=new URL(url,'https://gknest.org').searchParams.get('audience')==='leadership';return {ok:true,json:async()=>({...records,period:building?'all':'2',audience:building?'leadership':'division',canReachBuildingLeadership:true,divisions:['2']})};};
+ q('[data-email-subject]').value='Leadership meeting';q('.group-email-message').textContent='Keep this draft';
+ q('[data-email-group]').value='building-leadership';q('[data-email-group]').dispatchEvent(new w.Event('change'));await tick();
+ assert.match(calls[0],/period=all&audience=leadership/);assert.equal(q('[data-email-division]').disabled,true);
+ q('[data-email-copy]').click();await tick();assert.match(calls[1],/audience=leadership/);assert.ok(app.copied);
+ q('[data-email-group]').value='members';q('[data-email-group]').dispatchEvent(new w.Event('change'));await tick();
+ assert.match(calls[2],/period=2&audience=division/);assert.equal(q('[data-email-division]').disabled,false);assert.equal(q('.group-email-message').textContent,'Keep this draft');
  }finally{w.close();}
 });
