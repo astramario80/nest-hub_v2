@@ -112,7 +112,7 @@ function trackerDispatch_(r,s,rows,store,now) {
     if(!a || !title || title.length>100)return {status:400};a.title=title;
   } else if(change.type==='resize') {
     const a=data.assignments.find(a=>a.id===change.assignment),width=Number(change.width);
-    if(!a || !Number.isInteger(width) || width<120 || width>600)return {status:400};a.width=width;
+    if(!a || !Number.isInteger(width) || width<64 || width>600)return {status:400};a.width=width;
   } else if(change.type==='reorder') {
     const order=change.order;
     if(!Array.isArray(order)||order.length!==data.assignments.length||new Set(order).size!==order.length||order.some(id=>typeof id!=='string'||!data.assignments.some(a=>a.id===id)))return {status:400};

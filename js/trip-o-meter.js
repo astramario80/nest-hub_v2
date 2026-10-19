@@ -8,7 +8,7 @@
   let display={sort:'last',showRoles:true,nameWidth:190};
   const collator=new Intl.Collator(undefined,{sensitivity:'base',numeric:true});
   function displayKey(){const user=String(window.NestAuth?.identity?.username||window.NestAuth?.identity?.email||'account').toLowerCase();return 'nest-tracker-display:'+user+':'+period;}
-  function readDisplay(){try{const saved=JSON.parse(localStorage.getItem(displayKey())||'{}');return {sort:saved.sort==='first'?'first':'last',showRoles:saved.showRoles!==false,nameWidth:Number.isInteger(saved.nameWidth)&&saved.nameWidth>=130&&saved.nameWidth<=500?saved.nameWidth:190};}catch{return {sort:'last',showRoles:true,nameWidth:190};}}
+  function readDisplay(){try{const saved=JSON.parse(localStorage.getItem(displayKey())||'{}');return {sort:saved.sort==='first'?'first':'last',showRoles:saved.showRoles!==false,nameWidth:Number.isInteger(saved.nameWidth)&&saved.nameWidth>=64&&saved.nameWidth<=500?saved.nameWidth:190};}catch{return {sort:'last',showRoles:true,nameWidth:190};}}
   function saveDisplay(){try{localStorage.setItem(displayKey(),JSON.stringify(display));}catch{status.textContent='Display choices could not be saved in this browser.';}}
   function nameParts(value){const name=String(value||'').trim(),comma=name.indexOf(',');if(comma>=0)return {first:name.slice(comma+1).trim(),last:name.slice(0,comma).trim()};const words=name.split(/\s+/);return {first:words[0]||'',last:words.slice(1).join(' ')||words[0]||''};}
   function sortedStudents(){return [...data.students].sort((a,b)=>{const left=nameParts(a.name),right=nameParts(b.name),primary=display.sort==='first'?'first':'last',secondary=display.sort==='first'?'last':'first';return collator.compare(left[primary],right[primary])||collator.compare(left[secondary],right[secondary])||collator.compare(a.id,b.id);});}
@@ -87,12 +87,17 @@
       lastTitleTap=null;editAssignmentTitle(event,handle,assignment);
     }
   }
+  function setColumnWidth(column,table,width){
+    column.style.width=width+'px';
+    const index=[...column.parentNode.children].indexOf(column);
+    for(const row of table.rows)row.cells[index]?.classList.toggle('trip-compact-column',width<120);
+  }
   function resizeColumn(event,handle,assignment,column,table){
     if(event.button!==0||!layoutReady())return;
     event.preventDefault();
     const initial=assignment.width||180,startX=event.clientX,tableWidth=parseInt(table.style.width,10),oldStatus=status.textContent;
     let width=initial;
-    const preview=value=>{width=Math.max(120,Math.min(600,Math.round(value)));column.style.width=width+'px';table.style.width=tableWidth+width-initial+'px';};
+    const preview=value=>{width=Math.max(64,Math.min(600,Math.round(value)));setColumnWidth(column,table,width);table.style.width=tableWidth+width-initial+'px';};
     const cleanup=()=>{handle.classList.remove('trip-resizing');status.textContent=oldStatus;};
     pointerGesture(handle,event,move=>{preview(initial+move.clientX-startX);handle.classList.add('trip-resizing');status.textContent=assignment.title+' width: '+width+' pixels. Press Escape to cancel.';},()=>{
       cleanup();if(width!==initial)save({type:'resize',assignment:assignment.id,width});
@@ -103,7 +108,7 @@
     event.preventDefault();
     const initial=display.nameWidth,startX=event.clientX,tableWidth=parseInt(table.style.width,10),oldStatus=status.textContent;
     let width=initial;
-    const preview=value=>{width=Math.max(130,Math.min(500,Math.round(value)));column.style.width=width+'px';table.style.width=tableWidth+width-initial+'px';};
+    const preview=value=>{width=Math.max(64,Math.min(500,Math.round(value)));setColumnWidth(column,table,width);table.style.width=tableWidth+width-initial+'px';};
     const cleanup=()=>{handle.classList.remove('trip-resizing');status.textContent=oldStatus;};
     pointerGesture(handle,event,move=>{preview(initial+move.clientX-startX);handle.classList.add('trip-resizing');status.textContent='Student name width: '+width+' pixels. Press Escape to cancel.';},()=>{
       cleanup();if(width!==initial){display.nameWidth=width;saveDisplay();}
@@ -189,7 +194,7 @@
           const group=node('div'),fill=node('button','↓');group.className='trip-first-score';fill.type='button';fill.className='trip-fill-column';fill.setAttribute('aria-label','Fill empty '+a.title+' scores below '+student.name);fill.title='Copy this score into empty cells below this row. Existing scores stay unchanged.';fill.addEventListener('click',()=>fillColumn(a,select.value,student.id));group.append(select,fill);cell.append(group);
         }else cell.textContent=value||'—';row.append(cell);
       });body.append(row);
-    });table.append(body);scroll.append(table);view.append(scroll);
+    });table.append(body);[...columns.children].forEach(column=>setColumnWidth(column,table,parseInt(column.style.width,10)));scroll.append(table);view.append(scroll);
     if(!data.assignments.length)view.append(node('p','No assignments have been added yet.'));
     if(!Array.isArray(data.completionScores))view.append(node('p','Completion percentages will appear once the scoring rule is configured. Imported Yes/No values are preserved.'));
   }
