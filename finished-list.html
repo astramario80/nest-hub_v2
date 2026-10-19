@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/styles.css" />
   <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1" />
   <link rel="stylesheet" href="/css/resource-viewer.css" />
-  <link rel="stylesheet" href="/css/finished-list.css?v=skills-icons-1" />
+  <link rel="stylesheet" href="/css/finished-list.css?v=delete-tool-1" />
 </head>
 <body class="finished-shell">
   <header>
@@ -37,7 +37,7 @@
       <label>Learning purpose<textarea name="description" required maxlength="1500" rows="4" placeholder="What skill will this develop, and what could someone create or practice?"></textarea></label>
       <details class="finished-skill-picker"><summary id="finished-skill-summary">Choose 21st century skills</summary><fieldset id="finished-skills"><legend>Choose one or more skills</legend></fieldset></details>
       <div class="finished-icon-editor"><label>Tool icon<input type="file" id="finished-icon-file" accept="image/png,image/jpeg,image/webp"></label><p>Upload a PNG, JPEG, or WebP (up to 5 MB). It will be resized for the list.</p><img id="finished-icon-preview" alt="Icon preview" hidden><button type="button" id="finished-icon-remove" hidden>Remove icon</button></div>
-      <div class="finished-form-actions"><button type="submit" id="finished-save">Add to Finished List</button><button type="button" id="finished-cancel" hidden>Cancel editing</button></div></form>
+      <div class="finished-form-actions"><button type="submit" id="finished-save">Add to Finished List</button><button type="button" id="finished-cancel" hidden>Cancel editing</button><button type="button" id="finished-delete" hidden>Delete tool</button></div></form>
     </details>
     <div class="finished-results"><h2 id="finished-category-title">Finished List · All skills</h2><span id="finished-count"></span></div>
     <div id="finished-items" class="finished-grid" aria-label="Learning activities"></div><p id="finished-empty" hidden>No activities match your search. Try another skill or topic.</p>
@@ -60,6 +60,6 @@
   <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script>
   <script src="/js/main.js"></script>
   <script src="/js/resource-viewer.js"></script>
-  <script src="/js/finished-list.js?v=skills-icons-1"></script>
+  <script src="/js/finished-list.js?v=delete-tool-1"></script>
 </body>
 </html>

@@ -25,3 +25,9 @@ Skill choices come from NEST Database → Location_Lists_Inventory_OSPI_21stCent
 Editors may upload PNG/JPEG/WebP icons. The browser creates a 128px raster thumbnail, and both servers validate bounded raster payloads or local icon paths. The shared header and footer remain visible while the Finished List workspace scrolls. Website icons are self-hosted with sources recorded in assets/finished-list/SOURCES.md.
 
 Validation: 17 focused tests cover supervisor access, role revocation, skill/category search, migration, version conflicts, idempotent updates, upload conversion and image validation. Desktop and 390px browser checks confirm fixed navigation, multiple skill editing and saving. The full suite retains only its two previously documented unrelated failures. Browser file selection is restricted by the Chrome extension's file-URL setting; the conversion/save pipeline is tested separately without changing that setting.
+
+## Finished List deletion
+
+Existing-resource editors now show Delete tool. Confirmation identifies the resource and explains that its link, purpose, icon and tags will be removed for everyone. The server checks current editing rights and the resource version under the same write lock. Deleted content is removed from storage; minimal request metadata makes retries safe and prevents delayed add requests from recreating a deleted tool. Original seed activities do not return after deletion. A refresh resolves uncertain deletion responses without discarding unrelated resources.
+
+Validation: 21 Finished List tests pass, including denied/stale deletions, persistence, cancellation, retry recovery and prevention of resurrection. Existing production resources are not deleted during verification.

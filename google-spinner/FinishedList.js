@@ -273,13 +273,25 @@ function finishedPublic_(state,canAdd,skills){
 function finishedDispatch_(r){
   const store=PropertiesService.getScriptProperties(),session=r.session?authSession_(r.session,store,Date.now()):null;
   if(r.action==='finished-list-view')return finishedPublic_(finishedRead_(store),Boolean(session&&finishedAllowed_(session.email)),finishedSkills_());
-  if(!['auth-finished-list-add','auth-finished-list-update'].includes(r.action))return {status:400};
+  if(!['auth-finished-list-add','auth-finished-list-update','auth-finished-list-delete'].includes(r.action))return {status:400};
   if(!session)return {status:401};
   const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};
   try{
     if(!finishedAllowed_(session.email))return {status:403};
-    const skills=finishedSkills_(),entry=finishedEntry_(r,skills);if(!entry)return {status:400};
-    const state=finishedRead_(store),existing=state.entries.find(item=>item.id===entry.id),update=r.action==='auth-finished-list-update';
+    const skills=finishedSkills_(),state=finishedRead_(store);
+    if(r.action==='auth-finished-list-delete'){
+      if(typeof r.id!=='string'||!/^(original-\d+|[a-f0-9-]{36})$/i.test(r.id)||!Number.isInteger(r.version)||r.version<1||!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(r.requestId||''))return {status:400};
+      const existing=state.entries.find(item=>item.id===r.id),deleted=state.deleted?.find(item=>item.id===r.id);
+      if(!existing)return deleted?.requestId===r.requestId&&deleted.version===r.version?finishedPublic_(state,true,skills):{status:404};
+      if(existing.version!==r.version)return {status:409};
+      state.entries=state.entries.filter(item=>item.id!==r.id);
+      // Keep only retry metadata; remove the resource, icon and description from storage.
+      (state.deleted||(state.deleted=[])).push({id:r.id,version:r.version,requestId:r.requestId});
+      finishedWrite_(store,state);return finishedPublic_(state,true,skills);
+    }
+    const entry=finishedEntry_(r,skills);if(!entry)return {status:400};
+    if(state.deleted?.some(item=>item.id===entry.id))return {status:409};
+    const existing=state.entries.find(item=>item.id===entry.id),update=r.action==='auth-finished-list-update';
     const same=existing&&['title','description','url','icon','skills'].every(key=>JSON.stringify(existing[key])===JSON.stringify(entry[key]));
     if(update){
       if(!existing)return {status:404};
@@ -293,9 +305,13 @@ function finishedDispatch_(r){
       if(state.entries.length>=500)return {status:409};
       state.entries.push({...entry,instructions:'',version:1,createdAt:new Date().toISOString(),actor:hash_(session.email)});
     }
+    finishedWrite_(store,state);
+    return finishedPublic_(state,true,skills);
+  }finally{lock.releaseLock();}
+}
+
+function finishedWrite_(store,state){
     const id=store.getProperty(FINISHED_LIST_KEY),blob=Utilities.newBlob(JSON.stringify(state),'application/json','NEST Finished List.json');
     if(id)Drive.Files.update({},id,blob,{fields:'id'});
     else{const file=Drive.Files.create({name:'NEST Finished List.json',parents:[trackerFolder_()],mimeType:'application/json'},blob,{fields:'id'});store.setProperty(FINISHED_LIST_KEY,file.id);}
-    return finishedPublic_(state,true,skills);
-  }finally{lock.releaseLock();}
 }
