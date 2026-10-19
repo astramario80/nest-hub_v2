@@ -17,6 +17,63 @@ function setup(fetch){
 function tracker(){return {role:'manager',period:'1',revision:1,expires:Date.now()+21600000,students:[{id:'s',name:'Student',email:'student@example.org'}],assignments:[{id:'a',title:'Safety'}],scores:{s:{a:''}},completionScores:['4'],grants:[]};}
 function edit(w,q,value){const select=q('tbody select');select.value=value;select.dispatchEvent(new w.Event('change'));}
 
+function resize(w,q){
+  const pointer=(target,type,x)=>{
+    const event=new w.Event(type,{bubbles:true,cancelable:true});
+    Object.defineProperties(event,{pointerId:{value:1},button:{value:0},clientX:{value:x}});
+    target.dispatchEvent(event);
+  };
+  pointer(q('.trip-movable-column .trip-column-resize'),'pointerdown',300);
+  pointer(w,'pointermove',380);pointer(w,'pointerup',380);
+}
+
+for(const failure of [409,503])for(const alreadySaved of [false,true]){
+  test(`column width survives HTTP ${failure} with ${alreadySaved?'a committed write':'a newer revision'}`,async()=>{
+    let data=tracker();const updates=[];
+    const {dom,w,q}=setup(async(_,options)=>{
+      const body=JSON.parse(options.body);
+      if(body.action==='tracker-update'){
+        updates.push(body);
+        if(updates.length===1){
+          data={...data,revision:2,scores:{s:{a:'4'}},assignments:[{id:'a',title:'Safety',width:alreadySaved?260:180}]};
+          return {ok:false,status:failure,json:async()=>({error:'Save interrupted'})};
+        }
+        assert.equal(body.revision,2);
+        data={...data,revision:3,assignments:[{...data.assignments[0],width:body.change.width}]};
+      }
+      return {ok:true,status:200,json:async()=>structuredClone(data)};
+    });
+    try{
+      await tick();q('.trip-table-scroll').scrollLeft=40;resize(w,q);await tick();
+      assert.equal(q('colgroup col:nth-child(2)').style.width,'260px');
+      assert.equal(updates.length,alreadySaved?1:2);
+      assert.deepEqual(updates.at(-1).change,{type:'resize',assignment:'a',width:260});
+      assert.equal(q('tbody select').value,'4');
+      assert.equal(q('.trip-table-scroll').scrollLeft,40);
+      assert.match(q('[data-status]').textContent,/Column width saved/);
+      q('[data-refresh]').click();await tick();
+      assert.equal(q('colgroup col:nth-child(2)').style.width,'260px');
+    }finally{dom.window.close();}
+  });
+}
+
+test('a deleted assignment is not recreated when retrying a column resize',async()=>{
+  let data=tracker(),updates=0;
+  const {dom,w,q}=setup(async(_,options)=>{
+    const body=JSON.parse(options.body);
+    if(body.action==='tracker-update'){
+      updates++;data={...data,revision:2,assignments:[]};
+      return {ok:false,status:409,json:async()=>({error:'Tracker changed'})};
+    }
+    return {ok:true,status:200,json:async()=>structuredClone(data)};
+  });
+  try{
+    await tick();resize(w,q);await tick();
+    assert.equal(updates,1);assert.equal(q('th[data-assignment]'),null);
+    assert.match(q('[data-status]').textContent,/assignment was removed/i);
+  }finally{dom.window.close();}
+});
+
 test('rapid edits use last write, retry a temporary failure, and confirm the final value',async()=>{
   let data=tracker(),fail=true;const updates=[];
   const {dom,w,q}=setup(async(_,options)=>{
