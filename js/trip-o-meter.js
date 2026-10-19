@@ -281,6 +281,7 @@
     const previous=q('.trip-table-scroll'),left=previous?.scrollLeft||0,top=previous?.scrollTop||0,accessOpen=Boolean(q('.trip-temp-access')?.open);
     const show=result=>{if(currentVersion!==version)return;render(result);if(accessOpen&&q('.trip-temp-access'))q('.trip-temp-access').open=true;const current=q('.trip-table-scroll');if(current){current.scrollLeft=left;current.scrollTop=top;}};
     setBusy(true);
+    if(change.type==='resize')status.textContent='Saving column width…';
     try{
       let result;
       try{result=await api('tracker-update',{revision:data.revision,change});}
@@ -289,6 +290,15 @@
           const fresh=await api('tracker');
           const present=fresh.grants?.some(grant=>grant.email.toLowerCase()===change.email.toLowerCase());
           if(present===(change.type==='grant'))result=fresh;
+          else result=await api('tracker-update',{revision:fresh.revision,change});
+        }else if(change.type==='resize'&&[409,503].includes(error.status)){
+          // A timed-out write may already be stored. Read it back before retrying
+          // against the latest revision so another grader's scores stay intact.
+          const fresh=await api('tracker');
+          if(currentVersion!==version)return;
+          const assignment=fresh.assignments.find(a=>a.id===change.assignment);
+          if(!assignment){show(fresh);status.textContent='This assignment was removed while you resized it.';return;}
+          if(assignment.width===change.width)result=fresh;
           else result=await api('tracker-update',{revision:fresh.revision,change});
         }else{
           if(change.type!=='reorder'||![409,503].includes(error.status))throw error;
@@ -300,6 +310,7 @@
         }
       }
       show(result);
+      if(change.type==='resize')status.textContent='Column width saved.';
       if(change.type==='reorder')status.textContent='Column order saved.';
       if(change.type==='grant')status.textContent='Edit access shared with '+change.email.toLowerCase()+'.';
       if(change.type==='revoke')status.textContent='Edit access removed for '+change.email.toLowerCase()+'.';
