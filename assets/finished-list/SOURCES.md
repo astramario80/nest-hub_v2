@@ -19,3 +19,14 @@ Official website icons identify the linked tools. Company names and marks belong
 - documentary: NEST activity icon
 - word-cloud: NEST activity icon
 - revisit: NEST activity icon
+
+## Eight-tool expansion
+
+- tinkercad: https://www.tinkercad.com/favicon.ico
+- makecode: https://cdn.makecode.com/blob/4de54063603c8d16531078818a83f7c29a3588fa/static/icons/apple-touch-icon.png
+- phet: https://phet.colorado.edu/assets/img/phetNavigationMenubar/phet-logo-trademarked.png
+- datawrapper: https://www.datawrapper.de/img/favicon.svg
+- checkology: https://newslit.org/wp-content/uploads/2025/07/favicon.png
+- zooniverse: https://www.zooniverse.org/icon.svg
+- twine: https://twinery.org/favicon-152.png
+- desmos: https://www.desmos.com/assets/img/apps/3d/apple-touch-icon.png

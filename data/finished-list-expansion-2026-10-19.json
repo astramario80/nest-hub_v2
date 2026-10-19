@@ -1,0 +1,96 @@
+[
+  {
+    "requestId": "f4a71131-9025-4278-8996-ff7011bfdb82",
+    "title": "Tinkercad Circuits engineering",
+    "url": "https://www.tinkercad.com/learn/circuits",
+    "skills": [
+      "Apply Technology",
+      "Solve Problems",
+      "Use Systems Thinking"
+    ],
+    "description": "Develop engineering and troubleshooting skills by designing and simulating a circuit that solves a practical problem. Explain the purpose of its components and test how the circuit responds. Submit a project link or screenshot, explain one improvement you made, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/tinkercad.ico"
+  },
+  {
+    "requestId": "9d7b0d14-4e67-4b2e-b3b0-bdc8c1f767e2",
+    "title": "Microsoft MakeCode for micro:bit",
+    "url": "https://makecode.microbit.org/",
+    "skills": [
+      "Apply Technology",
+      "Implement Innovation",
+      "Solve Problems"
+    ],
+    "description": "Practice programming and iterative design by creating a reaction timer or a simple accessibility aid. Test your program in the browser simulator and improve its behavior. Submit your project link, describe one revision based on testing, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/makecode.png"
+  },
+  {
+    "requestId": "12052780-b951-40f6-9606-654a02c83d19",
+    "title": "PhET virtual science experiments",
+    "url": "https://phet.colorado.edu/en/simulations/browse?levels=high-school&type=html",
+    "skills": [
+      "Reason Effectively",
+      "Use Systems Thinking"
+    ],
+    "description": "Practice scientific reasoning with a high-school simulation. Make a prediction, change one variable, record what happens, and use evidence to explain your result. Submit screenshots or observations, explain one prediction you revised, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/phet.png"
+  },
+  {
+    "requestId": "068c15e2-71f7-401b-a4c7-7b37b99ec54c",
+    "title": "Datawrapper data storytelling",
+    "url": "https://www.datawrapper.de/",
+    "skills": [
+      "Access & Evaluate Information",
+      "Communicate Clearly",
+      "Create Media"
+    ],
+    "description": "Develop data literacy and visual communication by turning a public dataset into a clear chart or map. Cite the source, choose appropriate labels, and explain what the data does and does not show. Submit your visualization, describe one revision that improved its clarity, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/datawrapper.svg"
+  },
+  {
+    "requestId": "3fce8695-eda6-4fe7-9612-4ce34f338ca5",
+    "title": "Checkology media literacy",
+    "url": "https://newslit.org/checkology/",
+    "skills": [
+      "Analyze Media",
+      "Access & Evaluate Information",
+      "Make Judgments & Decisions"
+    ],
+    "description": "Strengthen media literacy through a teacher-assigned Checkology activity. Investigate a claim, evaluate its evidence, and document how you checked the sources. Submit your evidence trail and conclusion, explain one judgment you revised or reconsidered, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/checkology.png"
+  },
+  {
+    "requestId": "13bbb507-aeb9-4f3a-acc8-402970c0374e",
+    "title": "Zooniverse research contribution",
+    "url": "https://www.zooniverse.org/projects",
+    "skills": [
+      "Reason Effectively",
+      "Be Responsible to Others"
+    ],
+    "description": "Contribute to real research through a teacher-selected Zooniverse project. Follow its tutorial, complete at least 25 classifications, and note examples where the evidence is uncertain. Submit a brief activity record, explain one classification you reconsidered, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/zooniverse.svg"
+  },
+  {
+    "requestId": "29672750-b24b-4e12-934d-45c73a22fd46",
+    "title": "Twine interactive workplace story",
+    "url": "https://twinery.org/",
+    "skills": [
+      "Think Creatively",
+      "Communicate Clearly",
+      "Make Judgments & Decisions"
+    ],
+    "description": "Practice storytelling and decision-making by creating an interactive workplace scenario in which readers make choices and experience their consequences. Include at least three meaningful decisions and two possible endings. Submit the story, describe one revision after someone tested it, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/twine.png"
+  },
+  {
+    "requestId": "52293dde-6026-4118-9479-48c302bb74ce",
+    "title": "Desmos 3D math sculpture",
+    "url": "https://www.desmos.com/3d",
+    "skills": [
+      "Think Creatively",
+      "Reason Effectively",
+      "Apply Technology"
+    ],
+    "description": "Connect mathematical reasoning and creative design by building a 3D sculpture from equations. Explain how at least two equations or parameters control its shape. Submit a graph link or screenshot, describe one mathematical revision you made, and identify a skill you practiced.",
+    "icon": "/assets/finished-list/desmos.png"
+  }
+]

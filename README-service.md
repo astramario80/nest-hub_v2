@@ -31,3 +31,7 @@ Validation: 17 focused tests cover supervisor access, role revocation, skill/cat
 Existing-resource editors now show Delete tool. Confirmation identifies the resource and explains that its link, purpose, icon and tags will be removed for everyone. The server checks current editing rights and the resource version under the same write lock. Deleted content is removed from storage; minimal request metadata makes retries safe and prevents delayed add requests from recreating a deleted tool. Original seed activities do not return after deletion. A refresh resolves uncertain deletion responses without discarding unrelated resources.
 
 Validation: 21 Finished List tests pass, including denied/stale deletions, persistence, cancellation, retry recovery and prevention of resurrection. Existing production resources are not deleted during verification.
+
+## Finished List eight-tool expansion
+
+Added Tinkercad Circuits, Microsoft MakeCode for micro:bit, PhET, Datawrapper, Checkology, Zooniverse, Twine and Desmos 3D through the existing authorized resource workflow. Each entry includes a project prompt, finish requirement, selected database skills and a self-hosted official tool or publisher icon. The content and stable retry IDs are recorded in data/finished-list-expansion-2026-10-19.json. Existing resources, custom icons and prior deletions remain unchanged.
