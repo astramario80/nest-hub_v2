@@ -17,7 +17,7 @@ function ui(manage=true,hash=''){
 function choose(w,key){w.document.querySelector('[data-hq-tab='+key+']').click();}
 test('HQ has connected accessible tabs and loads slides and the application only on demand',async()=>{
   const {w,calls}=ui();await tick();
-  assert.deepEqual([...w.document.querySelectorAll('[role=tab]')].map(tab=>tab.textContent),['Trip-o-meter','Team Lookup','Meetings','Employment','Hiring']);
+  assert.deepEqual([...w.document.querySelectorAll('[role=tab]')].map(tab=>tab.textContent),['Trip-o-meter','Team Lookup','Communications','Meetings','Employment','Hiring']);
   assert.equal(w.document.querySelector('[aria-selected=true]').id,'hq-tab-tripometer');
   assert.equal(w.document.querySelectorAll('[role=tabpanel]:not([hidden])').length,1);
   assert.equal(w.document.querySelector('iframe[src]'),null);assert.equal(calls.length,0);

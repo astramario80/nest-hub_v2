@@ -11,3 +11,9 @@
 .group-email-toolbar{position:sticky;top:0;z-index:2;background:#172238;border-block:1px solid #52607a;padding:10px 0;align-items:center}.group-email-toolbar .group-email-color{display:flex;align-items:center;gap:6px;font-size:.85rem}.group-email-toolbar input[type=color]{display:inline-block;width:44px;height:42px;padding:4px;margin:0}.group-email-banner-note{font-size:.85rem;color:#c5d3e8}.group-email-message h1,.group-email-message h2,.group-email-message h3{color:inherit}.group-email-message blockquote{border-left:3px solid #9db0c9;margin-left:0;padding-left:16px}
 
 .group-email-shortcuts{font-size:.85rem;line-height:1.5;color:#c5d3e8;margin:8px 0}
+
+/* Division HQ keeps the composer in its own tab and preserves drafts across tabs. */
+.group-email-dialog.group-email-inline{width:100%;height:auto;max-height:none;margin:18px 0 0;border-radius:12px;overflow:visible}
+.group-email-inline .group-email-message{min-height:45dvh}
+.group-email-inline .group-email-fields{margin-top:16px}
+@media(max-width:600px){.group-email-dialog.group-email-inline{padding:14px}.group-email-inline .group-email-fields label{min-width:100%}}
