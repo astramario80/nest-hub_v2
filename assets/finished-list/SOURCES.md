@@ -7,7 +7,7 @@ Official website icons identify the linked tools. Company names and marks belong
 - sketchpad: https://sketchpad.app/media/favicons/favicon.ico
 - app-inventor: https://appinventor.mit.edu/favicon.ico
 - big-huge-labs: https://bighugelabs.com/img/ui/favicon.ico
-- voki: https://www.voki.com/favicon.ico
+- voki: https://www.voki.com/images/voki.png (official 85×83 logo; original pixels retained, metadata removed, packaged into the existing ICO asset)
 - pixton: https://www.pixton.com/hubfs/pixton-icon-1.svg
 - iorad: https://www.iorad.com/favicon.ico?v=2
 - animoto: NEST activity icon
