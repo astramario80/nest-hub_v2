@@ -1,0 +1,13 @@
+# Finished List
+
+`/finished-list` replaces the menu's external Google Doc link with a searchable list inside NEST. The 17 original activities were read from school Doc `1LfwoArm2BdDfVSrn9MynfIT9YrtcaBVkMIrC6pfBny0`, tab `t.0`, on October 19, 2026. Each keeps its original instructions and actual hyperlink; the three activities without hyperlink annotations remain project ideas. Learning-purpose descriptions were written from those activities. The source Doc remains unchanged and is linked for reference.
+
+Everyone may browse. Only current Software Technicians, Division Managers, Assistant Managers, and CTSO Chief Executive, Financial, and Operations/Operating Officers may add. The school bridge rechecks the live Imported leadership directory and current NEST division roster on each request, including linked manual-account identities. Executive rights require CTSO; Division Manager and Assistant Manager rights require a classroom division. Owner status and other titles grant no exception. There is no edit/delete interface.
+
+New entries require a title (120 characters), HTTP(S) URL (2,000), and learning-purpose description (1,500). Browser and server render text without HTML interpretation. API writes require a valid host-only NEST session and allowed origin. The school script validates again, authorizes under its existing script lock, and serializes appends to a private app-created JSON file in the existing tracker folder. `finished-list-file-v1` holds its ID in Script Properties. Browsing returns the original seed until the first authorized addition stores the seed and new entry together. Stored audit actor hashes and timestamps are excluded from public responses.
+
+Submission UUIDs make retries idempotent. Changed content with a reused UUID conflicts; network failures retain the draft and UUID. Refresh can confirm an already-saved submission. Signing out or changing accounts clears drafts and invalidates in-flight UI responses.
+
+School web-app version 63 adds `FinishedList.js` and its dispatch block to the existing project/deployment. All 12 original source/configuration files were preserved; the staged 13 files were independently pulled back and matched before release. No OAuth scopes or sharing permissions changed.
+
+Validation: `node --test tests/finished-list.test.mjs` covers the exact role allowlist, membership removal, linked accounts, all imported examples, persisted appends, idempotency, session expiry, URL/field validation, CSRF, public projection, search, safe text rendering, and retained drafts. Full suite: 385/387 pass, with the pre-existing resource-viewer and eagle-menu failures. Desktop and 390px mobile layouts were checked in Chrome.
