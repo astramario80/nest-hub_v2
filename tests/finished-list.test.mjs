@@ -101,10 +101,10 @@ test('API rejects unsigned and cross-site writes before contacting the school br
 test('API sends only allowed fields and projects safe public data with private no-store caching',async()=>{
   const old=globalThis.fetch,previous={url:process.env.SPINNER_BRIDGE_URL,token:process.env.SPINNER_BRIDGE_TOKEN};
   process.env.SPINNER_BRIDGE_URL='https://script.google.com/test';process.env.SPINNER_BRIDGE_TOKEN='test';let payload;
-  globalThis.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({status:200,canAdd:true,canEdit:true,skills,entries:[{id,title:entry.title,url:entry.url,description:entry.description,icon:'',skills:entry.skills,version:1,actor:'secret',email:'private@example.org'}]})};};
+  globalThis.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return {ok:true,json:async()=>({status:200,canAdd:true,canEdit:true,skills,entries:[{id,title:entry.title,url:entry.url,description:entry.description,icon:'',skills:entry.skills,mode:'partner',version:1,actor:'secret',email:'private@example.org'}]})};};
   try{
-    const res=response();await handler({method:'POST',headers,body:{...entry,canAdd:true,actor:'spoof'}},res);
-    assert.equal(res.code,200);assert.equal(payload.canAdd,undefined);assert.equal(payload.actor,undefined);assert.equal(payload.action,'auth-finished-list-add');
+    const res=response();await handler({method:'POST',headers,body:{...entry,mode:'partner',canAdd:true,actor:'spoof'}},res);
+    assert.equal(res.code,200);assert.equal(payload.canAdd,undefined);assert.equal(payload.actor,undefined);assert.equal(payload.action,'auth-finished-list-add');assert.equal(payload.mode,'partner');assert.equal(res.data.entries[0].mode,'partner');
     assert.equal(JSON.stringify(res.data).includes('secret'),false);assert.equal(JSON.stringify(res.data).includes('private@example'),false);
     assert.match(res.headers['Cache-Control'],/no-store/);assert.equal(res.headers.Vary,'Cookie');
     const publicRes=response();await handler({method:'GET',headers:{}},publicRes);assert.equal(publicRes.data.canAdd,false);
@@ -121,7 +121,7 @@ test('list is searchable, renders HTML as text, and exposes additions only to au
   const entries=[{id:'one',title:'<img src=x onerror=alert(1)>',url:'https://scratch.mit.edu/',description:'Learn coding',instructions:'Original task'},{id:'two',title:'Documentary',url:'',description:'Learn storytelling'}];
   const {w,q}=website(async()=>({ok:true,json:async()=>({entries,canAdd:false})}),null);
   try{
-    await tick();assert.equal(q('#finished-add').hidden,true);assert.equal(q('#finished-signin').hidden,false);assert.equal(q('.finished-card img'),null);
+    await tick();assert.equal(q('#finished-add').hidden,true);assert.equal(q('#finished-signin').hidden,false);assert.equal(q('.finished-card .finished-tool-icon'),null);
     assert.equal(w.document.querySelectorAll('.finished-card').length,2);
     q('#finished-search').value='storytelling';q('#finished-search').dispatchEvent(new w.Event('input'));
     assert.equal(w.document.querySelectorAll('.finished-card').length,1);assert.equal(q('.finished-card h3').textContent,'Documentary');
@@ -260,5 +260,39 @@ test('editor deletion requires confirmation, survives an uncertain save, and cle
   w.confirm=()=>true;q('#finished-delete').click();await tick();assert.equal(writes[0].operation,'delete');assert.equal(writes[0].version,2);assert.equal(q('#finished-form').elements.title.value,'Pixton');
   q('#finished-delete').click();await tick();assert.equal(writes[0].requestId,writes[1].requestId);
   q('#finished-refresh').click();await tick();assert.match(q('#finished-status').textContent,/was deleted/);assert.equal(q('#finished-delete').hidden,true);assert.equal(q('#finished-add').open,false);assert.equal(w.document.querySelectorAll('.finished-card').length,0);
+ }finally{w.close();}
+});
+
+
+test('work styles persist across saves and retries, reject invalid values, and preserve old-client edits',()=>{
+ const app=school();app.role('Software Technician');
+ for(const mode of ['group','',{},null]){
+  assert.equal(validEntry({...entry,mode}),false);
+  assert.equal(app.call({...entry,mode,action:'auth-finished-list-add',session:'valid'}).status,400);
+ }
+ let result=app.call({...entry,mode:'team',action:'auth-finished-list-add',session:'valid'});
+ assert.equal(result.entries.at(-1).mode,'team');
+ assert.equal(app.call({...entry,mode:'team',action:'auth-finished-list-add',session:'valid'}).status,200);
+ assert.equal(app.call({...entry,mode:'partner',action:'auth-finished-list-add',session:'valid'}).status,409);
+ const edit={...entry,operation:'update',id,version:1,requestId:'35d1a8ab-0e5f-49e2-a94a-74a093d2b1f0',action:'auth-finished-list-update',session:'valid'};
+ result=app.call(edit);assert.equal(result.entries.at(-1).mode,'team');
+ result=app.call({...edit,mode:'partner',version:2,requestId:'45d1a8ab-0e5f-49e2-a94a-74a093d2b1f0'});
+ assert.equal(result.entries.at(-1).mode,'partner');assert.equal(result.entries.at(-1).version,3);
+});
+
+test('work style icons, search and filters combine with skills without showing legacy instructions',async()=>{
+ const entries=[{id:'one',title:'Solo drawing',url:'',description:'Practice drawing',instructions:'Old hidden task',skills:['Think Creatively'],mode:'solo',version:1},{id:'two',title:'Shared drawing',url:'',description:'Practice together',skills:['Think Creatively'],mode:'partner',version:1},{id:'three',title:'Team coding',url:'',description:'Practice coding',skills:['Solve Problems'],mode:'team',version:1}];
+ const {w,q}=website(async()=>({ok:true,json:async()=>({entries,skills,canAdd:true,canEdit:true})}));
+ try{
+  await tick();assert.equal(w.document.querySelectorAll('.finished-work-style').length,3);
+  assert.equal(q('.finished-work-style img').getAttribute('src'),'/assets/finished-list/work-solo.svg');
+  assert.equal(q('.finished-card details'),null);assert.doesNotMatch(q('#finished-items').textContent,/Old hidden task|original instructions/i);
+  q('#finished-mode-filter').value='partner';q('#finished-mode-filter').dispatchEvent(new w.Event('change'));
+  assert.equal(w.document.querySelectorAll('.finished-card').length,1);assert.equal(q('.finished-card h3').textContent,'Shared drawing');
+  q('#finished-skill-filter').value='Solve Problems';q('#finished-skill-filter').dispatchEvent(new w.Event('change'));assert.equal(q('#finished-empty').hidden,false);
+  q('#finished-skill-filter').value='';q('#finished-skill-filter').dispatchEvent(new w.Event('change'));q('.finished-edit').click();assert.equal(q('#finished-form').elements.mode.value,'partner');
+  q('#finished-cancel').click();q('#finished-mode-filter').value='';q('#finished-mode-filter').dispatchEvent(new w.Event('change'));
+  q('#finished-search').value='team';q('#finished-search').dispatchEvent(new w.Event('input'));assert.equal(w.document.querySelectorAll('.finished-card').length,1);
+  q('#finished-search').value='Old hidden task';q('#finished-search').dispatchEvent(new w.Event('input'));assert.equal(q('#finished-empty').hidden,false);
  }finally{w.close();}
 });
