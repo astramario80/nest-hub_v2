@@ -27,4 +27,4 @@ async function handler(req,res){
   }catch(error){console.error('Finished list unavailable',{kind:error?.name||'Error'});return fail(503,'The Finished List is temporarily unavailable. Your draft is kept; retry to check whether it saved.');}
 }
 function safeURL(value){try{const url=new URL(value);return ['https:','http:'].includes(url.protocol)&&!url.username&&!url.password;}catch{return false;}}
-export default withDiagnostics('finished-list',handler);
+export default withDiagnostics('leadership',handler);
