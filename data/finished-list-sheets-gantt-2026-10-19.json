@@ -1,0 +1,14 @@
+{
+  "operation": "add",
+  "requestId": "54269102-24d0-49a4-8bb8-268224499f90",
+  "title": "Google Sheets Gantt chart",
+  "url": "https://www.vertex42.com/ExcelTemplates/simple-gantt-chart.html",
+  "description": "Practice project scheduling by copying Vertex42’s free Google Sheets Gantt template using the page’s Google Sheets option. List tasks for a real class project, enter start and end dates, and update progress. Submit your completed timeline, explain how overlapping tasks affect the schedule, and describe one revision you made after a project requirement changed.",
+  "mode": "solo",
+  "skills": [
+    "Manage Projects",
+    "Manage Goals & Time",
+    "Apply Technology"
+  ],
+  "icon": "/assets/finished-list/google-sheets.png"
+}
