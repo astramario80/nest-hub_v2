@@ -1,0 +1,15 @@
+{
+  "operation": "update",
+  "id": "6471b947-bd42-4293-8be3-fca54012fe55",
+  "version": 2,
+  "requestId": "8c015ea8-16ae-4a04-9ce9-b09e3c41db7b",
+  "title": "Zoho Projects project planner",
+  "url": "https://www.zoho.com/projects/signup.html?plan=Free",
+  "description": "Practice managing goals, time, and projects using Zoho Projects’ free plan. Create a small project, break it into tasks, set due dates, and update task statuses as you work. Submit screenshots of your plan and completed result, compare planned and actual progress, and explain one adjustment you made to keep the project on track.",
+  "mode": "solo",
+  "skills": [
+    "Manage Goals & Time",
+    "Manage Projects"
+  ],
+  "icon": "/assets/finished-list/zoho-projects.svg"
+}
