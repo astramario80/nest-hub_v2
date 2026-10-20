@@ -1,0 +1,93 @@
+[
+  {
+    "operation": "add",
+    "requestId": "d504c2ca-9038-4b44-82e6-b15d37e8c363",
+    "title": "Google Translate bilingual teamwork",
+    "url": "https://gknest.org/google-accessibility-guide#translate",
+    "description": "Practice communicating across languages by creating bilingual project instructions with a partner using Google Translate. Compare the original and translated messages, check important terms together, and revise wording that causes confusion. Submit both versions, record each partner’s contribution, and explain how you checked understanding and changed your instructions to help another learner participate.",
+    "mode": "partner",
+    "skills": [
+      "Work Effectively in Diverse Teams",
+      "Interact Effectively",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-translate.png"
+  },
+  {
+    "operation": "add",
+    "requestId": "e0549725-f768-4f13-b223-08734053dbd8",
+    "title": "Chrome Read Aloud team research",
+    "url": "https://gknest.org/google-accessibility-guide#reading-mode",
+    "description": "Practice inclusive teamwork by researching a project topic in a team of three or more using Chrome Reading Mode and Read Aloud. Let teammates choose reading or listening, adjust the presentation, and compare what each person understood. Submit a shared summary, document everyone’s contribution, and explain one adjustment that helped the team understand the information.",
+    "mode": "team",
+    "skills": [
+      "Work Effectively in Diverse Teams",
+      "Interact Effectively",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-chrome.svg"
+  },
+  {
+    "operation": "add",
+    "requestId": "49b66191-67af-49cb-80a1-1360d40dadab",
+    "title": "Google Docs speech-to-text collaboration",
+    "url": "https://gknest.org/google-accessibility-guide#voice-typing",
+    "description": "Practice accessible communication by creating a project explanation with a partner using Google Docs Voice Typing. Choose a supported speaking language, dictate a short draft, and review transcription errors together without taking over the speaker’s ideas. Submit the corrected explanation, record each contribution, and describe an adjustment that helped both partners express and understand the message.",
+    "mode": "partner",
+    "skills": [
+      "Work Effectively in Diverse Teams",
+      "Interact Effectively",
+      "Collaborate with Others",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-docs.png"
+  },
+  {
+    "operation": "add",
+    "requestId": "c9a89810-e6e1-4fc9-8ee5-6346c49d53f9",
+    "title": "Google Docs multilingual project guide",
+    "url": "https://gknest.org/google-accessibility-guide#translate-document",
+    "description": "Practice creative collaboration across languages by writing a short project guide with a partner in Google Docs. Create a translated copy, compare important terms, and ask a reader to explain the instructions before revising them. Submit the original and translated guides, record both contributions, and explain one change that made the project more accessible to others.",
+    "mode": "partner",
+    "skills": [
+      "Work Effectively in Diverse Teams",
+      "Work Creatively with Others",
+      "Interact Effectively",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-docs.png"
+  },
+  {
+    "operation": "add",
+    "requestId": "aa70ce65-71ab-4f1f-9e47-a0cffc42ed98",
+    "title": "Chrome captions for accessible media",
+    "url": "https://gknest.org/google-accessibility-guide#captions",
+    "description": "Practice inclusive media research in a team of three or more by using Chrome Live Caption with project audio or video. Compare captions with what you hear, clarify uncertain words, and let teammates choose a useful listening or reading approach. Submit a shared summary, document everyone’s contribution, and explain one adjustment that helped the team participate.",
+    "mode": "team",
+    "skills": [
+      "Work Effectively in Diverse Teams",
+      "Interact Effectively",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-chrome.svg"
+  },
+  {
+    "operation": "add",
+    "requestId": "fcb4f132-f4d5-43f4-896f-b8c91d35ab5c",
+    "title": "Chromebook Select-to-Speak reading practice",
+    "url": "https://gknest.org/google-accessibility-guide#select-to-speak",
+    "description": "Practice independent reading and revision by using Chromebook Select-to-Speak with a project passage or your own writing. Listen while following the highlighted text, adjust the reading setup, and identify wording that is difficult to understand. Submit a revised passage or research note, explain what you changed, and describe how listening helped you evaluate the message.",
+    "mode": "solo",
+    "skills": [
+      "Work Independently",
+      "Communicate Clearly",
+      "Apply Technology"
+    ],
+    "icon": "/assets/finished-list/google-chrome.svg"
+  }
+]
