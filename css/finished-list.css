@@ -26,4 +26,4 @@ body.finished-shell{height:100vh;height:100dvh;overflow:hidden;display:grid;grid
 .finished-form-actions #finished-delete{background:#8d2636;color:#fff;border-color:#eaa0ad;margin-left:auto}
 
 .finished-work-style{display:flex;align-items:center;gap:8px;color:#ffc572;font-size:.8rem;font-weight:700;min-height:28px}.finished-work-style img{width:26px;height:26px;object-fit:contain}.finished-purpose-help{color:#c7d2e4;font-size:.85rem!important}
-.finished-guide-link a{color:#bfe3ff;font-weight:700;text-underline-offset:4px}
+.finished-tools>.finished-guide-link{display:inline-flex;align-items:center;justify-content:center;min-height:46px;box-sizing:border-box;padding:10px 14px;border:1px solid #8c9bb2;border-radius:8px;background:#26344d;color:#bfe3ff;font:600 .85rem/1.4 Montserrat,Arial,sans-serif;text-decoration:none}.finished-tools>.finished-guide-link:hover{background:#344968;text-decoration:underline;text-underline-offset:4px}@media(max-width:620px){.finished-tools>.finished-guide-link{flex:1 1 100%}}
