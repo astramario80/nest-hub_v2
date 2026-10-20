@@ -26,3 +26,4 @@ body.finished-shell{height:100vh;height:100dvh;overflow:hidden;display:grid;grid
 .finished-form-actions #finished-delete{background:#8d2636;color:#fff;border-color:#eaa0ad;margin-left:auto}
 
 .finished-work-style{display:flex;align-items:center;gap:8px;color:#ffc572;font-size:.8rem;font-weight:700;min-height:28px}.finished-work-style img{width:26px;height:26px;object-fit:contain}.finished-purpose-help{color:#c7d2e4;font-size:.85rem!important}
+.finished-guide-link a{color:#bfe3ff;font-weight:700;text-underline-offset:4px}

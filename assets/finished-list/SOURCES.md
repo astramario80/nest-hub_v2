@@ -37,3 +37,6 @@ Official website icons identify the linked tools. Company names and marks belong
 - google-docs: https://www.gstatic.com/images/branding/product/2x/docs_2020q4_48dp.png
 
 - `zoho-projects.svg`: official Zoho Projects logo from https://www.zohowebstatic.com/sites/zweb/images/productlogos/projects.svg (2026-10-19). Retains the original vector logo group, removes the wordmark, and uses a square viewBox for the card icon.
+
+- `google-chrome.svg`: official Chrome mark, unchanged, from https://www.google.com/chrome/static/images/chrome-logo-m100.svg (2026-10-19).
+- `google-translate.png`: official 105×105 Google Translate mark, unchanged, from https://www.gstatic.com/marketing-cms/42/46/7db920244e2084b10251e7f41961/logo-translate-lg.png (2026-10-19).
