@@ -49,7 +49,7 @@ function emailArchiveDispatch_(r){
   const raw=PropertiesService.getScriptProperties().getProperty('groupmail:attempt:'+hash_(hash_(account.email)+':'+r.requestId)),attempt=raw?JSON.parse(raw):null;
   const book=PropertiesService.getScriptProperties().getProperty('NEST_EMAIL_ARCHIVE_WORKBOOK');let archiveReady=false;
   try{const header=book?(Sheets.Spreadsheets.Values.get(book,"'Messages'!A1:S1").values||[])[0]:null;archiveReady=!!header&&EMAIL_ARCHIVE_HEADERS.every((v,i)=>header[i]===v);}catch(_){}
-  return {status:200,accountActive:account.active,manualAccount:account.email.startsWith('manual:'),linkedAddressAvailable:!!districtEmail_(account.linkedEmail),recoveryAddressAvailable:!!districtEmail_(account.recoveryEmail),attemptRecorded:!!attempt,state:attempt&&attempt.state,archiveRecorded:!!(attempt&&attempt.archiveRow),accepted:attempt&&attempt.accepted||0,rejected:attempt&&attempt.rejected||0,archiveReady};
+  return {status:200,accountActive:account.active,manualAccount:account.email.startsWith('manual:'),linkedAddressAvailable:!!districtEmail_(account.linkedEmail),recoveryAddressAvailable:!!districtEmail_(account.recoveryEmail),attemptRecorded:!!attempt,state:attempt&&attempt.state,archiveRecorded:!!(attempt&&attempt.archiveRow),accepted:attempt&&attempt.accepted||0,rejected:attempt&&attempt.rejected||0,archiveReady,serviceFaults:Object.entries(PropertiesService.getScriptProperties().getProperties()).filter(([key])=>key.indexOf('nest-service-fault:')===0).map(([,value])=>JSON.parse(value))};
  }
  if(r.operation==='access')return {status:200,administrator:true};
  if(r.operation==='identities')return {status:200,identities:accounts_().map(a=>({email:a.email,username:a.username}))};

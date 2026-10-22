@@ -23,10 +23,10 @@ function nestRequest_(r){
     try{return json_(emailArchiveDispatch_(r));}catch(_){return json_({status:503});}
   }
   if(r.action==='auth-group-email-access'){
-    try{return json_(groupEmailAccess_(r));}catch(_){return json_({status:503});}
+    try{return json_(groupEmailAccess_(r));}catch(error){return json_(nestServiceFailure_(r.action,error));}
   }
   if(r.action==='auth-group-email'){
-    try{return json_(groupEmailDispatch_(r));}catch(_){return json_({status:503});}
+    try{return json_(groupEmailDispatch_(r));}catch(error){return json_(nestServiceFailure_(r.action,error));}
   }
   if(['finished-list-view','auth-finished-list-add','auth-finished-list-update','auth-finished-list-delete'].includes(r.action)){
     try{return json_(finishedDispatch_(r));}catch(_){return json_({status:503});}
@@ -101,7 +101,7 @@ function nestRequest_(r){
     try { return json_(authDispatch_(r)); }
     catch(error) {
       console.error('NEST bridge dispatch failed',r.action,String(error&&error.message||error).slice(0,300));
-      return json_({status:503});
+      return json_(nestServiceFailure_(r.action,error));
     }
   }
   const lock=LockService.getScriptLock();
@@ -124,7 +124,12 @@ function nestAccessValues_(id,range){
 }
 function withNestReadContext_(r,work){
  const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory'||r.action==='auth-group-email-access';
- if(!readonly)return work();
+ if(!readonly){
+  if(!['auth-group-email','auth-email-archive','diagnostics-record'].includes(r.action))return work();
+  // Reuse account reads only inside this request; later requests recheck live data.
+  const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
+  try{return work();}finally{NEST_ACCESS_READS=previous;}
+ }
  const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
  try{
   const store=PropertiesService.getScriptProperties(),session=/^[a-f0-9]{64}$/.test(r.session||'')?read_(store,'authsession:'+hash_(r.session),Date.now()):null;
@@ -289,4 +294,11 @@ function memberLeadershipDirectory_() {
     };
   }).filter(row=>row.position&&row.firstName&&row.lastName&&row.email&&/^(?:Period (?:1|2|3|4|5|7)|NEST Robotics)$/.test(row.division)&&!/^(vacant|open|we.?re hiring|hiring|tbd|n\/a)$/i.test(row.firstName));
   return {status:200,leaders};
+}
+
+// Bounded, content-free service fault categories for the owner diagnostic.
+function nestServiceFailure_(action,error){
+ const message=String(error&&error.message||''),code=/quota|too many times|rate.?limit|RESOURCE_EXHAUSTED/i.test(message)?'school-quota':/permission|denied|authorized|forbidden/i.test(message)?'school-permission':error&&error.name==='ReferenceError'?'school-reference':/timed? out|timeout/i.test(message)?'school-timeout':'school-service';
+ try{PropertiesService.getScriptProperties().setProperty('nest-service-fault:'+action,JSON.stringify({action,code,time:new Date().toISOString()}));}catch(_){}
+ return {status:503,code};
 }
