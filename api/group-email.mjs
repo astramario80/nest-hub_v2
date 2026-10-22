@@ -15,18 +15,25 @@ async function handler(req,res){
   const session=cookies(req)[COOKIE];
   if(!validToken(session))return res.status(401).json({error:'Sign in to NEST to email your team.'});
   try{
+    return res.status(200).json(await groupRecords(session,period,audience));
+  }catch(error){if([401,403].includes(error.status))return res.status(error.status).json({error:error.message});console.error('Email group lookup failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Email groups could not load. Please try again.'});}
+}
+
+export default withDiagnostics('division',handler);
+
+export async function groupRecords(session,period,audience){
     const targets=period==='all'?Object.keys(DIVISIONS):[period];
     const access=await Promise.all(targets.map(async target=>({...await bridge({action:'auth-division-slides',operation:'access',session,period:target},45000),period:target})));
-    if(access.some(a=>a.status===401))return res.status(401).json({error:'Your sign-in has expired.'});
+    if(access.some(a=>a.status===401))throw Object.assign(new Error('Your sign-in has expired.'),{status:401});
     if(access.some(a=>![200,403].includes(a.status)))throw new Error('Division access unavailable');
     const included=access.filter(a=>a.status===200&&(a.isOwner===true||a.canManage===true||Array.isArray(a.roles)&&a.roles.some(role=>typeof role==='string'&&role.trim()))).map(a=>a.period);
-    if(!included.length)return res.status(403).json({error:'Email groups are available only to the divisions where you are on the leadership team.'});
+    if(!included.length)throw Object.assign(new Error('Email groups are available only to the divisions where you are on the leadership team.'),{status:403});
     const canReachBuildingLeadership=included.length>0;
     if(audience==='leadership'){
       const directory=await bridge({action:'auth-leadership-directory',session},25000);
       if(directory.status!==200||!Array.isArray(directory.leaders))throw new Error('Leadership directory unavailable');
       const leaders=directory.leaders.filter(l=>districtEmail(l.email)&&typeof l.position==='string'&&l.position.trim()&&/^(Period (1|2|3|4|5|7)|NEST Robotics)$/.test(l.division)).map(l=>({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position,division:l.division}));
-      return res.status(200).json({period,audience,divisions:included,canReachBuildingLeadership,members:[...new Map(leaders.map(l=>[l.email,{name:l.name,email:l.email}])).values()],leaders,gmailClientId:process.env.EMAIL_GOOGLE_CLIENT_ID||process.env.SERVICE_GOOGLE_CLIENT_ID||''});
+      return {period,audience,divisions:included,canReachBuildingLeadership,members:[...new Map(leaders.map(l=>[l.email,{name:l.name,email:l.email}])).values()],leaders,...emailService()};
     }
     const [directory,rosters]=await Promise.all([
       bridge({action:'auth-leadership-directory',session},25000),
@@ -40,8 +47,6 @@ async function handler(req,res){
       const emails=new Set(current.map(s=>districtEmail(s.email))),division=roster.period==='CTSO'?'NEST Robotics':'Period '+roster.period;
       directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail(l.email))&&typeof l.position==='string').forEach(l=>leaders.push({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position}));
     });
-    return res.status(200).json({period,audience,divisions:included,canReachBuildingLeadership,members:[...members.values()],leaders,gmailClientId:process.env.EMAIL_GOOGLE_CLIENT_ID||process.env.SERVICE_GOOGLE_CLIENT_ID||''});
-  }catch(error){console.error('Email group lookup failed',{kind:error?.name||'Error'});return res.status(503).json({error:'Email groups could not load. Please try again.'});}
+    return {period,audience,divisions:included,canReachBuildingLeadership,members:[...members.values()],leaders,...emailService()};
 }
-
-export default withDiagnostics('division',handler);
+function emailService(){return {emailService:{ready:Boolean(process.env.POSTMARK_SERVER_TOKEN&&process.env.POSTMARK_FROM_EMAIL&&process.env.NEST_EMAIL_ENABLED==='true'),from:process.env.POSTMARK_FROM_EMAIL||'communications@gknest.org'}};}

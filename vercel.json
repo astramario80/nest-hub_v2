@@ -62,6 +62,9 @@
     "api/group-email.mjs": {
       "maxDuration": 120
     },
+    "api/group-email-send.mjs": {
+      "maxDuration": 120
+    },
     "api/diagnostics.mjs": {
       "maxDuration": 30
     },

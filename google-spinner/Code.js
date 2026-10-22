@@ -19,6 +19,9 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='auth-group-email'){
+    try{return json_(groupEmailDispatch_(r));}catch(_){return json_({status:503});}
+  }
   if(['finished-list-view','auth-finished-list-add','auth-finished-list-update','auth-finished-list-delete'].includes(r.action)){
     try{return json_(finishedDispatch_(r));}catch(_){return json_({status:503});}
   }
