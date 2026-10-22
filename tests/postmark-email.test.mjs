@@ -18,8 +18,8 @@ async function api(change={},requestChange={}){
    return new Response(JSON.stringify(change.provider||value.map(m=>({To:m.To,ErrorCode:0,MessageID:'accepted-id'}))));
   }
   calls.push(value);
-  let data=value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
-  if(change.accessDenied&&value.action==='auth-division-slides')data={status:403};
+  let data=value.action==='auth-group-email-access'?{status:200,period:value.period,audience:value.audience,divisions:['2'],members:[{email:recipient,name:'Member'}],leaders:[]}:value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
+  if(change.accessDenied&&value.action==='auth-group-email-access')data={status:403};
   if(change.duplicate&&value.operation==='reserve')data={status:200,duplicate:true,state:'pending'};
   if(change.finishFailed&&value.operation==='finish')throw new Error('Journal unavailable');
   if(change.rateLimited&&value.operation==='reserve')data={status:429};

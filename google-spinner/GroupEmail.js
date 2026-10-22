@@ -1,3 +1,25 @@
+// Email reads use live school rows without tracker files or tracker write locks.
+function groupEmailAccess_(r){
+ if(!['division','leadership'].includes(r.audience)||r.audience==='leadership'&&r.period!=='all'||r.period!=='all'&&!Object.prototype.hasOwnProperty.call(PERIODS,r.period))return {status:400};
+ const targets=r.period==='all'?Object.keys(PERIODS):[r.period],included=[];
+ for(const period of targets){
+  const access=divisionSlidesDispatch_({operation:'access',session:r.session,period});
+  if(access.status===401)return {status:401};if(![200,403].includes(access.status))return {status:503};
+  if(access.status===200&&(access.isOwner===true||access.canManage===true||Array.isArray(access.roles)&&access.roles.some(role=>String(role||'').trim())))included.push(period);
+ }
+ if(!included.length)return {status:403};
+ const directory=memberLeadershipDirectory_();if(directory.status!==200||!Array.isArray(directory.leaders))return {status:503};
+ const name=leader=>[leader.firstName,leader.lastName].filter(Boolean).join(' '),members=new Map(),leaders=[];
+ if(r.audience==='leadership'){
+  directory.leaders.forEach(l=>{const email=districtEmail_(l.email);if(!email)return;members.set(email,{name:name(l),email});leaders.push({name:name(l),email,position:l.position,division:l.division});});
+ }else included.forEach(period=>{
+  const roster=rows_(period),emails=new Set();roster.forEach(row=>{const email=districtEmail_(row[1]);if(email){emails.add(email);members.set(email,{name:row[0],email});}});
+  const division=period==='CTSO'?'NEST Robotics':'Period '+period;
+  directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail_(l.email))).forEach(l=>leaders.push({name:name(l),email:districtEmail_(l.email),position:l.position}));
+ });
+ return {status:200,period:r.period,audience:r.audience,divisions:included,canReachBuildingLeadership:true,members:[...members.values()],leaders};
+}
+
 // The website validates live roles/rosters before reserving. This owner-only bridge
 // stores a durable attempt BEFORE Postmark is called; message content is not stored.
 function groupEmailDispatch_(r){

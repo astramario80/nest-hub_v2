@@ -19,6 +19,9 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='auth-group-email-access'){
+    try{return json_(groupEmailAccess_(r));}catch(_){return json_({status:503});}
+  }
   if(r.action==='auth-group-email'){
     try{return json_(groupEmailDispatch_(r));}catch(_){return json_({status:503});}
   }
@@ -117,13 +120,14 @@ function nestAccessValues_(id,range){
  return result;
 }
 function withNestReadContext_(r,work){
- const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory';
+ const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory'||r.action==='auth-group-email-access';
  if(!readonly)return work();
  const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
  try{
   const store=PropertiesService.getScriptProperties(),session=/^[a-f0-9]{64}$/.test(r.session||'')?read_(store,'authsession:'+hash_(r.session),Date.now()):null;
   if(session){
    const ranges=[AUTH_SHEET];
+   if(r.action==='auth-group-email-access'&&r.period==='all')Object.keys(PERIODS).forEach(period=>ranges.push("'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000"));
    if(Object.prototype.hasOwnProperty.call(PERIODS,r.period))ranges.push("'"+(r.period==='CTSO'?'CTSO':'Period '+r.period)+"'!A2:C1000");
    if(r.action==='auth-hiring-view'&&r.period!=='CTSO')ranges.push("'CTSO'!A2:C1000");
    const groups=[{id:NEST_DATABASE,ranges:[...new Set(ranges)]},{id:LEADERSHIP_DATABASE,ranges:["'Imported'!B2:F"]}];

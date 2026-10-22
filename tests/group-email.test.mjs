@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import {JSDOM} from 'jsdom';
 import handler from '../api/group-email.mjs';
 import {renderDivisionPage} from '../api/division-page.mjs';
@@ -10,7 +11,9 @@ const response=()=>({code:200,setHeader(){},status(c){this.code=c;return this;},
 async function server(access,period="2",audience='division'){
  const oldFetch=globalThis.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN,calls=[];
  process.env.SPINNER_BRIDGE_URL='https://bridge.example.test';process.env.SPINNER_BRIDGE_TOKEN='test';
- globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);const result=body.action==='auth-division-slides'?(typeof access==='function'?access(body.period):access):body.action==='auth-leadership-directory'?{status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]}:{status:200,period:body.period,students:[...records.members,{name:'Archived',email:'archived@students.bethelsd.org',active:false}],scores:{private:'excluded'}};return new Response(JSON.stringify(result));};
+ const school=vm.createContext({PERIODS:Object.fromEntries(['1','2','3','4','5','7','CTSO'].map(p=>[p,p])),divisionSlidesDispatch_:r=>typeof access==='function'?access(r.period):access,districtEmail_:v=>/^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(v||'')?v:'',rows_:()=>records.members.map(m=>[m.name,m.email]),memberLeadershipDirectory_:()=>({status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]})});
+ vm.runInContext(fs.readFileSync('google-spinner/GroupEmail.js','utf8'),school);
+ globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);assert.equal(body.action,'auth-group-email-access');return new Response(JSON.stringify(school.groupEmailAccess_(body)));};
  try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period,audience}},res);return {res,calls};}
  finally{globalThis.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 }
@@ -18,7 +21,7 @@ test('email groups require login and reject invalid divisions and write requests
  for(const [req,code] of [[{method:'GET',headers:{},query:{period:'2'}},401],[{method:'GET',headers:{},query:{period:'__proto__'}},400],[{method:'POST',headers:{},query:{}},405]]){const res=response();await handler(req,res);assert.equal(res.code,code);}
 });
 test('ordinary members and other division members receive no email roster',async()=>{
- for(const access of [{status:200,roles:[],canManage:false},{status:403,roles:['Safety Officer']}]){const {res,calls}=await server(access);assert.equal(res.code,403);assert.equal(res.data.members,undefined);assert.deepEqual(calls,['auth-division-slides']);}
+ for(const access of [{status:200,roles:[],canManage:false},{status:403,roles:['Safety Officer']}]){const {res,calls}=await server(access);assert.equal(res.code,403);assert.equal(res.data.members,undefined);assert.deepEqual(calls,['auth-group-email-access']);}
 });
 test('managers, assistants and assigned leaders receive only current selected-division recipients',async()=>{
  for(const access of [{status:200,canManage:true},{status:200,roles:['Assistant Manager']},{status:200,roles:['Safety Officer']}]){const {res}=await server(access);assert.equal(res.code,200);assert.deepEqual(res.data.members,records.members);assert.equal(res.data.leaders.length,1);assert.equal(res.data.scores,undefined);}
@@ -52,8 +55,8 @@ test('revoked access prevents copying and opening recipients, and clears the dra
 });
 
 test('All divisions aggregates authorized rosters, deduplicates recipients and excludes nonleadership divisions',async()=>{
- const owner=await server({status:200,isOwner:true},'all');assert.equal(owner.res.code,200);assert.deepEqual(owner.res.data.divisions,['1','2','3','4','5','7','CTSO']);assert.equal(owner.res.data.members.length,2);assert.equal(owner.calls.filter(a=>a==='tracker').length,7);
- const leader=await server(p=>p==='2'?{status:200,roles:['Safety Officer']}:{status:200,roles:[]},'all');assert.equal(leader.res.code,200);assert.deepEqual(leader.res.data.divisions,['2']);assert.equal(leader.calls.filter(a=>a==='tracker').length,1);assert.equal(leader.res.data.leaders.length,1);
+ const owner=await server({status:200,isOwner:true},'all');assert.equal(owner.res.code,200);assert.deepEqual(owner.res.data.divisions,['1','2','3','4','5','7','CTSO']);assert.equal(owner.res.data.members.length,2);assert.equal(owner.calls.filter(a=>a==='auth-group-email-access').length,1);
+ const leader=await server(p=>p==='2'?{status:200,roles:['Safety Officer']}:{status:200,roles:[]},'all');assert.equal(leader.res.code,200);assert.deepEqual(leader.res.data.divisions,['2']);assert.equal(leader.calls.filter(a=>a==='auth-group-email-access').length,1);assert.equal(leader.res.data.leaders.length,1);
  const denied=await server({status:200,roles:[]},'all');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('tracker'),false);
 });
 test('All divisions is selectable and retains the written draft when changing scope',async()=>{
@@ -158,7 +161,7 @@ test('all assigned division leaders can retrieve building leadership without rec
   const access=p=>p===target?{status:200,roles:[role]}:{status:403};
   const building=await server(access,'all','leadership');assert.equal(building.res.code,200,role);assert.equal(building.res.data.leaders.length,2);assert.equal(building.res.data.members.length,2);
   assert.equal(building.res.data.members.some(m=>m.email==='member@students.bethelsd.org'),false);assert.equal(building.calls.includes('tracker'),false);
-  const scoped=await server(access,'all');assert.deepEqual(scoped.res.data.divisions,[target]);assert.equal(scoped.calls.filter(action=>action==='tracker').length,1);
+  const scoped=await server(access,'all');assert.deepEqual(scoped.res.data.divisions,[target]);assert.equal(scoped.calls.filter(action=>action==='auth-group-email-access').length,1);
  }
  const denied=await server(p=>p==='2'?{status:200,roles:[]}:{status:403},'all','leadership');assert.equal(denied.res.code,403);assert.equal(denied.calls.includes('auth-leadership-directory'),false);
  const invalid=await server({status:200,canManage:true},'2','leadership');assert.equal(invalid.res.code,400);

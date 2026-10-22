@@ -23,7 +23,7 @@
       q('[data-email-test]').disabled=!data?.emailService?.ready||mail.sending||mail.delivery!=='draft';
       q('[data-email-send]').textContent=mail.sending?'Sending…':mail.delivery==='accepted'?'Submitted to NEST':mail.delivery==='draft'?'Send email':'Review send result';
       q('[data-email-new]').hidden=mail.delivery==='draft';q('[data-email-new]').disabled=mail.sending;
-      q('[data-email-sender]').textContent=data?.emailService?.ready?'From: NEST™ Communications <'+data.emailService.from+'> · Replies go to your linked email.':'NEST email setup is not complete. Your draft can still be copied.';
+      q('[data-email-sender]').textContent=!data?'Email access has not been verified.':data.emailService?.ready?'From: NEST™ Communications <'+data.emailService.from+'> · Replies go to your linked email.':'NEST email setup is not complete. Your draft can still be copied.';
     }
     function clearFailure(){lastFailure=null;q('[data-email-error-copy]').hidden=true;}
     function failure(stage,statusCode,code){
@@ -208,7 +208,7 @@
       let attempted=false,httpStatus=0;const started=performance.now();
       try{
         attempted=true;
-        const response=await fetch('/api/group-email-send',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({period,audience:group.value==='building-leadership'?'leadership':'division',recipients:testing?[]:emails,subject,html,requestId,testing}),signal:AbortSignal.timeout(120000)});
+        const response=await fetch('/api/group-email-send',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({period,audience:group.value==='building-leadership'?'leadership':'division',recipients:testing?[]:emails,subject,html,requestId,testing}),signal:AbortSignal.timeout(180000)});
         httpStatus=response.status;const result=await response.json();if(own!==generation||!identity())return;
         if(!response.ok){attempted=false;failure('send',httpStatus,'nest-send-rejected');throw new Error(result.error||'NEST could not start sending. Your draft is still here.');}
         if(!['accepted','rejected','partial','pending','unknown'].includes(result.state))throw new Error('Send result could not be confirmed.');

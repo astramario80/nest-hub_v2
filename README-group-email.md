@@ -37,3 +37,5 @@ Postmark supplies the retained message content and first observed open for each 
 The content preview extracts the server-marked original message, sanitizes it again and places it in a sandboxed iframe with a restrictive CSP that blocks scripts, remote images, forms and base URLs. Viewing history cannot load the provider's tracking image. Drafts remain intact across the two subtabs; logout and stale responses clear history.
 
 The sanitizer remains at patched version 2.18.1. Its htmlparser2 dependency is pinned to compatible CJS-exporting 10.0.0 because Vercel's current loader rejects require(ESM) in the latest parser. Sanitization tests and npm audit verify this deployed dependency graph.
+
+Recipient loading uses `auth-group-email-access`, a single read-only school request that reuses the existing division permission routine and batches current account, leadership and roster cells. It does not call the tracker API or read private tracker files. This removes the live timeout observed when a leadership-directory read ran alongside tracker loading. School version 70 adds this read and preserves all prior source files and OAuth scopes.

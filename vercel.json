@@ -63,7 +63,7 @@
       "maxDuration": 120
     },
     "api/group-email-send.mjs": {
-      "maxDuration": 120,
+      "maxDuration": 180,
       "regions": ["sfo1"]
     },
     "api/group-email-history.mjs": {
