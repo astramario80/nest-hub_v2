@@ -1,6 +1,6 @@
 # NEST Communications — Postmark
 
-Managers and assigned division leaders compose and send inside Communications using their NEST session. Gmail OAuth is no longer used. Current division roles and active roster membership are read again on every send. Building leadership remains available to current leaders; other student rosters remain division-scoped.
+Members holding any current NEST leadership role compose and send inside Communications using their NEST session. Gmail OAuth is no longer used. Current leadership eligibility and active roster membership are read again on every send. Authorized leaders may select official recipients across NEST by individual, division or leadership position.
 
 ## Provider
 
@@ -41,3 +41,7 @@ The sanitizer remains at patched version 2.18.1. Its htmlparser2 dependency is p
 Recipient loading uses `auth-group-email-access`, a single read-only school request that reuses the existing division permission routine and batches current account, leadership and roster cells. It does not call the tracker API or read private tracker files. This removes the live timeout observed when a leadership-directory read ran alongside tracker loading. School version 70 adds this read and preserves all prior source files and OAuth scopes.
 
 The composer shows sending progress and acceptance below its action buttons. Its official-use reminder links to the email privacy policy. History retries transient school identity reads once, renews the signed identity cookie after verification, and offers a Try again button when a detail request fails. Sending always checks live leadership/recipient access and the durable session-backed reservation.
+
+## Recipient selection
+
+The compact Send to control offers Individual, Division, Position and Leadership teams. Individual reveals name/email search with independent checkboxes across the NEST database. Division and Position reveal accessible checkbox menus supporting multiple choices and All; groups deduplicate by address and have a collapsible recipient preview. The NEST-wide `audience=nest&period=all` read requires a current leadership role in at least one division, returns only live district roster members and their divisions, and preserves the verified access division for manual-account reply address checks. Sends re-read the roster and current leadership access; browser-provided recipients outside that live roster are rejected. Legacy audience routes remain compatible during rollout.

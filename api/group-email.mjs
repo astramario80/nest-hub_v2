@@ -3,7 +3,7 @@ import { COOKIE, cookies, validToken, bridge, districtEmail } from '../lib/nest-
 import { DIVISIONS } from '../lib/divisions.mjs';
 import { groupRecords } from '../lib/group-email-access.mjs';
 
-// Student recipients stay division-scoped; all current leaders may reach building leadership.
+// Current leaders may select official NEST recipients across the live school rosters.
 async function handler(req,res){
   res.setHeader('Cache-Control','private, no-store, max-age=0');
   res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
@@ -11,7 +11,7 @@ async function handler(req,res){
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'Method not allowed.'});}
   const period=String(req.query?.period||'');
   const audience=String(req.query?.audience||'division');
-  if(!['division','leadership'].includes(audience)||audience==='leadership'&&period!=='all')return res.status(400).json({error:'Choose a supported email audience.'});
+  if(!['division','leadership','nest'].includes(audience)||['leadership','nest'].includes(audience)&&period!=='all')return res.status(400).json({error:'Choose a supported email audience.'});
   if(period!=='all'&&!Object.hasOwn(DIVISIONS,period))return res.status(400).json({error:'Choose a division.'});
   const session=cookies(req)[COOKIE];
   if(!validToken(session))return res.status(401).json({error:'Sign in to NEST to email your team.'});

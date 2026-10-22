@@ -1,15 +1,20 @@
 // Email reads use live school rows without tracker files or tracker write locks.
 function groupEmailAccess_(r){
- if(!['division','leadership'].includes(r.audience)||r.audience==='leadership'&&r.period!=='all'||r.period!=='all'&&!Object.prototype.hasOwnProperty.call(PERIODS,r.period))return {status:400};
+ if(!['division','leadership','nest'].includes(r.audience)||['leadership','nest'].includes(r.audience)&&r.period!=='all'||r.period!=='all'&&!Object.prototype.hasOwnProperty.call(PERIODS,r.period))return {status:400};
  const targets=r.period==='all'?Object.keys(PERIODS):[r.period],included=[];
  for(const period of targets){
   const access=divisionSlidesDispatch_({operation:'access',session:r.session,period});
   if(access.status===401)return {status:401};if(![200,403].includes(access.status))return {status:503};
-  if(access.status===200&&(access.isOwner===true||access.canManage===true||Array.isArray(access.roles)&&access.roles.some(role=>String(role||'').trim())))included.push(period);
+  if(access.status===200&&(access.isOwner===true||access.canManage===true||Array.isArray(access.roles)&&access.roles.some(role=>String(role||'').trim()))){included.push(period);if(r.audience==='nest')break;}
  }
  if(!included.length)return {status:403};
  const directory=memberLeadershipDirectory_();if(directory.status!==200||!Array.isArray(directory.leaders))return {status:503};
  const name=leader=>[leader.firstName,leader.lastName].filter(Boolean).join(' '),members=new Map(),leaders=[];
+ if(r.audience==='nest'){
+  Object.keys(PERIODS).forEach(period=>rows_(period).forEach(row=>{const email=districtEmail_(row[1]);if(!email)return;if(!members.has(email))members.set(email,{name:row[0],email,divisions:[]});const member=members.get(email);if(!member.divisions.includes(period))member.divisions.push(period);}));
+  directory.leaders.forEach(l=>{const email=districtEmail_(l.email);if(email&&members.has(email))leaders.push({name:name(l),email,position:l.position,division:l.division});});
+  return {status:200,period:'all',audience:'nest',accessPeriod:included[0],divisions:Object.keys(PERIODS),members:[...members.values()],leaders};
+ }
  if(r.audience==='leadership'){
   directory.leaders.forEach(l=>{const email=districtEmail_(l.email);if(!email)return;members.set(email,{name:name(l),email});leaders.push({name:name(l),email,position:l.position,division:l.division});});
  }else included.forEach(period=>{

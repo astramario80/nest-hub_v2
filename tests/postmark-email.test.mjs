@@ -18,7 +18,7 @@ async function api(change={},requestChange={}){
    return new Response(JSON.stringify(change.provider||value.map(m=>({To:m.To,ErrorCode:0,MessageID:'accepted-id'}))));
   }
   calls.push(value);
-  let data=value.action==='auth-group-email-access'?{status:200,period:value.period,audience:value.audience,divisions:['2'],members:[{email:recipient,name:'Member'}],leaders:[]}:value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
+  let data=value.action==='auth-group-email-access'?{status:200,period:value.period,audience:value.audience,divisions:['2'],accessPeriod:'2',members:[{email:recipient,name:'Member',...(value.audience==='nest'?{divisions:['2','3']}:{} )}],leaders:[]}:value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
   if(change.accessDenied&&value.action==='auth-group-email-access')data={status:403};
   if(change.duplicate&&value.operation==='reserve')data={status:200,duplicate:true,state:'pending'};
   if(change.finishFailed&&value.operation==='finish')throw new Error('Journal unavailable');
@@ -71,4 +71,9 @@ test('durable journal blocks repeated requests and identical content under a dif
 });
 test('journal rate limits parallel new messages and requires a valid session',()=>{
  const j=journal();j.call();assert.equal(j.call({requestId:'c'.repeat(64),fingerprint:'d'.repeat(64)}).status,429);assert.equal(j.call({session:'expired'}).status,401);j.advance(31000);assert.equal(j.call({requestId:'c'.repeat(64),fingerprint:'d'.repeat(64)}).status,200);
+});
+
+test('NEST-wide selections revalidate membership and reserve against the sender’s authorized division',async()=>{
+ const {res,calls,messages}=await api({body:{period:'all',audience:'nest'}});assert.equal(res.data.state,'accepted');assert.equal(messages[0].To,recipient);assert.equal(calls.find(c=>c.operation==='reserve').period,'2');
+ const denied=await api({body:{period:'all',audience:'nest',recipients:['outsider@students.bethelsd.org']}});assert.equal(denied.res.code,403);assert.equal(denied.messages.length,0);
 });
