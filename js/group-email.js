@@ -214,6 +214,7 @@
         if(!['accepted','rejected','partial','pending','unknown'].includes(result.state))throw new Error('Send result could not be confirmed.');
         mail.delivery=result.state;
         if(result.state==='accepted'){
+          document.dispatchEvent(new Event('nest-email-sent'));
           status.textContent=testing?'Test submitted to your linked email address. Your team has not been emailed.':'Postmark accepted '+result.accepted+' email'+(result.accepted===1?'':'s')+' for delivery. Replies go to your linked email.';
           if(testing){mail.delivery='draft';mail.requestId=newRequestId();}
         }else if(result.state==='rejected'){failure('send',httpStatus,'provider-rejected');status.textContent='Postmark rejected the message. No recipients were accepted. Your draft is still here; contact a NEST administrator.';}

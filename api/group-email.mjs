@@ -1,6 +1,7 @@
 import { withDiagnostics } from '../lib/diagnostics.mjs';
 import { COOKIE, cookies, validToken, bridge, districtEmail } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
+import { groupRecords } from '../lib/group-email-access.mjs';
 
 // Student recipients stay division-scoped; all current leaders may reach building leadership.
 async function handler(req,res){
@@ -20,33 +21,3 @@ async function handler(req,res){
 }
 
 export default withDiagnostics('division',handler);
-
-export async function groupRecords(session,period,audience){
-    const targets=period==='all'?Object.keys(DIVISIONS):[period];
-    const access=await Promise.all(targets.map(async target=>({...await bridge({action:'auth-division-slides',operation:'access',session,period:target},45000),period:target})));
-    if(access.some(a=>a.status===401))throw Object.assign(new Error('Your sign-in has expired.'),{status:401});
-    if(access.some(a=>![200,403].includes(a.status)))throw new Error('Division access unavailable');
-    const included=access.filter(a=>a.status===200&&(a.isOwner===true||a.canManage===true||Array.isArray(a.roles)&&a.roles.some(role=>typeof role==='string'&&role.trim()))).map(a=>a.period);
-    if(!included.length)throw Object.assign(new Error('Email groups are available only to the divisions where you are on the leadership team.'),{status:403});
-    const canReachBuildingLeadership=included.length>0;
-    if(audience==='leadership'){
-      const directory=await bridge({action:'auth-leadership-directory',session},25000);
-      if(directory.status!==200||!Array.isArray(directory.leaders))throw new Error('Leadership directory unavailable');
-      const leaders=directory.leaders.filter(l=>districtEmail(l.email)&&typeof l.position==='string'&&l.position.trim()&&/^(Period (1|2|3|4|5|7)|NEST Robotics)$/.test(l.division)).map(l=>({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position,division:l.division}));
-      return {period,audience,divisions:included,canReachBuildingLeadership,members:[...new Map(leaders.map(l=>[l.email,{name:l.name,email:l.email}])).values()],leaders,...emailService()};
-    }
-    const [directory,rosters]=await Promise.all([
-      bridge({action:'auth-leadership-directory',session},25000),
-      Promise.all(included.map(target=>bridge({action:'tracker',session,period:target},50000)))
-    ]);
-    if(directory.status!==200||!Array.isArray(directory.leaders)||rosters.some((r,i)=>r.status!==200||r.period!==included[i]||!Array.isArray(r.students)))throw new Error('Group records unavailable');
-    const members=new Map(),leaders=[];
-    rosters.forEach(roster=>{
-      const current=roster.students.filter(s=>s.active!==false&&districtEmail(s.email)&&typeof s.name==='string');
-      current.forEach(s=>members.set(districtEmail(s.email),{name:s.name,email:districtEmail(s.email)}));
-      const emails=new Set(current.map(s=>districtEmail(s.email))),division=roster.period==='CTSO'?'NEST Robotics':'Period '+roster.period;
-      directory.leaders.filter(l=>l.division===division&&emails.has(districtEmail(l.email))&&typeof l.position==='string').forEach(l=>leaders.push({name:[l.firstName,l.lastName].filter(Boolean).join(' '),email:districtEmail(l.email),position:l.position}));
-    });
-    return {period,audience,divisions:included,canReachBuildingLeadership,members:[...members.values()],leaders,...emailService()};
-}
-function emailService(){return {emailService:{ready:Boolean(process.env.POSTMARK_SERVER_TOKEN&&process.env.POSTMARK_FROM_EMAIL&&process.env.NEST_EMAIL_ENABLED==='true'),from:process.env.POSTMARK_FROM_EMAIL||'communications@gknest.org'}};}

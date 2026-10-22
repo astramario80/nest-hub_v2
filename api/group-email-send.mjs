@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto';
-import { COOKIE,cookies,validToken,originAllowed,bridge,districtEmail } from '../lib/nest-auth.mjs';
+import { COOKIE,cookies,validToken,originAllowed,bridge,districtEmail,accountEmail } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 import { withDiagnostics } from '../lib/diagnostics.mjs';
-import { groupRecords } from './group-email.mjs';
-import { emailContent,postmarkMessages,submitPostmark,MAX_EMAIL_RECIPIENTS } from '../lib/postmark-email.mjs';
+import { groupRecords } from '../lib/group-email-access.mjs';
+import { emailContent,emailSenderKey,postmarkMessages,submitPostmark,MAX_EMAIL_RECIPIENTS } from '../lib/postmark-email.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');
 async function handler(req,res){
   res.setHeader('Cache-Control','private, no-store');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
@@ -17,7 +17,9 @@ async function handler(req,res){
   const content=emailContent(body.html);if(!content.text)return res.status(400).json({error:'Add a message before sending.'});
   let reserved=false;
   try{
-    const fresh=await groupRecords(session,body.period,body.audience),allowed=new Set(fresh.members.map(m=>m.email));
+    const [fresh,sender]=await Promise.all([groupRecords(session,body.period,body.audience),bridge({action:'auth-me',session},20000)]);
+    if(sender.status!==200||!accountEmail(sender.email))return res.status(sender.status===401?401:503).json({error:'Your sending identity could not be verified.'});
+    const allowed=new Set(fresh.members.map(m=>m.email));
     const recipients=[...new Set(body.recipients)].sort();
     if(!body.testing&&(!recipients.length||recipients.some(email=>!allowed.has(email))))return res.status(403).json({error:'The group changed. Choose the recipients again.'});
     const fingerprint=sha(JSON.stringify({period:body.period,audience:body.audience,recipients:body.testing?[]:recipients,subject:body.subject.trim(),html:content.html,testing:body.testing}));
@@ -25,7 +27,7 @@ async function handler(req,res){
     if(reservation.status!==200)return res.status([400,401,403,409,429].includes(reservation.status)?reservation.status:503).json({error:reservation.status===429?'NEST email limit reached. Wait before sending another message.':reservation.status===403?'Your account needs a linked reply email before sending.':'Sending could not start. Your draft is still here.'});
     if(reservation.duplicate)return res.status(200).json({state:reservation.state,accepted:reservation.accepted||0,rejected:reservation.rejected||0,duplicate:true});
     reserved=true;
-    const messages=postmarkMessages({recipients:body.testing?[reservation.replyTo]:recipients,replyTo:reservation.replyTo,subject:body.subject.trim(),content,requestId:body.requestId,testing:body.testing});
+    const messages=postmarkMessages({recipients:body.testing?[reservation.replyTo]:recipients,replyTo:reservation.replyTo,subject:body.subject.trim(),content,requestId:body.requestId,testing:body.testing,senderKey:emailSenderKey(sender.email)});
     let result;try{result=await submitPostmark(messages);}catch{result={state:'unknown',accepted:0,rejected:0};}
     // A failed journal acknowledgement must never cause an automatic resend.
     const saved=await bridge({action:'auth-group-email',operation:'finish',session,requestId:body.requestId,fingerprint,lease:reservation.lease,...result},25000);

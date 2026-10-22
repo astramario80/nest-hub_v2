@@ -18,7 +18,7 @@ async function api(change={},requestChange={}){
    return new Response(JSON.stringify(change.provider||value.map(m=>({To:m.To,ErrorCode:0,MessageID:'accepted-id'}))));
   }
   calls.push(value);
-  let data=value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
+  let data=value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
   if(change.accessDenied&&value.action==='auth-division-slides')data={status:403};
   if(change.duplicate&&value.operation==='reserve')data={status:200,duplicate:true,state:'pending'};
   if(change.finishFailed&&value.operation==='finish')throw new Error('Journal unavailable');
@@ -30,7 +30,7 @@ async function api(change={},requestChange={}){
 }
 test('server sends separate private emails from NEST with authoritative Reply-To and no browser credentials',async()=>{
  const {res,messages,calls}=await api({body:{from:'spoof@bad.invalid',replyTo:'spoof@bad.invalid'}});
- assert.equal(res.data.state,'accepted');assert.equal(messages.length,1);assert.match(messages[0].From,/communications@gknest.org/);assert.equal(messages[0].ReplyTo,replyTo);assert.equal(messages[0].To,recipient);assert.equal(messages[0].TrackOpens,false);assert.equal(messages[0].TrackLinks,'None');assert.match(messages[0].HtmlBody,/nest-email-banner/);assert.doesNotMatch(JSON.stringify(res.data),/token|lease|manager@/);assert.ok(calls.find(c=>c.operation==='reserve'));assert.ok(calls.find(c=>c.operation==='finish'));
+ assert.equal(res.data.state,'accepted');assert.equal(messages.length,1);assert.match(messages[0].From,/communications@gknest.org/);assert.equal(messages[0].ReplyTo,replyTo);assert.equal(messages[0].To,recipient);assert.equal(messages[0].TrackOpens,true);assert.equal(messages[0].TrackLinks,'None');assert.match(messages[0].HtmlBody,/nest-email-banner/);assert.doesNotMatch(JSON.stringify(res.data),/token|lease|manager@/);assert.ok(calls.find(c=>c.operation==='reserve'));assert.ok(calls.find(c=>c.operation==='finish'));
 });
 test('self-test ignores browser recipients and sends only to the verified linked account',async()=>{
  const {res,messages}=await api({body:{testing:true,recipients:[]}});assert.equal(res.data.state,'accepted');assert.equal(messages[0].To,replyTo);assert.match(messages[0].Subject,/^\[TEST\]/);
