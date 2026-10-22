@@ -20,3 +20,5 @@
 @media(max-width:600px){.group-email-dialog.group-email-inline{padding:14px}.group-email-inline .group-email-fields label{min-width:100%}}
 
 .group-email-send-status{margin:12px 0;line-height:1.5;scroll-margin-block:20px}.group-email-send-status:empty{display:none}.group-email-send-status[data-state="success"]{padding:12px;border-left:4px solid #64d8a2;background:#163b32;color:#e2fff0}.group-email-send-status[data-state="error"]{padding:12px;border-left:4px solid #ffbc7a}
+
+.group-email-notice a{color:#ffc572;text-decoration:underline}.group-email-notice a:hover{color:#ffe1b5}
