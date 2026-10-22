@@ -19,10 +19,11 @@ function emailArchiveRecord_(id,row,index){
  return {...emailArchiveSummary_(row),recipients:JSON.parse(row[7]||'[]'),outcomes:JSON.parse(row[12]||'[]'),html:String(content[0]||'')+String(content[1]||''),text:String(content[2]||'')+String(content[3]||''),source:content[4]||'nest'};
 }
 function emailArchiveValid_(doc){return doc&&/^[a-f0-9]{64}$/.test(doc.senderKey||'')&&typeof doc.subject==='string'&&doc.subject.length<=187&&typeof doc.html==='string'&&doc.html.length<=60000&&typeof doc.text==='string'&&doc.text.length<=60000&&Array.isArray(doc.recipients)&&doc.recipients.length>0&&doc.recipients.length<=300&&doc.recipients.every(email=>accountEmail_(email)&&!email.startsWith('manual:'))&&typeof doc.testing==='boolean';}
+function emailArchiveParts_(text){const code=text.charCodeAt(29999),cut=code>=0xD800&&code<=0xDBFF?29999:30000;return [text.slice(0,cut),text.slice(cut)];}
 function emailArchiveWrite_(book,doc){
  const archiveId=hash_(doc.senderKey+':'+doc.requestId),rows=emailArchiveRows_(book),existing=rows.findIndex(row=>row[0]===archiveId);
  if(existing>=0){if(doc.source==='postmark-import'&&['pending','unknown'].includes(rows[existing][9])){const selected=JSON.parse(rows[existing][7]||'[]').length;Sheets.Spreadsheets.Values.update({values:[[doc.accepted===selected?'accepted':'partial',doc.accepted||0,doc.rejected||0,JSON.stringify(doc.outcomes||[])]]},book,"'Messages'!J"+(existing+2)+':M'+(existing+2),{valueInputOption:'RAW'});}return {archiveId,row:existing+2};}
- const values=[archiveId,doc.requestId,doc.sender,doc.username||'',doc.sentAt,doc.subject,doc.replyTo,JSON.stringify(doc.recipients),String(doc.testing),doc.state||'pending',doc.accepted||0,doc.rejected||0,JSON.stringify(doc.outcomes||[]),doc.html.slice(0,30000),doc.html.slice(30000),doc.text.slice(0,30000),doc.text.slice(30000),doc.source||'nest',doc.senderKey];
+ const values=[archiveId,doc.requestId,doc.sender,doc.username||'',doc.sentAt,doc.subject,doc.replyTo,JSON.stringify(doc.recipients),String(doc.testing),doc.state||'pending',doc.accepted||0,doc.rejected||0,JSON.stringify(doc.outcomes||[]),...emailArchiveParts_(doc.html),...emailArchiveParts_(doc.text),doc.source||'nest',doc.senderKey];
  const result=Sheets.Spreadsheets.Values.append({values:[values]},book,"'Messages'!A:S",{valueInputOption:'RAW',insertDataOption:'INSERT_ROWS'});
  const match=String(result.updates&&result.updates.updatedRange||'').match(/![A-Z]+(\d+):/);if(!match)throw new Error('Archive append not confirmed');
  return {archiveId,row:Number(match[1])};
