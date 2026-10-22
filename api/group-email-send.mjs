@@ -38,7 +38,7 @@ async function handler(req,res){
     if(saved.status!==200)return res.status(200).json({state:'unknown',accepted:result.accepted,rejected:result.rejected});
     return res.status(200).json({state:result.state,accepted:result.accepted,rejected:result.rejected});
   }catch(error){
-    console.error('NEST email send unavailable',{stage,kind:error.name,message:['Group records unavailable','School identity unavailable'].includes(error.message)?error.message:'Service read failed'});
+    console.error('NEST email send unavailable',{stage,kind:error.name,message:/^Google bridge HTTP \d+$|^Unexpected Google response host$|^Group records unavailable$|^School identity unavailable$/.test(error.message)?error.message:'Service read failed'});
     if(reserved)return res.status(200).json({state:'unknown',accepted:0,rejected:0});
     return res.status([401,403].includes(error.status)?error.status:503).json({error:[401,403].includes(error.status)?error.message:'Email access could not be verified. Your draft is still here.'});
   }

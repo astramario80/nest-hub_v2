@@ -38,6 +38,6 @@ async function handler(req,res){
   const result=await bridge({action:'auth-email-archive',operation,session,archiveId:req.query?.archiveId,offset,search},45000);if(result.status!==200)return fail(res,[401,403,404].includes(result.status)?result.status:503);
   if(operation==='detail'){const content=emailContent(result.message.html||'');return res.status(200).json({message:{...result.message,html:content.html,text:content.text}});}
   const {status,...data}=result;return res.status(200).json(data);
- }catch(error){console.error('NEST permanent email archive unavailable',{kind:error.name});return fail(res,503);}
+ }catch(error){const reason=/^Google bridge HTTP \d+$|^Unexpected Google response host$|^School identity unavailable$|^Bridge not configured$/.test(error.message)?error.message:'Service read failed';console.error('NEST permanent email archive unavailable',{kind:error.name,reason});if(req.query?.action==='diagnose')return res.status(503).json({error:'The administrator diagnostic did not complete.',reason});return fail(res,503);}
 }
 export default withDiagnostics('division',handler);
