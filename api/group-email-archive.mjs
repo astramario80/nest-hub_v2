@@ -31,7 +31,7 @@ async function handler(req,res){
   }
   if(req.query?.action==='diagnose'){
    if(!validToken(req.query.requestId)||typeof req.query.username!=='string'||!/^[a-z][a-z0-9._-]{2,31}$/.test(req.query.username))return res.status(400).json({error:'Invalid diagnostic request.'});
-   const result=await bridge({action:'auth-email-archive',operation:'diagnose',session,username:req.query.username,requestId:req.query.requestId},45000);if(result.status!==200)return fail(res,[401,403,404].includes(result.status)?result.status:503);const {status,...data}=result;return res.status(200).json(data);
+   const result=await bridge({action:'auth-email-archive',operation:'diagnose',session,username:req.query.username,requestId:req.query.requestId},45000);if(result.status!==200)return res.status([400,401,403,404].includes(result.status)?result.status:503).json({error:'The administrator diagnostic did not complete.',diagnosticStatus:result.status});const {status,...data}=result;return res.status(200).json(data);
   }
   const operation=req.query?.action==='access'?'access':req.query?.archiveId?'detail':'list',offset=Number(req.query?.offset||0),search=String(req.query?.search||'');
   if(!Number.isInteger(offset)||offset<0||search.length>120||operation==='detail'&&!validToken(req.query.archiveId))return res.status(400).json({error:'Choose a valid archive page.'});
