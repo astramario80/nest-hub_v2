@@ -43,7 +43,7 @@
     const frame=document.createElement('iframe');frame.title='Sent email content';frame.setAttribute('sandbox','');frame.referrerPolicy='no-referrer';frame.className='email-history-content';
     frame.srcdoc='<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; img-src \'none\'; base-uri \'none\'; form-action \'none\'"><style>body{font-family:Arial,sans-serif;line-height:1.6;overflow-wrap:anywhere;padding:12px;color:#172238}a{pointer-events:none}</style></head><body>'+data.html+'</body></html>';
     detail.append(heading,sent,metrics,counts,recipients,contentHeading,frame);
-   }catch(error){if(own===detailGeneration&&epoch===generation&&identity())detail.textContent=error.message;}
+   }catch(error){if(own===detailGeneration&&epoch===generation&&identity()){detail.textContent=error.message;const retry=document.createElement('button');retry.type='button';retry.textContent='Try again';retry.addEventListener('click',()=>show(requestId,button));detail.append(document.createElement('br'),retry);}}
   }
   function reset(){generation++;detailGeneration++;loading=false;loaded=false;nextOffset=0;seen=new Set();list.replaceChildren();detail.replaceChildren();status.textContent='';more.hidden=true;refresh.disabled=false;more.disabled=false;}
   refresh.addEventListener('click',()=>load(false));more.addEventListener('click',()=>load(true));

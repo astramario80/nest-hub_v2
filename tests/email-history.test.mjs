@@ -50,3 +50,8 @@ test('logout clears history and a late response cannot expose the previous sende
  let settle;const w=historyUI(()=>new Promise(resolve=>settle=resolve));
  try{w.document.getElementById('email-history-tab').click();w.NestAuth.identity={signedIn:false};w.document.dispatchEvent(new w.Event('nest-auth-change'));settle({ok:true,json:async()=>({messages:[{requestId,subject:'Private old account',sentAt:'2026-10-22T17:00:00Z'}],hasMore:false})});await tick();assert.equal(w.document.querySelector('[data-history-list]').textContent,'');assert.equal(w.document.querySelector('[data-history-detail]').textContent,'');}finally{w.close();}
 });
+test('failed detail reads offer a retry that recovers the selected message',async()=>{
+ let attempts=0;
+ const w=historyUI(async url=>({ok:!url.includes('requestId=')||++attempts>1,json:async()=>!url.includes('requestId=')?{messages:[{requestId,subject:'Meeting',sentAt:'2026-10-22T17:00:00Z'}],hasMore:false,nextOffset:1}:attempts===1?{error:'Your email history could not load. Please try again.'}:{subject:'Meeting',sentAt:'2026-10-22T17:00:00Z',tracking:true,openRate:0,observedOpens:0,accepted:1,selected:1,recipients:[{email,openedAt:null}],html:'<p>Original message</p>'}}));
+ try{w.document.getElementById('email-history-tab').click();await tick();w.document.querySelector('.email-history-item').click();await tick();const detail=w.document.querySelector('[data-history-detail]');assert.match(detail.textContent,/could not load/);detail.querySelector('button').click();await tick();assert.equal(attempts,2);assert.ok(detail.querySelector('iframe'));}finally{w.close();}
+});

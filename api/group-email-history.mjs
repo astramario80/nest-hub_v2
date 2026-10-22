@@ -1,4 +1,5 @@
-import {COOKIE,cookies,validToken,bridge,accountEmail} from '../lib/nest-auth.mjs';
+import {COOKIE,cookies,validToken,accountEmail} from '../lib/nest-auth.mjs';
+import {emailIdentity} from '../lib/email-identity.mjs';
 import {withDiagnostics} from '../lib/diagnostics.mjs';
 import {emailSenderKey,emailContent,postmarkRead} from '../lib/postmark-email.mjs';
 const uuid=value=>typeof value==='string'&&/^[a-f0-9-]{36}$/i.test(value);
@@ -17,7 +18,7 @@ async function handler(req,res){
  if(requestId!==undefined&&!validToken(requestId)||!Number.isInteger(offset)||offset<0||offset>9500)return res.status(400).json({error:'Choose a valid history page.'});
  if(!process.env.POSTMARK_SERVER_TOKEN)return res.status(503).json({error:'Email history is not configured.'});
  try{
-  const identity=await bridge({action:'auth-me',session},20000);if(identity.status!==200||!accountEmail(identity.email))return res.status(401).json({error:'Your NEST sign-in expired.'});
+  const identity=await emailIdentity(req,res,session);if(identity.status!==200||!accountEmail(identity.email))return res.status(401).json({error:'Your NEST sign-in expired.'});
   const actor=emailSenderKey(identity.email),stream=process.env.POSTMARK_MESSAGE_STREAM||'broadcast';
   const query={count:'500',offset:String(requestId?0:offset),messagestream:stream,metadata_nestActor:actor,...(requestId?{tag:'nest-'+requestId}:{})};
   const result=await postmarkRead('/messages/outbound',query),messages=ownMessages(result,actor,requestId);
@@ -39,6 +40,6 @@ async function handler(req,res){
   if(list.length>20){nextOffset=offset+list[20].start;list=list.slice(0,20);}
   else if(messages.length===500&&list.length>1&&list.at(-1).loaded<list.at(-1).selected){nextOffset=offset+list.at(-1).start;list.pop();}
   return res.status(200).json({messages:list.map(({start,loaded,...m})=>m),hasMore:nextOffset<result.TotalCount,nextOffset,retentionDays:45});
- }catch{return res.status(503).json({error:'Your email history could not load. Please try again.'});}
+ }catch(error){console.error('NEST email history unavailable',{kind:error.name});return res.status(503).json({error:'Your email history could not load. Please try again.'});}
 }
 export default withDiagnostics('division',handler);

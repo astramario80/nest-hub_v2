@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { COOKIE,cookies,validToken,originAllowed,bridge,districtEmail,accountEmail } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 import { withDiagnostics } from '../lib/diagnostics.mjs';
+import { emailIdentity } from '../lib/email-identity.mjs';
 import { groupRecords } from '../lib/group-email-access.mjs';
 import { emailContent,emailSenderKey,postmarkMessages,submitPostmark,MAX_EMAIL_RECIPIENTS } from '../lib/postmark-email.mjs';
 const sha=value=>createHash('sha256').update(value).digest('hex');
@@ -17,7 +18,7 @@ async function handler(req,res){
   const content=emailContent(body.html);if(!content.text)return res.status(400).json({error:'Add a message before sending.'});
   let reserved=false;
   try{
-    const [fresh,sender]=await Promise.all([groupRecords(session,body.period,body.audience),bridge({action:'auth-me',session},20000)]);
+    const [fresh,sender]=await Promise.all([groupRecords(session,body.period,body.audience),emailIdentity(req,res,session)]);
     if(sender.status!==200||!accountEmail(sender.email))return res.status(sender.status===401?401:503).json({error:'Your sending identity could not be verified.'});
     const allowed=new Set(fresh.members.map(m=>m.email));
     const recipients=[...new Set(body.recipients)].sort();

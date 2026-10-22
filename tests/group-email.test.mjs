@@ -36,21 +36,18 @@ function ui(_unused=false,inline=false){
  w.fetch=async()=>({ok:true,json:async()=>({...records,canReachBuildingLeadership:true,emailService:{ready:true,from:'communications@gknest.org'}})});w.eval(fs.readFileSync('js/group-email.js','utf8'));
  return {w,get copied(){return copied;},get opened(){return opened;},get tokenRequest(){return tokenRequest;}};
 }
-test('composer filters groups, copies sanitized banner HTML without opening another service',async()=>{
- const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);
- assert.equal(q('.group-email-launch').hidden,false);q('.group-email-launch').click();assert.equal(q('.group-email-dialog').open,true);
+test('composer filters recipients and offers a concise official-use policy notice',async()=>{
+ const {w}=ui();try{await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();assert.equal(q('.group-email-dialog').open,true);
  assert.equal(q('[data-email-recipients]').querySelectorAll('input:checked').length,1);
  q('[data-email-group]').value='members';q('[data-email-group]').dispatchEvent(new w.Event('change'));assert.equal(q('[data-email-recipients]').querySelectorAll('input:checked').length,2);
- q('[data-email-group]').value='specific';q('[data-email-group]').dispatchEvent(new w.Event('change'));assert.equal(q('[data-email-copy]').disabled,true);
- q('[data-email-recipients] input').checked=true;q('[data-email-recipients] input').dispatchEvent(new w.Event('change'));
- q('[data-email-subject]').value='Team meeting';q('.group-email-message').innerHTML='<b>Hello</b><ul><li>Agenda</li></ul><font face="Georgia" size="4">Team</font><script>bad()</script><a href="javascript:bad()">unsafe</a>';
- q('[data-email-copy]').click();await tick();
- const html=await app.copied.data['text/html'].text();assert.match(html,/nest-email-banner.png/);assert.match(html,/<ul>/);assert.match(html,/face="Georgia"/);assert.doesNotMatch(html,/javascript:|<script/);
- assert.equal(app.opened,null);w.close();
+ q('[data-email-group]').value='specific';q('[data-email-group]').dispatchEvent(new w.Event('change'));assert.equal(q('[data-email-send]').disabled,true);
+ assert.match(q('.group-email-notice').textContent,/official NEST™ communications only/);assert.equal(q('.group-email-notice a').textContent,'Email privacy policy');
+ for(const selector of ['[data-email-copy]','[data-email-sender]','.group-email-shortcuts','.group-email-banner-note'])assert.equal(q(selector),null);
+ }finally{w.close();}
 });
-test('revoked access prevents copying and opening recipients, and clears the draft',async()=>{
+test('revoked access clears the draft and closes the composer',async()=>{
  const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('[data-email-subject]').value='Meeting';q('.group-email-message').textContent='Hello';
- w.fetch=async()=>({ok:false,json:async()=>({error:'Leadership access ended.'})});q('[data-email-copy]').click();await tick();assert.equal(app.copied,null);assert.equal(app.opened,null);
+
  w.NestDivisionHQ.allowed=false;w.document.dispatchEvent(new w.Event('nest-hq-access-revoked'));assert.equal(q('.group-email-message').textContent,'');assert.equal(q('.group-email-dialog').open,false);assert.equal(q('.group-email-launch').hidden,true);w.close();
 });
 
@@ -93,10 +90,7 @@ test('first bullets visibly indent and pasted line breaks become separately adju
  editor.innerHTML='One<br>Two<br>Three';const nodes=[...editor.childNodes];const range=w.document.createRange();range.setStart(nodes[0],0);range.setEnd(nodes[2],3);w.getSelection().removeAllRanges();w.getSelection().addRange(range);w.document.dispatchEvent(new w.Event('selectionchange'));indent(w);
  assert.deepEqual([...editor.children].map(el=>el.style.marginLeft),['32px','32px','']);assert.match(w.getSelection().toString(),/OneTwo/);w.close();
 });
-test('copied email keeps indentation and nested bullets while stripping unrelated inline styles',async()=>{
- const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('[data-email-subject]').value='Meeting';const editor=q('.group-email-message');editor.innerHTML='<p style="color:red" onclick="bad()">First</p><p>Second</p><ul><li>Parent<ul><li>Child</li></ul></li></ul>';
- selectText(w,editor.children[0],editor.children[1]);indent(w);q('[data-email-copy]').click();await tick();const html=await app.copied.data['text/html'].text();assert.equal((html.match(/margin-left: 32px/g)||[]).length,2);assert.match(html,/<li>Parent<ul><li>Child/);assert.doesNotMatch(html,/data-email-indent|onclick|color:red/);w.close();
-});
+
 
 test('selection ending at the start of the next bullet does not indent that unselected bullet',async()=>{
  const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<ul><li>Parent</li><li>First</li><li>Second</li><li>After</li></ul>';
@@ -114,15 +108,11 @@ test('outdent after a selection ending at the next bullet does not also outdent 
 
 test('the composer keeps its banner for delivery and provides additional formatting controls',async()=>{
  const {w}=ui();await tick();const d=w.document;
- assert.equal(d.querySelector('.group-email-banner'),null);assert.match(d.querySelector('.group-email-banner-note').textContent,/included in the email/);
+ assert.equal(d.querySelector('.group-email-banner'),null);assert.equal(d.querySelector('.group-email-banner-note'),null);
  for(const command of ['underline','strikeThrough','insertOrderedList','justifyLeft','justifyCenter','justifyRight','removeFormat','unlink','undo','redo'])assert.ok(d.querySelector(`[data-email-command="${command}"]`));
  for(const name of ['block','color','highlight'])assert.ok(d.querySelector(`[data-email-${name}]`));w.close();
 });
-test('sent HTML retains safe colors, highlights, alignment, headings and underlining while removing active or layout styles',async()=>{
- const app=ui(),{w}=app;await tick();const q=s=>w.document.querySelector(s);q('.group-email-launch').click();q('[data-email-subject]').value='Formatting check';
- q('.group-email-message').innerHTML='<h2 style="text-align:center;color:#1459a3;position:fixed" onclick="bad()">Team</h2><div style="background-color:#fff3a3;font-style:italic;background-image:url(https://tracking.invalid)"><u>Underlined</u><s>Old</s><span style="color:rgb(10, 20, 30);text-decoration:underline">Colored</span></div><font color="#ff0000" face="Georgia" size="4">Red</font><img src="https://tracking.invalid/image"><script>bad()</script>';
- q('[data-email-copy]').click();await tick();const html=await app.copied.data['text/html'].text();assert.match(html,/text-align: center/);assert.match(html,/color: rgb\(20, 89, 163\)/);assert.match(html,/background-color: rgb\(255, 243, 163\)/);assert.match(html,/<u>Underlined<\/u>/);assert.match(html,/<s>Old<\/s>/);assert.match(html,/color="#ff0000"/);assert.match(html,/nest-email-banner.png/);assert.doesNotMatch(html,/tracking.invalid|position:|onclick|<script/);w.close();
-});
+
 test('Tab and Shift+Tab indent only the selected composer paragraphs and preserve the selection',async()=>{
  const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<p>One</p><p>Two</p><p>Three</p>';const paragraphs=[...editor.children];
  try{selectText(w,paragraphs[0],paragraphs[1]);const tab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});editor.dispatchEvent(tab);assert.equal(tab.defaultPrevented,true);assert.equal(paragraphs[0].style.marginLeft,'32px');assert.equal(paragraphs[1].style.marginLeft,'32px');assert.equal(paragraphs[2].style.marginLeft,'');assert.equal(w.getSelection().toString(),'OneTwo');
@@ -138,7 +128,7 @@ test('Control and Command bracket shortcuts use the same bullet nesting rules as
 test('Escape then Tab leaves the composer without trapping focus, and shortcuts do not affect other fields',async()=>{
  const {w}=ui();await tick();const editor=w.document.querySelector('.group-email-message');editor.innerHTML='<p>Text</p>';selectText(w,editor.firstChild,editor.firstChild,1,1);
  try{const escape=new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true});editor.dispatchEvent(escape);assert.equal(escape.defaultPrevented,true);const tab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});editor.dispatchEvent(tab);assert.equal(tab.defaultPrevented,false);assert.equal(editor.firstChild.style.marginLeft,'');
-  const subject=w.document.querySelector('[data-email-subject]'),subjectTab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});subject.dispatchEvent(subjectTab);assert.equal(subjectTab.defaultPrevented,false);assert.match(w.document.getElementById(editor.getAttribute('aria-describedby')).textContent,/Escape, then Tab/);
+  const subject=w.document.querySelector('[data-email-subject]'),subjectTab=new w.KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true});subject.dispatchEvent(subjectTab);assert.equal(subjectTab.defaultPrevented,false);assert.equal(editor.hasAttribute('aria-describedby'),false);
  }finally{w.close();}
 });
 
@@ -167,15 +157,14 @@ test('all assigned division leaders can retrieve building leadership without rec
  const invalid=await server({status:200,canManage:true},'2','leadership');assert.equal(invalid.res.code,400);
 });
 
-test('building audience is rechecked before copying, and returning to students restores the division boundary',async()=>{
+test('returning from building leadership to students restores the division boundary',async()=>{
  const app=ui(false,true),{w}=app;try{await tick();const q=s=>w.document.querySelector(s),calls=[];
  w.fetch=async url=>{calls.push(url);const building=new URL(url,'https://gknest.org').searchParams.get('audience')==='leadership';return {ok:true,json:async()=>({...records,period:building?'all':'2',audience:building?'leadership':'division',canReachBuildingLeadership:true,divisions:['2']})};};
  q('[data-email-subject]').value='Leadership meeting';q('.group-email-message').textContent='Keep this draft';
  q('[data-email-group]').value='building-leadership';q('[data-email-group]').dispatchEvent(new w.Event('change'));await tick();
  assert.match(calls[0],/period=all&audience=leadership/);assert.equal(q('[data-email-division]').disabled,true);
- q('[data-email-copy]').click();await tick();assert.match(calls[1],/audience=leadership/);assert.ok(app.copied);
  q('[data-email-group]').value='members';q('[data-email-group]').dispatchEvent(new w.Event('change'));await tick();
- assert.match(calls[2],/period=2&audience=division/);assert.equal(q('[data-email-division]').disabled,false);assert.equal(q('.group-email-message').textContent,'Keep this draft');
+ assert.match(calls[1],/period=2&audience=division/);assert.equal(q('[data-email-division]').disabled,false);assert.equal(q('.group-email-message').textContent,'Keep this draft');
  }finally{w.close();}
 });
 
@@ -189,7 +178,7 @@ async function nestMailApp(send){
  return {...app,w,sends};
 }
 test('NEST send needs no Google connection, sends through the local API and blocks duplicate clicks',async()=>{
- const {w,sends}=await nestMailApp();try{const q=s=>w.document.querySelector(s);assert.equal(q('[data-email-connect]'),null);assert.equal(q('[data-email-open]'),null);q('[data-email-send]').click();q('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.match(sends[0].requestId,/^[a-f0-9]{64}$/);assert.equal(sends[0].html,'<p>Hello team</p>');assert.equal(sends[0].testing,false);assert.equal(q('[data-email-send]').disabled,true);assert.match(q('[data-email-status]').textContent,/accepted.*delivery/);assert.equal(w.document.querySelector('script[src*=google]'),null);}finally{w.close();}
+ const {w,sends}=await nestMailApp();try{const q=s=>w.document.querySelector(s);assert.equal(q('[data-email-connect]'),null);assert.equal(q('[data-email-open]'),null);q('[data-email-send]').click();q('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.match(sends[0].requestId,/^[a-f0-9]{64}$/);assert.equal(sends[0].html,'<p>Hello team</p>');assert.equal(sends[0].testing,false);assert.equal(q('[data-email-send]').disabled,true);assert.equal(q('.group-email-actions').nextElementSibling,q('[data-email-status]'));assert.equal(q('[data-email-status]').dataset.state,'success');assert.match(q('[data-email-status]').textContent,/Email sent.*recipient.*Accepted for delivery/);assert.equal(w.document.querySelector('script[src*=google]'),null);}finally{w.close();}
 });
 test('uncertain NEST delivery preserves the draft and cannot retry automatically',async()=>{
  const {w,sends}=await nestMailApp(async()=>{throw new Error('Network lost');});try{const q=s=>w.document.querySelector(s);q('[data-email-send]').click();await tick();assert.match(q('[data-email-status]').textContent,/not resend automatically/);assert.equal(q('.group-email-message').textContent,'Hello team');q('[data-email-send]').click();assert.equal(sends.length,1);assert.equal(q('[data-email-new]').hidden,false);}finally{w.close();}
