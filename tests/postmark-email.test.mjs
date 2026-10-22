@@ -18,7 +18,7 @@ async function api(change={},requestChange={}){
    return new Response(JSON.stringify(change.provider||value.map(m=>({To:m.To,ErrorCode:0,MessageID:'accepted-id'}))));
   }
   calls.push(value);
-  let data=value.action==='auth-group-email-access'?{status:200,period:value.period,audience:value.audience,divisions:['2'],accessPeriod:'2',members:[{email:recipient,name:'Member',...(value.audience==='nest'?{divisions:['2','3']}:{} )}],leaders:[]}:value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease'}:{status:200};
+  let data=value.action==='auth-group-email-access'?{status:200,period:value.period,audience:value.audience,divisions:['2'],accessPeriod:'2',members:[{email:recipient,name:'Member',...(value.audience==='nest'?{divisions:['2','3']}:{} )}],leaders:[]}:value.action==='auth-me'?{status:200,email:replyTo}:value.action==='auth-division-slides'?{status:200,canManage:true}:value.action==='auth-leadership-directory'?{status:200,leaders:[]}:value.action==='tracker'?{status:200,period:'2',students:[{email:recipient,name:'Member'}]}:value.operation==='reserve'?{status:200,replyTo,lease:'lease',archived:!change.archiveFailed}:{status:200};
   if(change.accessDenied&&value.action==='auth-group-email-access')data={status:403};
   if(change.duplicate&&value.operation==='reserve')data={status:200,duplicate:true,state:'pending'};
   if(change.finishFailed&&value.operation==='finish')throw new Error('Journal unavailable');
@@ -60,7 +60,7 @@ test('server sanitizer strips active content, tracking images and CSS URLs while
 function journal(){
  let now=2000000000000;const values=new Map();let locked=false;
  const store={getProperty:k=>values.get(k)||null,setProperty(k,v){values.set(k,v);},deleteProperty:k=>values.delete(k),getProperties:()=>Object.fromEntries(values)};
- const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},PropertiesService:{getScriptProperties:()=>store},authSession_:s=>s==='session'?{email:replyTo}:null,hash_:v=>createHash('sha256').update(v).digest('hex'),LockService:{getScriptLock:()=>({tryLock:()=>{assert.equal(locked,false);locked=true;return true;},releaseLock:()=>{locked=false;}})},Utilities:{getUuid:()=> 'lease'},accountByEmail_:()=>({}),memberEmail_:email=>email,districtEmail_:email=>email,OWNER_EMAILS:[],PERIODS:{'2':'id'}});
+ const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},PropertiesService:{getScriptProperties:()=>store},authSession_:s=>s==='session'?{email:replyTo}:null,hash_:v=>createHash('sha256').update(v).digest('hex'),LockService:{getScriptLock:()=>({tryLock:()=>{assert.equal(locked,false);locked=true;return true;},releaseLock:()=>{locked=false;}})},Utilities:{getUuid:()=> 'lease'},accountByEmail_:()=>({}),memberEmail_:email=>email,districtEmail_:email=>email,emailArchiveReserve_:()=>({archiveId:'c'.repeat(64),row:2}),emailArchiveFinish_:()=>{},OWNER_EMAILS:[],PERIODS:{'2':'id'}});
  vm.runInContext(fs.readFileSync('google-spinner/GroupEmail.js','utf8'),ctx);
  return {call:changes=>ctx.groupEmailDispatch_({session:'session',operation:'reserve',requestId:'a'.repeat(64),fingerprint:'b'.repeat(64),count:2,period:'2',...changes}),values,advance:ms=>now+=ms};
 }
@@ -77,3 +77,5 @@ test('NEST-wide selections revalidate membership and reserve against the senderâ
  const {res,calls,messages}=await api({body:{period:'all',audience:'nest'}});assert.equal(res.data.state,'accepted');assert.equal(messages[0].To,recipient);assert.equal(calls.find(c=>c.operation==='reserve').period,'2');
  const denied=await api({body:{period:'all',audience:'nest',recipients:['outsider@students.bethelsd.org']}});assert.equal(denied.res.code,403);assert.equal(denied.messages.length,0);
 });
+
+test('an unconfirmed permanent archive prevents the provider send',async()=>{const result=await api({archiveFailed:true});assert.equal(result.res.code,503);assert.equal(result.messages.length,0);assert.match(result.res.data.error,/archive/);});

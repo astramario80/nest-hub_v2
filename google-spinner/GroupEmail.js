@@ -26,7 +26,7 @@ function groupEmailAccess_(r){
 }
 
 // The website validates live roles/rosters before reserving. This owner-only bridge
-// stores a durable attempt BEFORE Postmark is called; message content is not stored.
+// stores a durable attempt and a private permanent archive BEFORE Postmark is called.
 function groupEmailDispatch_(r){
  const now=Date.now(),store=PropertiesService.getScriptProperties();
  const session=authSession_(r.session,store,now);if(!session)return {status:401};
@@ -40,6 +40,7 @@ function groupEmailDispatch_(r){
    if(r.operation==='reserve')return {status:200,duplicate:true,state:existing.state,accepted:existing.accepted||0,rejected:existing.rejected||0};
    if(existing.lease!==r.lease||!['accepted','partial','rejected','unknown'].includes(r.state)||!Number.isInteger(r.accepted)||!Number.isInteger(r.rejected)||r.accepted<0||r.rejected<0||r.accepted+r.rejected>existing.count)return {status:400};
    if(existing.state!=='pending')return {status:200};
+   emailArchiveFinish_(existing,r);
    existing.state=r.state;existing.accepted=r.accepted;existing.rejected=r.rejected;
    store.setProperty(key,JSON.stringify(existing));return {status:200};
   }
@@ -61,6 +62,7 @@ function groupEmailDispatch_(r){
   store.setProperty(key,JSON.stringify(record));
   store.setProperty(duplicateKey,JSON.stringify({key,expires:now+600000}));
   store.setProperty(actorKey,JSON.stringify(user));store.setProperty(globalKey,JSON.stringify(global));
-  return {status:200,lease,replyTo};
+  const archive=emailArchiveReserve_(r,session,replyTo);record.archiveId=archive.archiveId;record.archiveRow=archive.row;store.setProperty(key,JSON.stringify(record));
+  return {status:200,lease,replyTo,archived:true};
  }finally{lock.releaseLock();}
 }

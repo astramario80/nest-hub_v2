@@ -9,12 +9,14 @@
   panel.innerHTML='<div class="email-history-heading"><h2>Your sent emails</h2><button type="button" data-history-refresh>Refresh</button></div><p>New NEST messages are available here for 45 days. Only your own sent emails appear.</p><p class="email-history-note">Open rates are approximate. Tracking images may be blocked or loaded automatically, so an observed open is not proof that someone read the email.</p><p data-history-status role="status" aria-live="polite"></p><div class="email-history-layout"><div><div data-history-list></div><button type="button" data-history-more hidden>Load older emails</button></div><section data-history-detail aria-label="Selected email"></section></div>';
   host.prepend(nav);host.append(panel);
   const tabs=[...nav.querySelectorAll('button')],status=panel.querySelector('[data-history-status]'),list=panel.querySelector('[data-history-list]'),detail=panel.querySelector('[data-history-detail]'),more=panel.querySelector('[data-history-more]'),refresh=panel.querySelector('[data-history-refresh]');
+  let archive=null;
   let generation=0,detailGeneration=0,nextOffset=0,loaded=false,loading=false,selected=false,seen=new Set();
   const identity=()=>window.NestAuth?.identity?.signedIn&&window.NestDivisionHQ?.allowed!==false;
   const date=value=>{const n=Date.parse(value);return Number.isFinite(n)?new Date(n).toLocaleString():'';};
   async function records(query){const response=await fetch('/api/group-email-history?'+new URLSearchParams(query),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(90000)});const data=await response.json();if(!response.ok)throw new Error(data.error||'Your email history could not load.');return data;}
-  function switchTab(index){selected=index===1;composer.hidden=selected;panel.hidden=!selected;tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;});if(selected&&!loaded&&!loading)load(false);}
-  tabs.forEach((tab,index)=>{tab.addEventListener('click',()=>switchTab(index));tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const target=event.key==='Home'?0:event.key==='End'?1:1-index;switchTab(target);tabs[target].focus();});});
+  function switchTab(index){selected=index===1;composer.hidden=index!==0;panel.hidden=!selected;if(archive){archive.panel.hidden=index!==2;if(index===2)archive.load();}tabs.forEach((tab,i)=>{tab.setAttribute('aria-selected',String(i===index));tab.tabIndex=i===index?0:-1;});if(selected&&!loaded&&!loading)load(false);}
+  if(window.NestEmailArchive){archive=window.NestEmailArchive.create(host,nav,()=>switchTab(2));tabs.push(archive.button);window.NestAuth?.ready?.then(()=>archive.verify());}
+  tabs.forEach((tab,index)=>{if(index!==2)tab.addEventListener('click',()=>switchTab(index));tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const visible=tabs.filter(el=>!el.hidden),current=visible.indexOf(tab),target=event.key==='Home'?visible[0]:event.key==='End'?visible.at(-1):visible[(current+(event.key==='ArrowLeft'?-1:1)+visible.length)%visible.length];switchTab(tabs.indexOf(target));target.focus();});});
   async function load(append){
    if(!identity()||loading)return;const own=++generation;loading=true;refresh.disabled=more.disabled=true;status.textContent='Loading your sent emails…';
    if(!append){list.replaceChildren();detail.replaceChildren();seen=new Set();nextOffset=0;detailGeneration++;}
@@ -45,11 +47,11 @@
     detail.append(heading,sent,metrics,counts,recipients,contentHeading,frame);
    }catch(error){if(own===detailGeneration&&epoch===generation&&identity()){detail.textContent=error.message;const retry=document.createElement('button');retry.type='button';retry.textContent='Try again';retry.addEventListener('click',()=>show(requestId,button));detail.append(document.createElement('br'),retry);}}
   }
-  function reset(){generation++;detailGeneration++;loading=false;loaded=false;nextOffset=0;seen=new Set();list.replaceChildren();detail.replaceChildren();status.textContent='';more.hidden=true;refresh.disabled=false;more.disabled=false;}
+  function reset(){if(archive){archive.reset();switchTab(0);}generation++;detailGeneration++;loading=false;loaded=false;nextOffset=0;seen=new Set();list.replaceChildren();detail.replaceChildren();status.textContent='';more.hidden=true;refresh.disabled=false;more.disabled=false;}
   refresh.addEventListener('click',()=>load(false));more.addEventListener('click',()=>load(true));
   document.addEventListener('nest-hq-tab-change',event=>{if(event.detail?.tab==='communications')switchTab(0);});
   document.addEventListener('nest-email-sent',()=>{loaded=false;if(selected)load(false);});
-  document.addEventListener('nest-auth-change',reset);document.addEventListener('nest-hq-access-revoked',reset);window.addEventListener('pagehide',reset);
+  document.addEventListener('nest-auth-change',()=>{reset();if(window.NestAuth?.identity?.signedIn)archive?.verify();});document.addEventListener('nest-hq-access-revoked',reset);window.addEventListener('pagehide',reset);
  }
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();

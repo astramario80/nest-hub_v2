@@ -64,11 +64,15 @@
     },
     "api/group-email-send.mjs": {
       "maxDuration": 180,
-      "regions": ["sfo1"]
+      "regions": [
+        "sfo1"
+      ]
     },
     "api/group-email-history.mjs": {
       "maxDuration": 90,
-      "regions": ["sfo1"]
+      "regions": [
+        "sfo1"
+      ]
     },
     "api/diagnostics.mjs": {
       "maxDuration": 30
@@ -78,6 +82,12 @@
     },
     "api/finished-list.mjs": {
       "maxDuration": 60
+    },
+    "api/group-email-archive.mjs": {
+      "maxDuration": 180,
+      "regions": [
+        "sfo1"
+      ]
     }
   },
   "redirects": [

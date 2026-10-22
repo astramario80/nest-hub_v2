@@ -19,6 +19,9 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='auth-email-archive'){
+    try{return json_(emailArchiveDispatch_(r));}catch(_){return json_({status:503});}
+  }
   if(r.action==='auth-group-email-access'){
     try{return json_(groupEmailAccess_(r));}catch(_){return json_({status:503});}
   }
