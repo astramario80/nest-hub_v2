@@ -47,6 +47,7 @@
   }
   function reset(){generation++;detailGeneration++;loading=false;loaded=false;nextOffset=0;seen=new Set();list.replaceChildren();detail.replaceChildren();status.textContent='';more.hidden=true;refresh.disabled=false;more.disabled=false;}
   refresh.addEventListener('click',()=>load(false));more.addEventListener('click',()=>load(true));
+  document.addEventListener('nest-hq-tab-change',event=>{if(event.detail?.tab==='communications')switchTab(0);});
   document.addEventListener('nest-email-sent',()=>{loaded=false;if(selected)load(false);});
   document.addEventListener('nest-auth-change',reset);document.addEventListener('nest-hq-access-revoked',reset);window.addEventListener('pagehide',reset);
  }
