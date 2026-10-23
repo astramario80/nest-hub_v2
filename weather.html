@@ -41,6 +41,11 @@
       <form id="weather-form">
         <fieldset id="weather-fields" disabled>
           <label for="weather-period">Your division / period</label><select id="weather-period" required></select>
+          <div id="weather-preview-counselor" hidden>
+            <label for="weather-preview-surname">Sample last name — administrator test</label><select id="weather-preview-surname"></select>
+            <p>Try these sample names to check counselor matching. This does not change anyone’s enrollment.</p>
+            <p id="weather-preview-counselor-status" role="status"></p><a id="weather-preview-counselor-link" target="_blank" rel="noopener noreferrer" hidden>Open counselor appointment scheduler</a>
+          </div>
           <h3>How are you feeling right now?</h3>
           <p id="weather-emotion-help">Hover to magnify the wheel. Click or tap an emotion to select and confirm it immediately. Use arrow keys to explore the wheel and Enter or Space to confirm. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
           <div class="weather-wheel-layout">

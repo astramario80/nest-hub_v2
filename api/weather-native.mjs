@@ -11,7 +11,7 @@ export default async function handler(req,res){
  const operation=String(input.operation||'bootstrap');if(!(req.method==='GET'?reads:writes).has(operation))return res.status(400).json({error:'Invalid weather action.'});
  // Only selected fields cross the bridge. Identity, owner status, audience, and timestamps never come from the browser.
  const payload={action:'auth-weather-native',session,operation};
- for(const key of ['period','page','year','trimester','since','draft','emotion','pacing','challenge','safety','working','change','dates'])if(Object.hasOwn(input,key))payload[key]=input[key];
+ for(const key of ['period','page','year','trimester','since','draft','emotion','pacing','challenge','safety','working','change','dates','previewSurname'])if(Object.hasOwn(input,key))payload[key]=input[key];
  try{
   const data=await bridge(payload,operation==='export'?55000:45000);
   if(data.status!==200){const code=[400,401,403,409,429].includes(data.status)?data.status:503;return res.status(code).json({error:data.error||({400:'Check the required fields.',401:'Your sign-in has expired.',403:'Your account does not have access to this weather action.',409:'Confirm your emotion again before submitting.',429:'Please wait before confirming another emotion.'}[code])||'Weather reports are temporarily unavailable. Please try again.'});}

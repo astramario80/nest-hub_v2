@@ -1,6 +1,6 @@
 (() => {
  const $=id=>document.getElementById(id),form=$('weather-form');if(!form)return;
- let frozen=false,lensSvg,attemptedEmotion='',catalog=[],config,preview,confirmed='',draft=crypto.randomUUID(),busy=false,confirmationRequest=0,confirmedDraft='',submitted=false,identityKey='',loadVersion=0;
+ let frozen=false,lensSvg,attemptedEmotion='',catalog=[],config,preview,confirmed='',draft=crypto.randomUUID(),busy=false,confirmationRequest=0,confirmedDraft='',submitted=false,identityKey='',loadVersion=0,counselorRequest=0;
  const status=$('weather-form-status'),confirmStatus=$('weather-confirm-status'),submitStatus=$('weather-submit-status');
  async function api(operation,fields={},write=false){
   const response=await fetch('/api/weather-native'+(write?'':'?'+new URLSearchParams({operation,...fields})),{method:write?'POST':'GET',credentials:'same-origin',cache:'no-store',headers:write?{'Content-Type':'application/json'}:undefined,body:write?JSON.stringify({operation,...fields}):undefined,signal:AbortSignal.timeout(60000)});
@@ -35,14 +35,24 @@
   if(attemptedEmotion&&attemptedEmotion!==item.id){draft=crypto.randomUUID();confirmed='';confirmedDraft='';}
   attemptedEmotion=item.id;const request=++confirmationRequest,before=draft;busy=true;$('weather-wheel').setAttribute('aria-busy','true');confirmStatus.textContent='Confirming your emotion…';
   try{
-   const data=await api('confirm',{period,draft:before,emotion:item.id},true);if(request!==confirmationRequest)return;
+   const data=await api('confirm',{period,draft:before,emotion:item.id,previewSurname:config?.testMode?$('weather-preview-surname').value:undefined},true);if(request!==confirmationRequest)return;
    if(!data.confirmed)throw new Error('That confirmation was already used. Choose the emotion again.');confirmed=item.id;confirmedDraft=before;$('weather-emotion-answer').value=item.answer;
    confirmStatus.textContent=data.test?(data.alerted?'Test emotion confirmed. The support alert is visible only to you.':'Test emotion confirmed.'):data.alerted?'Emotion confirmed. A support alert is available to Mr. Penalver, your division manager, and partner liaison.':'Emotion confirmed.';
    if(item.charged&&data.counselor){$('weather-counselor').hidden=false;const link=$('weather-counselor-link');link.href=data.counselor.url;link.textContent=data.counselor.unmatched?'Find your counselor and appointment link':'Schedule with '+data.counselor.name;}
   }catch(error){if(request===confirmationRequest)confirmStatus.textContent=error.message;}
   finally{busy=false;$('weather-wheel').setAttribute('aria-busy','false');}
  }
- $('weather-period').addEventListener('change',clearConfirmation);
+ async function previewCounselor(){
+  const request=++counselorRequest,version=loadVersion,link=$('weather-preview-counselor-link'),message=$('weather-preview-counselor-status');link.hidden=true;
+  if(!config?.testMode||!$('weather-preview-surname').value)return;
+  message.textContent='Finding the counselor for '+$('weather-preview-surname').value+'…';
+  try{const data=await api('counselor',{period:$('weather-period').value,previewSurname:$('weather-preview-surname').value});if(request!==counselorRequest||version!==loadVersion)return;const counselor=data.counselor;
+   message.textContent=counselor.unmatched?'No reliable counselor match; showing the school counseling directory.':'Assigned counselor: '+counselor.name;link.href=counselor.url;link.textContent=counselor.unmatched?'Open school counseling directory':'Schedule with '+counselor.name;link.hidden=false;
+   if(!$('weather-counselor').hidden){$('weather-counselor-link').href=link.href;$('weather-counselor-link').textContent=link.textContent;}
+  }catch(error){if(request===counselorRequest&&version===loadVersion)message.textContent=error.message;}
+ }
+ $('weather-preview-surname').addEventListener('change',previewCounselor);
+ $('weather-period').addEventListener('change',()=>{clearConfirmation();previewCounselor();});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
   if(submitted){form.reset();$('weather-submit').formNoValidate=false;submitted=false;clearConfirmation();preview=null;$('weather-emotion-answer').value='';$('weather-submit').textContent=config?.testMode?'Complete administrator test':'Submit weather report';submitStatus.textContent=config?.testMode?'Ready for another administrator test.':'Ready for a new check-in.';return;}
@@ -76,11 +86,12 @@
   svg.addEventListener('click',event=>{const group=event.target.closest('[data-emotion]'),item=items.find(x=>x.id===group?.dataset.emotion);if(item&&!busy){select(item,event,true);frozen=true;$('weather-lens').hidden=true;if($('weather-fields').disabled){confirmStatus.textContent='Preview selected. Student check-ins require a matching enrolled-student account.';}else confirm();}});
  }).catch(error=>{status.textContent=error.message;throw error;});
  async function load(){
-  const version=++loadVersion;identityKey=String(window.NestAuth?.identity?.email||'')+':'+String(window.NestAuth?.identity?.username||'');clearConfirmation();form.reset();preview=null;submitted=false;config=null;window.NestWeather.config=null;$('weather-fields').disabled=true;$('weather-admin-tab').hidden=true;view('compose');
+  const version=++loadVersion;identityKey=String(window.NestAuth?.identity?.email||'')+':'+String(window.NestAuth?.identity?.username||'');clearConfirmation();form.reset();preview=null;submitted=false;config=null;window.NestWeather.config=null;$('weather-fields').disabled=true;$('weather-admin-tab').hidden=true;$('weather-preview-counselor').hidden=true;counselorRequest++;view('compose');
   if(!window.NestAuth?.identity?.signedIn){status.textContent='Sign in to NEST to check in.';window.NestWeather.ready=Promise.resolve(null);return;}
   status.textContent='Loading your check-in…';const pending=api('bootstrap');window.NestWeather.ready=pending;
   try{const data=await pending;await wheelReady;if(version!==loadVersion)return;config=data;window.NestWeather.config=data;
    $('weather-admin-tab').hidden=!data.admin;const formPeriods=data.testMode?data.previewPeriods:data.studentPeriods;$('weather-period').replaceChildren(...formPeriods.map(p=>option(p,periodLabel(p))));$('weather-fields').disabled=!formPeriods.length;$('weather-submit').textContent=data.testMode?'Complete administrator test':'Submit weather report';
+   $('weather-preview-counselor').hidden=!data.testMode;$('weather-preview-surname').replaceChildren(...(data.previewSurnames||[]).map(name=>option(name,name)));if(data.testMode)previewCounselor();
    status.textContent=data.testMode?'Administrator test mode: choose any division and try the complete form. Alerts are visible only to you. Completing this test does not add a student report.':data.studentPeriods.length?'Choose the emotion that fits how you feel today.':data.admin?'Your administrator account can review the archive and test support alerts. Student check-ins require a matching enrolled-student record.':'Your school email and period could not be matched to the enrolled-student directory. Ask Mr. Penalver to check your linked email and enrollment.';
    const currentYear=Object.keys(data.calendars||{}).sort().at(-1);if(currentYear){$('weather-calendar-year').value=currentYear;['start','t1','t2','end'].forEach((k,i)=>$('weather-calendar-'+k).value=data.calendars[currentYear][i]);}
    $('weather-counselor-health').textContent=data.counselorError|| (data.counselorCheckedAt?'Directory checked '+new Date(data.counselorCheckedAt).toLocaleString():'Directory has not been checked yet.');

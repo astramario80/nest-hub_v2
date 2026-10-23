@@ -127,3 +127,11 @@ test('administrator test form enables division and rating controls and reports p
  w.document.querySelector('#weather-wheel [data-emotion="e0"]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await new Promise(r=>setImmediate(r));for(const id of ['weather-pacing','weather-challenge','weather-safety'])w.document.getElementById(id).value='3';w.document.getElementById('weather-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setImmediate(r));assert.match(w.document.getElementById('weather-submit-status').textContent,/No student report was added/);assert.equal(w.document.getElementById('weather-submit').textContent,'Start another test');
  w.document.getElementById('weather-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));assert.equal(w.document.getElementById('weather-submit').textContent,'Complete administrator test');
 });
+
+test('seven administrator sample surnames use the live counselor matcher while students retain their enrolled surname',()=>{
+ const s=school();s.ctx.weatherSetup_=()=>{};s.properties['weather-counselors']=JSON.stringify({checkedAt:new Date().toISOString(),counselors:s.ctx.weatherParseCounselors_(fs.readFileSync('tests/fixtures/weather-counselors.html','utf8'))});
+ const samples=s.call(OWNER,'bootstrap').previewSurnames;assert.equal(samples.length,7);const expected=['Katie Kimball','Katie Kimball','Brad Hostak','Emmalee Kronoff','Zoey Williams','Elizabeth Martinez','Mike Stallman'];
+ samples.forEach((previewSurname,i)=>{const result=s.call(OWNER,'counselor',{period:'1',previewSurname});assert.equal(result.counselor.name,expected[i]);assert.equal(result.counselor.unmatched,undefined);assert.match(result.counselor.url,/calendar|youcanbook/);});
+ assert.equal(s.call(STUDENT,'counselor',{period:'1',previewSurname:'Williams'}).counselor.name,'Katie Kimball');assert.equal(s.call(OWNER,'counselor',{period:'1',previewSurname:'Unapproved'}).counselor.unmatched,true);
+ const confirmed=s.call(OWNER,'confirm',{period:'1',previewSurname:'Penalver',emotion:s.emotion,draft:uuid});assert.equal(confirmed.test,true);assert.equal(confirmed.counselor.name,'Elizabeth Martinez');assert.equal(s.call(DM,'alerts').events.length,0);assert.equal(s.reports.length,0);
+});
