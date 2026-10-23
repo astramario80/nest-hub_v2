@@ -22,7 +22,7 @@
    if(point){popup.style.left=Math.max(0,Math.min(Math.max(0,rect.width-200),point.clientX-rect.left-100))+'px';popup.style.top=Math.max(0,Math.min(Math.max(0,rect.height-160),point.clientY-rect.top-80))+'px';}
    if(point){const matrix=svg.getScreenCTM?.();if(matrix){const p=svg.createSVGPoint();p.x=point.clientX;p.y=point.clientY;const local=p.matrixTransform(matrix.inverse());x=local.x;y=local.y;}}
    else{const transform=group.querySelector('text')?.getAttribute('transform')||'',match=transform.match(/rotate\(([-\d.]+)\) translate\(([-\d.]+),/);if(match){const angle=Number(match[1])*Math.PI/180,radius=Number(match[2]);x=1000+radius*Math.cos(angle);y=1000+radius*Math.sin(angle);}}
-   lens.setAttribute('viewBox',`${Math.max(0,Math.min(1760,x-120))} ${Math.max(0,Math.min(1840,y-80))} 240 160`);
+   lens.setAttribute('viewBox',`${Math.max(0,Math.min(1880,x-60))} ${Math.max(0,Math.min(1904,y-48))} 120 96`);
   }
  }
  async function confirm(){
