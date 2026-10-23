@@ -16,7 +16,7 @@ async function handler(req,res){
   if(!body||Array.isArray(body)||JSON.stringify(body).length>100000||!validToken(body.requestId)||typeof body.subject!=='string'||!body.subject.trim()||body.subject.length>180||/[\r\n\x00-\x1f]/.test(body.subject)||typeof body.html!=='string'||body.html.length>60000||!['division','leadership','nest'].includes(body.audience)||['leadership','nest'].includes(body.audience)&&body.period!=='all'||body.period!=='all'&&!Object.hasOwn(DIVISIONS,body.period)||typeof body.testing!=='boolean'||!Array.isArray(body.recipients)||body.recipients.length>MAX_EMAIL_RECIPIENTS||body.recipients.some(email=>typeof email!=='string'||districtEmail(email)!==email))return res.status(400).json({error:'Check the subject, message and selected recipients (maximum 300).'});
   if(!process.env.POSTMARK_SERVER_TOKEN||!/^[a-z0-9._+-]+@gknest\.org$/i.test(process.env.POSTMARK_FROM_EMAIL||'')||process.env.NEST_EMAIL_ENABLED!=='true')return res.status(503).json({error:'NEST email setup is not complete. Your draft is still here.'});
   const content=emailContent(body.html);if(!content.text)return res.status(400).json({error:'Add a message before sending.'});
-  let reserved=false,stage='identity-and-roster';
+  let reserved=false,providerResult=null,stage='identity-and-roster';
   try{
     const [fresh,sender]=await Promise.all([groupRecords(session,body.period,body.audience),emailIdentity(req,res,session)]);
     if(sender.status!==200||!accountEmail(sender.email))return res.status(sender.status===401?401:503).json({error:'Your sending identity could not be verified.'});
@@ -33,13 +33,14 @@ async function handler(req,res){
     reserved=true;
     const messages=postmarkMessages({recipients:body.testing?[reservation.replyTo]:recipients,replyTo:reservation.replyTo,subject:body.subject.trim(),content,requestId:body.requestId,testing:body.testing,senderKey:emailSenderKey(sender.email)});
     let result;try{result=await submitPostmark(messages);}catch{result={state:'unknown',accepted:0,rejected:0};}
+    providerResult=result;
     // A failed journal acknowledgement must never cause an automatic resend.
     const saved=await bridge({action:'auth-group-email',operation:'finish',session,requestId:body.requestId,fingerprint,lease:reservation.lease,...result},25000);
-    if(saved.status!==200)return res.status(200).json({state:'unknown',accepted:result.accepted,rejected:result.rejected});
+    if(saved.status!==200)return res.status(200).json({state:result.state,accepted:result.accepted,rejected:result.rejected,archivePending:true});
     return res.status(200).json({state:result.state,accepted:result.accepted,rejected:result.rejected});
   }catch(error){
     console.error('NEST email send unavailable',{stage,kind:error.name,message:/^Google bridge HTTP \d+$|^Unexpected Google response host$|^Group records unavailable$|^School identity unavailable$/.test(error.message)?error.message:'Service read failed'});
-    if(reserved)return res.status(200).json({state:'unknown',accepted:0,rejected:0});
+    if(reserved)return res.status(200).json({state:providerResult?.state||'unknown',accepted:providerResult?.accepted||0,rejected:providerResult?.rejected||0,archivePending:true});
     return res.status([401,403].includes(error.status)?error.status:503).json({error:[401,403].includes(error.status)?error.message:'Email access could not be verified. Your draft is still here.'});
   }
 }

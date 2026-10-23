@@ -195,3 +195,21 @@ test('every configured NEST leadership role can select the full live roster; ord
  for(const access of [{status:200,roles:[]},{status:403,roles:['Safety Officer']}])assert.equal((await server(access,'all','nest')).res.code,403);
  assert.equal((await server({status:200,roles:['Safety Officer']},'2','nest')).res.code,400);
 });
+
+test('uncertain delivery rechecks status without sending again and restores confirmed success',async()=>{
+ const {w,sends}=await nestMailApp(async()=>({ok:true,status:200,json:async()=>({state:'unknown',accepted:0,rejected:0})}));
+ try{const q=s=>w.document.querySelector(s);q('[data-email-send]').click();await tick();const sendFetch=w.fetch;let checks=0;
+ w.fetch=async(url,options)=>{if(url.startsWith('/api/group-email-history?')){checks++;return {ok:true,json:async()=>({requestId:sends[0].requestId,state:'accepted',accepted:2,rejected:0,unconfirmed:0})};}return sendFetch(url,options);};
+ q('[data-email-check]').click();await tick();assert.equal(checks,1);assert.equal(sends.length,1);assert.match(q('[data-email-status]').textContent,/Email sent to 2 recipients/);assert.equal(q('[data-email-status]').dataset.state,'success');assert.equal(q('[data-email-check]').hidden,true);assert.equal(q('[data-email-send]').disabled,true);
+ }finally{w.close();}
+});
+test('a partially successful send reports confirmed counts instead of an unconfirmed batch',async()=>{
+ const {w,sends}=await nestMailApp(async()=>({ok:true,status:200,json:async()=>({state:'partial',accepted:7,rejected:1})}));
+ try{const q=s=>w.document.querySelector(s);q('[data-email-send]').click();await tick();assert.match(q('[data-email-status]').textContent,/Email sent to 7 recipients.*1 recipient was rejected/);assert.equal(q('[data-email-check]').hidden,true);assert.equal(sends.length,1);}finally{w.close();}
+});
+
+test('logout discards a late status check and clears its controls',async()=>{
+ const {w,sends}=await nestMailApp(async()=>({ok:true,status:200,json:async()=>({state:'pending'})}));
+ try{const q=s=>w.document.querySelector(s);q('[data-email-send]').click();await tick();let settle;w.fetch=()=>new Promise(resolve=>settle=resolve);q('[data-email-check]').click();await tick();w.NestAuth.identity={signedIn:false};w.document.dispatchEvent(new w.Event('nest-auth-change'));settle({ok:true,json:async()=>({requestId:sends[0].requestId,state:'accepted',accepted:1})});await tick();assert.equal(q('[data-email-status]').textContent,'');assert.equal(q('[data-email-check]').hidden,true);assert.equal(q('[data-email-send]').disabled,true);
+ }finally{w.close();}
+});

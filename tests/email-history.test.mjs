@@ -10,7 +10,7 @@ function response(){return {setHeader(){},status(code){this.code=code;return thi
 async function api(options={}){
  const oldFetch=globalThis.fetch,env={...process.env};Object.assign(process.env,{SPINNER_BRIDGE_URL:'https://school.invalid',SPINNER_BRIDGE_TOKEN:'private-bridge',POSTMARK_SERVER_TOKEN:'private-postmark'});
  const actor=emailSenderKey(sender),calls=[];
- const metadata={nestActor:actor,nestRequestId:requestId,nestSelectedCount:'2',nestTesting:'false'};
+ const metadata={nestActor:actor,nestRequestId:requestId,nestSelectedCount:String(options.selected||2),nestTesting:'false'};
  const message={MessageID:id,Metadata:metadata,Tag:'nest-'+requestId,Recipients:[email],Subject:'Meeting',ReceivedAt:'2026-10-22T17:00:00Z',TrackOpens:true};
  const messages=[message,{...message,MessageID:second,Recipients:['other@students.bethelsd.org']}];
  globalThis.fetch=async(url,init)=>{
@@ -54,4 +54,10 @@ test('failed detail reads offer a retry that recovers the selected message',asyn
  let attempts=0;
  const w=historyUI(async url=>({ok:!url.includes('requestId=')||++attempts>1,json:async()=>!url.includes('requestId=')?{messages:[{requestId,subject:'Meeting',sentAt:'2026-10-22T17:00:00Z'}],hasMore:false,nextOffset:1}:attempts===1?{error:'Your email history could not load. Please try again.'}:{subject:'Meeting',sentAt:'2026-10-22T17:00:00Z',tracking:true,openRate:0,observedOpens:0,accepted:1,selected:1,recipients:[{email,openedAt:null}],html:'<p>Original message</p>'}}));
  try{w.document.getElementById('email-history-tab').click();await tick();w.document.querySelector('.email-history-item').click();await tick();const detail=w.document.querySelector('[data-history-detail]');assert.match(detail.textContent,/could not load/);detail.querySelector('button').click();await tick();assert.equal(attempts,2);assert.ok(detail.querySelector('iframe'));}finally{w.close();}
+});
+
+test('status checks use only owned provider records and keep missing recipients unconfirmed',async()=>{
+ const complete=await api({query:{action:'status'}});assert.equal(complete.res.data.state,'accepted');assert.equal(complete.res.data.accepted,2);assert.equal(complete.res.data.unconfirmed,0);assert.equal(complete.calls.length,1);assert.equal(complete.res.data.html,undefined);assert.equal(complete.res.data.recipients,undefined);
+ const partial=await api({selected:3,query:{action:'status'}});assert.equal(partial.res.data.state,'partial');assert.equal(partial.res.data.accepted,2);assert.equal(partial.res.data.rejected,0);assert.equal(partial.res.data.unconfirmed,1);
+ assert.equal((await api({foreign:true,query:{action:'status'}})).res.code,503);assert.equal((await api({empty:true,query:{action:'status'}})).res.code,404);
 });

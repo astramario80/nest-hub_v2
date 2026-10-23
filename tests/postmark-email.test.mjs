@@ -47,7 +47,8 @@ test('header injection, malformed scope, oversized HTML and excessive recipient 
 });
 test('duplicate reservation never reaches Postmark; lost provider or journal acknowledgement never retries',async()=>{
  const duplicate=await api({duplicate:true});assert.equal(duplicate.messages.length,0);assert.equal(duplicate.res.data.state,'pending');
- for(const config of [{lostResponse:true},{finishFailed:true}]){const result=await api(config);assert.equal(result.res.data.state,'unknown');assert.equal(result.messages.length,1);}
+ const lost=await api({lostResponse:true});assert.equal(lost.res.data.state,'unknown');assert.equal(lost.messages.length,1);
+ const saved=await api({finishFailed:true});assert.equal(saved.res.data.state,'accepted');assert.equal(saved.res.data.accepted,1);assert.equal(saved.res.data.archivePending,true);assert.equal(saved.messages.length,1);
 });
 test('batch response checks per-recipient rejection even with HTTP 200',async()=>{
  const rejected=await api({provider:[{To:recipient,ErrorCode:406,Message:'Inactive recipient'}]});assert.equal(rejected.res.data.state,'rejected');
@@ -79,3 +80,9 @@ test('NEST-wide selections revalidate membership and reserve against the senderâ
 });
 
 test('an unconfirmed permanent archive prevents the provider send',async()=>{const result=await api({archiveFailed:true});assert.equal(result.res.code,503);assert.equal(result.messages.length,0);assert.match(result.res.data.error,/archive/);});
+
+test('documented batch rejection without To preserves successful recipients and assigns ordered outcomes',async()=>{
+ const old=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify([{To:recipient,ErrorCode:0,MessageID:'id'},{ErrorCode:406,Message:'Inactive recipient'}]));
+ try{const result=await submitPostmark([{To:recipient},{To:replyTo}]);assert.equal(result.state,'partial');assert.equal(result.accepted,1);assert.equal(result.rejected,1);assert.deepEqual(result.outcomes,[{email:recipient,messageId:'id',errorCode:0},{email:replyTo,messageId:null,errorCode:406}]);}finally{globalThis.fetch=old;}
+ const rejected=await api({provider:[{ErrorCode:406,Message:'Inactive recipient'}]});assert.equal(rejected.res.data.state,'rejected');assert.equal(rejected.res.data.rejected,1);
+});

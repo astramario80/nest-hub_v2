@@ -8,7 +8,7 @@
     const button=document.createElement('button');button.type='button';button.className='group-email-launch';button.textContent='Email group';button.hidden=true;
     if(!inline)lookup.querySelector('.leadership-controls').append(button);
     const dialog=document.createElement(inline?'section':'dialog');dialog.className='group-email-dialog'+(inline?' group-email-inline':'');dialog.setAttribute('aria-labelledby','group-email-title');
-    dialog.innerHTML=`<div class="group-email-heading"><h2 id="group-email-title">Email group</h2><button type="button" data-email-close aria-label="Close email window">×</button></div><div class="group-email-fields group-email-audience"><label>Send to<select data-email-group><option value="">Choose an audience</option><option value="individual">Individual</option><option value="division">Division</option><option value="position">Position</option><option value="leadership">Leadership teams</option></select></label><label data-email-search-label hidden>Find a recipient<input data-email-search type="search" placeholder="Search any NEST member"></label><details class="group-email-picker" data-email-picker hidden><summary data-email-picker-summary>Choose options</summary><fieldset data-email-options><legend class="sr-only">Audience options</legend></fieldset></details><span data-email-count role="status" aria-live="polite"></span></div><div class="group-email-recipients" data-email-recipients hidden></div><details data-email-review hidden><summary>Review recipients</summary><div class="group-email-recipient-preview" data-email-preview></div></details><label class="group-email-subject">Subject<input data-email-subject maxlength="180" autocomplete="off"></label><div class="group-email-toolbar" role="group" aria-label="Message formatting"><button type="button" data-email-command="bold"><strong>Bold</strong></button><button type="button" data-email-command="italic"><em>Italic</em></button><button type="button" data-email-command="underline"><u>Underline</u></button><button type="button" data-email-command="strikeThrough"><s>Strike through</s></button><button type="button" data-email-command="insertUnorderedList">Bullet points</button><button type="button" data-email-command="insertOrderedList">Numbered list</button><button type="button" data-email-command="indent">Indent</button><button type="button" data-email-command="outdent">Outdent</button><button type="button" data-email-link>Insert hyperlink</button><select data-email-font aria-label="Font style"><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Courier New">Courier New</option></select><select data-email-size aria-label="Font size"><option value="2">Small</option><option value="3" selected>Normal</option><option value="4">Large</option><option value="5">Extra large</option></select><select data-email-block aria-label="Paragraph style"><option value="p">Paragraph</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="blockquote">Quote</option></select><label class="group-email-color">Text color<input type="color" data-email-color value="#172238" aria-label="Text color"></label><label class="group-email-color">Highlight<input type="color" data-email-highlight value="#fff3a3" aria-label="Highlight color"></label><button type="button" data-email-command="justifyLeft">Align left</button><button type="button" data-email-command="justifyCenter">Center</button><button type="button" data-email-command="justifyRight">Align right</button><button type="button" data-email-command="removeFormat">Clear formatting</button><button type="button" data-email-command="unlink">Remove link</button><button type="button" data-email-command="undo">Undo</button><button type="button" data-email-command="redo">Redo</button></div><div class="group-email-message" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Email message"></div><p class="group-email-notice">For official NEST™ communications only. Review your recipients before sending. Replies go to your linked email address. <a href="/email-privacy" target="_blank" rel="noopener noreferrer">Email privacy policy</a>.</p><button type="button" data-email-error-copy hidden>Copy error details</button><div class="group-email-actions"><button type="button" data-email-send disabled>Send email</button><button type="button" data-email-test disabled>Send test to myself</button><button type="button" data-email-new hidden>New email</button></div><p class="group-email-send-status" data-email-status role="status" aria-live="polite" aria-atomic="true"></p>`;
+    dialog.innerHTML=`<div class="group-email-heading"><h2 id="group-email-title">Email group</h2><button type="button" data-email-close aria-label="Close email window">×</button></div><div class="group-email-fields group-email-audience"><label>Send to<select data-email-group><option value="">Choose an audience</option><option value="individual">Individual</option><option value="division">Division</option><option value="position">Position</option><option value="leadership">Leadership teams</option></select></label><label data-email-search-label hidden>Find a recipient<input data-email-search type="search" placeholder="Search any NEST member"></label><details class="group-email-picker" data-email-picker hidden><summary data-email-picker-summary>Choose options</summary><fieldset data-email-options><legend class="sr-only">Audience options</legend></fieldset></details><span data-email-count role="status" aria-live="polite"></span></div><div class="group-email-recipients" data-email-recipients hidden></div><details data-email-review hidden><summary>Review recipients</summary><div class="group-email-recipient-preview" data-email-preview></div></details><label class="group-email-subject">Subject<input data-email-subject maxlength="180" autocomplete="off"></label><div class="group-email-toolbar" role="group" aria-label="Message formatting"><button type="button" data-email-command="bold"><strong>Bold</strong></button><button type="button" data-email-command="italic"><em>Italic</em></button><button type="button" data-email-command="underline"><u>Underline</u></button><button type="button" data-email-command="strikeThrough"><s>Strike through</s></button><button type="button" data-email-command="insertUnorderedList">Bullet points</button><button type="button" data-email-command="insertOrderedList">Numbered list</button><button type="button" data-email-command="indent">Indent</button><button type="button" data-email-command="outdent">Outdent</button><button type="button" data-email-link>Insert hyperlink</button><select data-email-font aria-label="Font style"><option value="Arial">Arial</option><option value="Verdana">Verdana</option><option value="Georgia">Georgia</option><option value="Times New Roman">Times New Roman</option><option value="Courier New">Courier New</option></select><select data-email-size aria-label="Font size"><option value="2">Small</option><option value="3" selected>Normal</option><option value="4">Large</option><option value="5">Extra large</option></select><select data-email-block aria-label="Paragraph style"><option value="p">Paragraph</option><option value="h1">Heading 1</option><option value="h2">Heading 2</option><option value="h3">Heading 3</option><option value="blockquote">Quote</option></select><label class="group-email-color">Text color<input type="color" data-email-color value="#172238" aria-label="Text color"></label><label class="group-email-color">Highlight<input type="color" data-email-highlight value="#fff3a3" aria-label="Highlight color"></label><button type="button" data-email-command="justifyLeft">Align left</button><button type="button" data-email-command="justifyCenter">Center</button><button type="button" data-email-command="justifyRight">Align right</button><button type="button" data-email-command="removeFormat">Clear formatting</button><button type="button" data-email-command="unlink">Remove link</button><button type="button" data-email-command="undo">Undo</button><button type="button" data-email-command="redo">Redo</button></div><div class="group-email-message" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Email message"></div><p class="group-email-notice">For official NEST™ communications only. Review your recipients before sending. Replies go to your linked email address. <a href="/email-privacy" target="_blank" rel="noopener noreferrer">Email privacy policy</a>.</p><button type="button" data-email-error-copy hidden>Copy error details</button><div class="group-email-actions"><button type="button" data-email-send disabled>Send email</button><button type="button" data-email-test disabled>Send test to myself</button><button type="button" data-email-new hidden>New email</button></div><p class="group-email-send-status" data-email-status role="status" aria-live="polite" aria-atomic="true"></p><button type="button" data-email-check hidden>Check send status</button>`;
     (communicationPanel||document.body).append(dialog);
     const isOpen=()=>inline?window.NestDivisionHQ?.active===activeTab:dialog.open;
     const q=s=>dialog.querySelector(s),group=q('[data-email-group]'),recipients=q('[data-email-recipients]'),message=q('.group-email-message'),status=q('[data-email-status]');
@@ -17,7 +17,8 @@
     let data=null,period='all',generation=0,selectedRange=null,leaveEditorOnTab=false;
     const newRequestId=()=>Array.from(window.crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
     const mail={sending:false,delivery:'draft',requestId:newRequestId()};
-    let lastFailure=null;
+    let lastFailure=null,statusTimer=null,statusChecks=0;
+    const stopStatusChecks=()=>{window.clearTimeout(statusTimer);statusTimer=null;statusChecks=0;q('[data-email-check]').hidden=true;q('[data-email-check]').disabled=false;};
     function mailControls(){
       q('[data-email-send]').disabled=!data?.emailService?.ready||!chosen().length||mail.sending||mail.delivery!=='draft';
       q('[data-email-test]').disabled=!data?.emailService?.ready||mail.sending||mail.delivery!=='draft';
@@ -35,7 +36,7 @@
     q('[data-email-new]').addEventListener('click',()=>{
       if(mail.sending)return;
       if(['unknown','pending','partial'].includes(mail.delivery)&&!window.confirm('Some recipients may already have received this message. Ask a NEST administrator to check the send before composing another. Start a new message?'))return;
-      mail.delivery='draft';mail.requestId=newRequestId();clearFailure();message.replaceChildren();selectedRange=null;q('[data-email-subject]').value='';status.textContent='';mailControls();q('[data-email-subject]').focus();
+      stopStatusChecks();mail.delivery='draft';mail.requestId=newRequestId();clearFailure();message.replaceChildren();selectedRange=null;q('[data-email-subject]').value='';status.textContent='';mailControls();q('[data-email-subject]').focus();
     });
 
     const identity=()=>Boolean(window.NestAuth?.identity?.signedIn)&&(!window.NestDivisionHQ||window.NestDivisionHQ.allowed);
@@ -64,7 +65,7 @@
       }
       renderRecipients();
     }
-    function resetAccess(){mail.sending=false;message.contentEditable='true';dialog.querySelectorAll('input,select,.group-email-toolbar button').forEach(el=>el.disabled=false);clearFailure();status.textContent='';delete status.dataset.state;mail.delivery='draft';mail.requestId=newRequestId();selectedRange=null;delete lookup.dataset.emailEnabled;generation++;data=null;button.hidden=true;recipients.replaceChildren();individuals.clear();selectedRoles.clear();selectedDivisions.clear();message.replaceChildren();q('[data-email-subject]').value='';render();if(!inline&&dialog.open)dialog.close();}
+    function resetAccess(){stopStatusChecks();mail.sending=false;message.contentEditable='true';dialog.querySelectorAll('input,select,.group-email-toolbar button').forEach(el=>el.disabled=false);clearFailure();status.textContent='';delete status.dataset.state;mail.delivery='draft';mail.requestId=newRequestId();selectedRange=null;delete lookup.dataset.emailEnabled;generation++;data=null;button.hidden=true;recipients.replaceChildren();individuals.clear();selectedRoles.clear();selectedDivisions.clear();message.replaceChildren();q('[data-email-subject]').value='';render();if(!inline&&dialog.open)dialog.close();}
     async function check(p){
       if(!divisions.includes(p)||!identity()||(window.NestDivisionHQ&&window.NestDivisionHQ.active!==activeTab&&!isOpen()))return;
       const own=++generation;period='all';delete lookup.dataset.emailEnabled;data=null;button.hidden=true;render();status.textContent='Loading NEST recipients…';
@@ -193,6 +194,47 @@
     q('[data-email-color]').addEventListener('input',event=>command('foreColor',event.target.value));
     q('[data-email-highlight]').addEventListener('input',event=>command('hiliteColor',event.target.value));
     q('[data-email-link]').addEventListener('click',()=>{const raw=window.prompt('Hyperlink address (https://…)');if(!raw)return;try{const u=new URL(raw);if(!['https:','http:','mailto:'].includes(u.protocol))throw new Error();command('createLink',u.href);}catch{status.textContent='Use an https, http, or email link.';}});
+    function scheduleStatusCheck(){
+      q('[data-email-check]').hidden=false;
+      if(statusTimer||statusChecks>=4)return;
+      statusTimer=window.setTimeout(()=>{statusTimer=null;checkSendStatus();},[2000,5000,10000,20000][statusChecks++]);
+    }
+    function showSendResult(result,testing){
+      mail.delivery=result.state;mail.testing=testing;clearFailure();
+      if(result.state==='accepted'){
+        stopStatusChecks();document.dispatchEvent(new Event('nest-email-sent'));
+        status.dataset.state='success';status.textContent=testing?'Test email sent to your linked email address.':'Email sent to '+result.accepted+' recipient'+(result.accepted===1?'':'s')+'. Accepted for delivery at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. View it in Sent history.';
+        if(testing){mail.delivery='draft';mail.requestId=newRequestId();}
+      }else if(result.state==='partial'){
+        document.dispatchEvent(new Event('nest-email-sent'));failure('send',200,'delivery-partial');status.dataset.state='error';
+        status.textContent='Email sent to '+result.accepted+' recipients. '+(result.unconfirmed?result.unconfirmed+' remaining recipient'+(result.unconfirmed===1?' is':'s are')+' unconfirmed.':result.rejected+' recipient'+(result.rejected===1?' was':'s were')+' rejected and did not receive this send.')+' View Sent history. NEST will not resend automatically.';
+        if(result.unconfirmed)scheduleStatusCheck();else stopStatusChecks();
+      }else if(result.state==='rejected'){
+        stopStatusChecks();failure('send',200,'provider-rejected');status.dataset.state='error';status.textContent='Postmark rejected the message. No recipients were accepted. Your draft is still here; contact a NEST administrator.';
+      }else{
+        failure('send',200,'delivery-'+result.state);status.dataset.state='error';status.textContent='Checking send confirmation. Some recipients may already have received this email. NEST will not resend automatically.';scheduleStatusCheck();
+      }
+      mailControls();
+    }
+    async function checkSendStatus(){
+      const own=generation,requestId=mail.requestId,testing=mail.testing;
+      if(!identity()||!['unknown','pending','partial'].includes(mail.delivery))return;
+      q('[data-email-check]').disabled=true;
+      try{
+        const response=await fetch('/api/group-email-history?action=status&requestId='+encodeURIComponent(requestId),{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(30000)});
+        const result=await response.json();if(own!==generation||requestId!==mail.requestId||!identity())return;
+        if(response.ok&&result.requestId===requestId&&['accepted','partial'].includes(result.state)&&Number.isInteger(result.accepted)&&result.accepted>0)showSendResult(result,testing);
+      }catch{}finally{
+        if(own===generation&&requestId===mail.requestId&&identity()){
+          q('[data-email-check]').disabled=false;
+          if(['unknown','pending'].includes(mail.delivery)||!q('[data-email-check]').hidden){
+            if(statusChecks>=4&&['unknown','pending'].includes(mail.delivery))status.textContent='Send confirmation is still unavailable. Use Check send status or view Sent history. NEST will not resend automatically.';
+            scheduleStatusCheck();
+          }
+        }
+      }
+    }
+    q('[data-email-check]').addEventListener('click',()=>{window.clearTimeout(statusTimer);statusTimer=null;checkSendStatus();});
     async function sendEmail(testing=false){
       if(mail.sending||mail.delivery!=='draft'||!data?.emailService?.ready||!identity())return;
       const emails=chosen(),subject=q('[data-email-subject]').value.trim();
@@ -208,16 +250,10 @@
         httpStatus=response.status;const result=await response.json();if(own!==generation||!identity())return;
         if(!response.ok){attempted=false;failure('send',httpStatus,'nest-send-rejected');throw new Error(result.error||'NEST could not start sending. Your draft is still here.');}
         if(!['accepted','rejected','partial','pending','unknown'].includes(result.state))throw new Error('Send result could not be confirmed.');
-        mail.delivery=result.state;
-        if(result.state==='accepted'){
-          document.dispatchEvent(new Event('nest-email-sent'));
-          status.dataset.state='success';status.textContent=testing?'Test email sent to your linked email address.':'Email sent to '+result.accepted+' recipient'+(result.accepted===1?'':'s')+'. Accepted for delivery at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. View it in Sent history.';
-          if(testing){mail.delivery='draft';mail.requestId=newRequestId();}
-        }else if(result.state==='rejected'){failure('send',httpStatus,'provider-rejected');status.textContent='Postmark rejected the message. No recipients were accepted. Your draft is still here; contact a NEST administrator.';}
-        else{failure('send',httpStatus,'delivery-'+result.state);status.textContent=result.state==='partial'?result.accepted+' emails accepted; '+result.rejected+' rejected. Contact a NEST administrator before sending again.':'Sending is pending or unconfirmed. Contact a NEST administrator to check the send. NEST will not resend automatically.';}
+        showSendResult(result,testing);
       }catch(error){
         if(own!==generation||!identity())return;
-        if(attempted){mail.delivery='unknown';failure('send',httpStatus,'delivery-unconfirmed');status.textContent='Sending could not be confirmed. Contact a NEST administrator before sending again. NEST will not resend automatically.';}
+        if(attempted){showSendResult({state:'unknown',accepted:0,rejected:0},testing);}
         else status.textContent=error.message;
       }finally{
         window.clearTimeout(progress);if(lastFailure)status.dataset.state='error';

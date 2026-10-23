@@ -25,6 +25,11 @@ async function handler(req,res){
   if(requestId){
    if(!messages.length)return res.status(404).json({error:'This message is not available in your history.'});
    if(result.TotalCount>300||result.TotalCount!==messages.length)throw new Error('Incomplete message history');
+   if(req.query?.action==='status'){
+    const selected=Number(messages[0].Metadata.nestSelectedCount);
+    if(!Number.isInteger(selected)||selected<messages.length||selected>300||messages.some(m=>Number(m.Metadata.nestSelectedCount)!==selected))throw new Error('Invalid send count');
+    return res.status(200).json({requestId,state:messages.length===selected?'accepted':'partial',accepted:messages.length,rejected:0,unconfirmed:selected-messages.length,selected,testing:messages[0].Metadata.nestTesting==='true'});
+   }
    const [detail,activity]=await Promise.all([postmarkRead('/messages/outbound/'+messages[0].MessageID+'/details'),postmarkRead('/messages/outbound/opens',{count:'500',offset:'0',tag:'nest-'+requestId,messagestream:stream})]);
    if(detail.Metadata?.nestActor!==actor||detail.Metadata?.nestRequestId!==requestId||detail.MessageID!==messages[0].MessageID||!Array.isArray(activity.Opens)||!Number.isInteger(activity.TotalCount)||activity.TotalCount<0||activity.TotalCount>500)throw new Error('Invalid activity ownership');
    const recipients=messages.map(m=>({email:m.Recipients[0],messageId:m.MessageID,openedAt:null})),byId=new Map(recipients.map(r=>[r.messageId,r]));
