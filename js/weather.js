@@ -1,5 +1,5 @@
 (() => {
-  const divisions=[['Advisory','Advisory'],['1','Period 1'],['2','Period 2'],['3','Period 3'],['4','Period 4'],['5','Period 5'],['CTSO','CTSO']];
+  const divisions=[['Advisory','Advisory'],['1','Period 1'],['2','Period 2'],['3','Period 3'],['4','Period 4'],['5','Period 5'],['7','Period 7'],['CTSO','CTSO']];
   const status=document.getElementById('weather-status');
   const buttons=document.getElementById('weather-divisions');
   const section=document.getElementById('weather-data');
@@ -101,10 +101,18 @@
     summary.slice(1).forEach(row=>{const tr=document.createElement('tr');row.slice(0,4).forEach(value=>{const cell=document.createElement('td');cell.textContent=value||'—';tr.append(cell);});table.append(tr);});
     trimesters.replaceChildren(table);
   }
-  async function get(period,page=0){const response=await fetch('/api/weather?period='+encodeURIComponent(period)+'&page='+page,{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Weather reports unavailable.');return data;}
+  async function get(period,page=0){
+    if(window.NestWeather){
+      if(period==='mine'){const config=await window.NestWeather.ready;return {periods:config?.periods||[]};}
+      const data=await window.NestWeather.api('reports',{period,page,year:document.getElementById('weather-year').value,trimester:document.getElementById('weather-trimester').value});
+      const year=document.getElementById('weather-year'),chosen=year.value;
+      const options=[['all','All school years'],...data.years.map(y=>[y,y])];year.replaceChildren(...options.map(([value,label])=>{const option=document.createElement('option');option.value=value;option.textContent=label;return option;}));year.value=chosen||'all';return data;
+    }
+    const response=await fetch('/api/weather?period='+encodeURIComponent(period)+'&page='+page,{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||'Weather reports unavailable.');return data;
+  }
   function renderButtons(allowed){
     buttons.replaceChildren();
-    divisions.forEach(([period,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=!allowed.includes(period);button.title=button.disabled?'Available to this division’s manager, assistant manager, partner liaison, and CTSO executives':'';button.setAttribute('aria-pressed',String(selected===period));button.addEventListener('click',()=>show(period));buttons.append(button);});
+    divisions.forEach(([period,label])=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.disabled=!allowed.includes(period);button.title=button.disabled?'Available to this division’s manager, assistant manager, partner liaison, ':'';button.setAttribute('aria-pressed',String(selected===period));button.addEventListener('click',()=>show(period));buttons.append(button);});
   }
   async function show(period,page=0){
     selected=period;currentPage=page;const current=++request;
@@ -117,17 +125,21 @@
       section.hidden=false;renderResponses(data,period,page);
       section.hidden=false;pages.hidden=false;prev.disabled=page===0;next.disabled=!data.hasMore;
       document.getElementById('weather-page-label').textContent='Page '+(page+1);
-      status.textContent=data.rows.length?`${data.rows.length} current-trimester responses on this page.`:'No responses this trimester yet.';
+      status.textContent=window.NestWeather?`${data.total} matching reports; ${data.rows.length} on this page.`:data.rows.length?`${data.rows.length} current-trimester responses on this page.`:'No responses this trimester yet.';
     }catch(error){if(current===request)status.textContent=error.message;}
   }
   async function load(){
     stopResize?.();
-    request++;selected='';allowed=[];section.hidden=true;pages.hidden=true;renderButtons([]);
+    const currentLoad=++request;selected='';allowed=[];section.hidden=true;pages.hidden=true;renderButtons([]);
     if(!window.NestAuth?.identity?.signedIn){status.textContent='Sign in from Quick Access above to view your division’s report data.';return;}
     status.textContent='Checking division access…';
-    try{const data=await get('mine');if(!window.NestAuth?.identity?.signedIn)return;allowed=data.periods;renderButtons(allowed);status.textContent=allowed.length?'Choose a division above to view its charts and responses.':'Your NEST account does not have weather report access.';}
+    try{const data=await get('mine');if(currentLoad!==request||!window.NestAuth?.identity?.signedIn)return;allowed=data.periods;renderButtons(allowed);status.textContent=allowed.length?'Choose a division above to view its charts and responses.':'Your NEST account does not have weather report access.';}
     catch(error){status.textContent=error.message;}
   }
+  document.addEventListener('nest-weather-ready',event=>{allowed=event.detail.periods;renderButtons(allowed);});
+  document.addEventListener('nest-weather-view',event=>{if(event.detail.view==='admin')show(document.getElementById('weather-admin-division').value);else if(event.detail.view==='reports'&&allowed.length)show(allowed[0]);});
+  document.getElementById('weather-filter-apply')?.addEventListener('click',()=>{const period=window.NestWeather?.view==='admin'?document.getElementById('weather-admin-division').value:selected;if(period)show(period);});
+  document.getElementById('weather-admin-division')?.addEventListener('change',()=>{if(window.NestWeather?.view==='admin')show(document.getElementById('weather-admin-division').value);});
   prev.addEventListener('click',()=>{if(selected&&currentPage>0)show(selected,currentPage-1);});
   next.addEventListener('click',()=>{if(selected)show(selected,currentPage+1);});
   document.addEventListener('nest-auth-change',load);window.NestAuth?.ready.then(load);

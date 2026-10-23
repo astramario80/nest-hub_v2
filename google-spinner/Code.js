@@ -59,6 +59,13 @@ function nestRequest_(r){
       return json_(session?memberLeadershipDirectory_():{status:401});
     } catch(_){return json_({status:503});}
   }
+  if(r.action==='auth-weather-native') {
+    try {
+      const empty=weatherNativePollEmpty_(r);if(empty)return json_(empty);
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      return json_(session?weatherNativeDispatch_(session,r):{status:401});
+    } catch(error){console.error('Native weather failed',String(error&&error.message||error).slice(0,160));return json_({status:503});}
+  }
   if(r.action==='auth-weather') {
     try {
       const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
@@ -125,7 +132,7 @@ function nestAccessValues_(id,range){
 function withNestReadContext_(r,work){
  const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory'||r.action==='auth-group-email-access';
  if(!readonly){
-  if(!['auth-group-email','auth-email-archive','diagnostics-record'].includes(r.action))return work();
+  if(!['auth-group-email','auth-email-archive','diagnostics-record','auth-weather-native'].includes(r.action))return work();
   // Reuse account reads only inside this request; later requests recheck live data.
   const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
   try{return work();}finally{NEST_ACCESS_READS=previous;}

@@ -25,11 +25,9 @@ function weatherCurrentTrimester_() {
 function weatherRole_(email,period,leaders) {
   if(OWNER_EMAILS.includes(email_(email)))return true;
   leaders=leaders||Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
-  const ownEmail=memberEmail_(email,period),ctsoEmail=memberEmail_(email,'CTSO');
+  const ownEmail=memberEmail_(email,period);
   return leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period.toUpperCase() &&
-    /^(division manager|assistant manager|partner liaison|parnter liaison)$/i.test(String(row[2]||'').trim()) && email_(row[4])===ownEmail) ||
-    leaders.some(row=>String(row[0]||'').trim().toUpperCase()==='CTSO' &&
-    /^chief (executive|financial|operations) officer$/i.test(String(row[2]||'').trim()) && email_(row[4])===ctsoEmail);
+    /^(division manager|assistant manager|partner liaison|parnter liaison)$/i.test(String(row[2]||'').trim()) && email_(row[4])===ownEmail);
 }
 function weatherForMember_(email,period,page) {
   if(period==='mine') {

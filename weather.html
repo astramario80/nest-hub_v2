@@ -30,13 +30,73 @@
   <main class="internal-page weather-page">
     <h1>Weather Report</h1>
     <p>Share how your division is doing. Division leaders can review their own report data and charts here.</p>
+    <nav class="internal-actions weather-tabs" aria-label="Weather report views">
+      <button type="button" data-weather-tab="compose" aria-pressed="true">Check in</button>
+      <button type="button" data-weather-tab="reports" aria-pressed="false">Division reports</button>
+      <button type="button" data-weather-tab="admin" aria-pressed="false" id="weather-admin-tab" hidden>Administrator archive</button>
+    </nav>
+    <section id="weather-compose" class="internal-card" aria-labelledby="weather-form-heading">
+      <h2 id="weather-form-heading">How is your weather today?</h2>
+      <p id="weather-form-status" role="status">Sign in to NEST to check in.</p>
+      <form id="weather-form">
+        <fieldset id="weather-fields" disabled>
+          <label for="weather-period">Your division / period</label><select id="weather-period" required></select>
+          <h3>How are you feeling right now?</h3>
+          <p id="weather-emotion-help">Hover to preview and enlarge a word. Click or tap the wheel, or choose a word below and select <strong>Confirm emotion</strong>. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
+          <div class="weather-wheel-layout">
+            <div id="weather-wheel" aria-describedby="weather-emotion-help"></div>
+            <div class="weather-selection">
+              <div id="weather-lens" aria-hidden="true"><p>Move over the wheel for a closer look.</p></div>
+              <p id="weather-preview-status" aria-live="polite"></p>
+              <label for="weather-emotion">Choose an emotion or sensation</label><select id="weather-emotion" required><option value="">Choose a word…</option></select>
+              <label for="weather-emotion-answer">Emotional check-in answer</label><input id="weather-emotion-answer" readonly placeholder="Explore the wheel above">
+              <button type="button" id="weather-confirm">Confirm emotion</button>
+              <p id="weather-confirm-status" role="status"></p>
+              <div id="weather-counselor" hidden><p>You can also talk with your school counselor.</p><a id="weather-counselor-link" target="_blank" rel="noopener noreferrer">Schedule an appointment</a></div>
+            </div>
+          </div>
+          <div class="weather-ratings">
+            <label>How is the pace of your supervisor?<select id="weather-pacing" required><option value="">Choose…</option><option value="1">1 — Much too slow</option><option value="2">2 — A little slow</option><option value="3">3 — Just right</option><option value="4">4 — A little fast</option><option value="5">5 — Much too fast</option></select></label>
+            <label>Is the learning challenging you?<select id="weather-challenge" required><option value="">Choose…</option><option value="1">1 — Much too easy</option><option value="2">2 — A little easy</option><option value="3">3 — Just right</option><option value="4">4 — A little difficult</option><option value="5">5 — Much too difficult</option></select></label>
+            <label>How safe do you feel here?<select id="weather-safety" required><option value="">Choose…</option><option value="1">1 — Not safe</option><option value="2">2 — A little safe</option><option value="3">3 — Somewhat safe</option><option value="4">4 — Mostly safe</option><option value="5">5 — Very safe</option></select></label>
+          </div>
+          <label for="weather-working">What are we doing right, even if it is something small?</label><textarea id="weather-working" rows="3" maxlength="5000"></textarea>
+          <div class="weather-question-heading"><label for="weather-change">What can we change to make your experience better?</label><button type="button" id="weather-builder-open">Help me write an I/Me statement</button></div>
+          <textarea id="weather-change" rows="4" maxlength="5000"></textarea>
+          <p class="internal-muted">Your report is saved in NEST. Mr. Penalver and your division’s manager, assistant manager, and partner liaison can review division reports. Only Mr. Penalver can export the archive. A support alert includes your name, division, confirmed emotion, and time; your written feedback is saved when you submit.</p>
+          <button type="submit" id="weather-submit">Submit weather report</button>
+        </fieldset>
+        <p id="weather-submit-status" role="status"></p>
+      </form>
+    </section>
+    <section id="weather-report-view" hidden>
+      <div class="weather-filters internal-actions">
+        <label>School year<select id="weather-year"></select></label><label>Trimester<select id="weather-trimester"><option value="all">All trimesters</option><option value="1">Trimester 1</option><option value="2">Trimester 2</option><option value="3">Trimester 3</option><option value="Unassigned">Outside configured dates</option></select></label>
+        <button type="button" id="weather-filter-apply">Apply filters</button>
+      </div>
+      <div id="weather-admin-tools" class="internal-card" hidden>
+        <h2>Private administrator archive</h2>
+        <label>Division<select id="weather-admin-division"><option value="all">All divisions</option></select></label>
+        <button type="button" id="weather-export">Prepare spreadsheet and PDF</button><div id="weather-export-status" role="status"></div>
+        <details><summary>Test support alerts and manage counselor links</summary>
+          <p>The test is labeled TEST and appears only for your current administrator account. It does not notify division leaders or create a student report.</p>
+          <button type="button" id="weather-test-alert">Test a support alert on my screen</button><p id="weather-test-status" role="status"></p>
+          <p id="weather-counselor-health"></p><button type="button" id="weather-refresh-counselors">Refresh counselor directory now</button>
+        </details>
+        <details><summary>School year and trimester dates</summary><p>Import a school year’s dates from the school calendars, or enter the official dates below. Historical reports without configured dates remain available by year.</p>
+          <label>School year (YYYY-YYYY)<input id="weather-calendar-year" pattern="20[0-9]{2}-20[0-9]{2}" value="2026-2027"></label>
+          <label>School year starts<input type="date" id="weather-calendar-start"></label><label>Trimester 1 ends<input type="date" id="weather-calendar-t1"></label><label>Trimester 2 ends<input type="date" id="weather-calendar-t2"></label><label>School year ends<input type="date" id="weather-calendar-end"></label>
+          <button type="button" id="weather-calendar-import">Import dates from school calendars</button>
+          <button type="button" id="weather-calendar-save">Save trimester dates</button><p id="weather-calendar-status" role="status"></p>
+        </details>
+      </div>
     <nav id="weather-divisions" class="internal-actions weather-division-buttons" aria-label="Division weather reports"></nav>
     <div id="weather-status" role="status">Checking division access…</div>
     <section id="weather-data" class="internal-card" hidden>
       <h2 id="weather-title"></h2>
       <div id="weather-charts" class="weather-charts" aria-label="Weather report charts"></div>
       <div id="weather-trimesters" class="weather-trimesters"></div>
-      <h3>Responses this trimester</h3>
+      <h3>Responses</h3>
       <div class="internal-actions" id="weather-pages" hidden>
         <button type="button" id="weather-prev">Previous</button>
         <span id="weather-page-label"></span>
@@ -47,11 +107,13 @@
       <p class="internal-muted" id="weather-layout-help">Drag the right edge of a column heading to change its width, or the bottom edge of a row’s first cell to change its height. You can also focus a handle and use the arrow keys. Your sizes are remembered on this device.</p>
       <div class="table-scroll weather-responses" tabindex="0" role="region" aria-label="Weather report responses" aria-describedby="weather-layout-help"><table id="weather-responses"><colgroup></colgroup><thead></thead><tbody></tbody></table></div>
     </section>
-    <section class="internal-card" aria-labelledby="weather-form-heading">
-      <h2 id="weather-form-heading">Submit a weather report</h2>
-      <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform?embedded=true" title="NEST weather report form" loading="lazy"></iframe>
-      <p class="internal-muted">If the form does not load, <a href="https://docs.google.com/forms/d/e/1FAIpQLSetK0Uegeg9SBa1gnpnDp84Em47_CS27RVDf714WUWP3P52ew/viewform" target="_blank" rel="noopener noreferrer">open it in Google Forms</a>.</p>
     </section>
+    <dialog id="weather-builder" aria-labelledby="weather-builder-title">
+      <h2 id="weather-builder-title">Put your experience into words</h2><p>Describe what happened, how it affected you, and one change that would help.</p>
+      <label>I feel…<input id="weather-builder-feeling" maxlength="150" placeholder="frustrated"></label><label>When…<textarea id="weather-builder-when" maxlength="500" placeholder="our plans change without warning"></textarea></label>
+      <label>Because I need / value…<textarea id="weather-builder-need" maxlength="500" placeholder="time to understand what comes next"></textarea></label><label>It would help me if…<textarea id="weather-builder-request" maxlength="500" placeholder="we could agree on the plan before starting"></textarea></label>
+      <p id="weather-builder-preview" role="status"></p><button type="button" id="weather-builder-use">Add to my feedback</button> <button type="button" id="weather-builder-close">Close</button>
+    </dialog>
   </main>
   <footer class="site-footer">
     <div class="footer-content">
@@ -79,6 +141,7 @@
   </footer>
   <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script>
   <script src="/js/main.js"></script>
+  <script src="/js/weather-form.js"></script>
   <script src="/js/weather.js"></script>
 </body>
 </html>

@@ -52,10 +52,10 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   w.eval(fs.readFileSync('js/weather.js','utf8'));
   await new Promise(resolve=>setImmediate(resolve));
   const buttons=[...w.document.querySelectorAll('#weather-divisions button')];
-  assert.deepEqual(buttons.map(button=>button.textContent),['Advisory','Period 1','Period 2','Period 3','Period 4','Period 5','CTSO']);
+  assert.deepEqual(buttons.map(button=>button.textContent),['Advisory','Period 1','Period 2','Period 3','Period 4','Period 5','Period 7','CTSO']);
   assert.equal(buttons[0].disabled,true);
   assert.equal(buttons[1].disabled,false);
-  assert.match(w.document.querySelector('iframe').src,/viewform\?embedded=true/);
+  assert.equal(w.document.querySelector('iframe'),null);assert.ok(w.document.getElementById('weather-form'));
   buttons[1].click();await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#weather-data').hidden,false);
   assert.equal(w.document.querySelectorAll('#weather-charts svg').length,3);
@@ -77,7 +77,7 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   assert.match(gauges[1].getAttribute('aria-label'),/best at 3/);
   assert.match(gauges[2].getAttribute('aria-label'),/best at 5/);
   assert.equal(w.document.querySelector('#weather-data tbody tr td').textContent,'Today');
-  assert.match(w.document.querySelector('#weather-data > h3').textContent,/this trimester/);
+  assert.match(w.document.querySelector('#weather-data > h3').textContent,/Responses/);
   assert.match(w.document.querySelector('#weather-status').textContent,/current-trimester responses/);
   dom.window.close();
 });

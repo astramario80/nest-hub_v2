@@ -29,3 +29,21 @@
   .weather-responses th { padding: 10px 6px; }
   .weather-cell { padding: 8px 6px; }
 }
+.weather-tabs {margin:24px 0}.weather-tabs [aria-pressed="true"] {background:#ba5b16;color:white}
+#weather-form fieldset {border:0;padding:0;margin:0;min-width:0}
+.weather-page label {display:block;margin:14px 0 7px;font-weight:600}.weather-page input,.weather-page select,.weather-page textarea {display:block;width:100%;max-width:100%;box-sizing:border-box;padding:12px;border:1px solid #8f9daa;border-radius:8px;background:#142537;color:#fff;font:inherit}
+.weather-page select {width:auto;min-width:160px}.weather-page option {background:#142537;color:#fff}.weather-page textarea {resize:vertical}
+.weather-wheel-layout {display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:24px;align-items:start;margin-bottom:24px}
+#weather-wheel {background:#fff;border-radius:18px;overflow:hidden;max-width:900px}#weather-wheel svg {display:block;width:100%;height:auto;touch-action:manipulation}
+#weather-wheel [data-emotion] {cursor:pointer}#weather-wheel [data-emotion]:hover path,#weather-wheel [data-emotion].selected path {stroke:#172f42;stroke-width:6}
+#weather-lens {background:white;border-radius:12px;overflow:hidden;aspect-ratio:1.5;max-height:260px;margin-bottom:16px}#weather-lens svg {width:100%;height:100%;display:block;pointer-events:none}
+.weather-selection {position:sticky;top:16px}.weather-selection select {width:100%}.weather-selection button {margin-top:12px}
+.weather-ratings {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.weather-ratings select {width:100%}
+.weather-question-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}.weather-filters {align-items:end;gap:16px}
+#weather-counselor {border-left:4px solid #ffb35c;padding:10px 16px;margin-top:16px}#weather-counselor a {color:#ffce8e;text-decoration:underline}
+#weather-builder {max-width:600px;width:calc(100% - 56px);max-height:85vh;overflow:auto;background:#132a3c;color:#fff;border:1px solid #8396a6;border-radius:16px;padding:24px}#weather-builder::backdrop {background:#0009}#weather-builder label {display:block;margin-top:14px}#weather-builder input,#weather-builder textarea {box-sizing:border-box;display:block;width:100%;font:inherit;padding:10px;margin-top:5px;background:#fff;color:#132a3c;border-radius:6px}
+#weather-admin-tools details {margin-top:20px}#weather-admin-tools input {max-width:280px}#weather-admin-tools button {margin-top:12px}
+#weather-submit-status,#weather-confirm-status {min-height:1.5em}#weather-export-status a {display:inline-block;margin:10px 20px 10px 0;text-decoration:underline}
+@media(max-width:800px){.weather-wheel-layout,.weather-ratings{grid-template-columns:1fr}.weather-selection{position:static}#weather-lens{max-width:360px}.weather-question-heading{display:block}.weather-tabs{flex-wrap:wrap}}
+
+#weather-lens {display:grid;place-items:center;color:#17364b;text-align:center}#weather-lens p {padding:24px;font-size:1rem}#weather-emotion-help {max-width:115ch;line-height:1.6;margin-bottom:20px}

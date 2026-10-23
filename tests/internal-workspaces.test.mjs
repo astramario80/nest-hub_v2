@@ -39,8 +39,8 @@ test('weather division list exposes only authorized periods',()=>{
  const typo=context('Parnter Liaison');
  assert.deepEqual(Array.from(typo.ctx.weatherForMember_('liaison@students.bethelsd.org','mine').periods),['2']);
  const executive=ctx.weatherForMember_('exec@students.bethelsd.org','mine');
- assert.deepEqual(Array.from(executive.periods),['1','2','3','4','5','Advisory','CTSO']);
- assert.equal(ctx.weatherForMember_('exec@students.bethelsd.org','2',0).status,200);
+ assert.deepEqual(Array.from(executive.periods),[]);
+ assert.equal(ctx.weatherForMember_('exec@students.bethelsd.org','2',0).status,403);
  assert.equal(ctx.weatherForMember_('former@students.bethelsd.org','2',0).status,403);
  assert.equal(ctx.weatherForMember_('astramario@gmail.com','2',0).status,200);
  assert.equal(ctx.weatherForMember_('mpenalver@bethelsd.org','2',0).status,200);

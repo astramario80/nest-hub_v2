@@ -1052,3 +1052,8 @@ if (document.querySelector('header .logo-container') && !document.body.classList
   eagleMenuScript.src='/js/eagle-menu.js';
   document.body.append(eagleMenuScript);
 }
+
+// Support alerts follow authorized leaders throughout the NEST menu.
+if(window.NestAuth && !document.querySelector('script[src="/js/weather-alerts.js"]')){
+ const weatherAlertScript=document.createElement('script');weatherAlertScript.src='/js/weather-alerts.js';document.body.append(weatherAlertScript);
+}
