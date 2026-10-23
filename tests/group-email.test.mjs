@@ -213,3 +213,8 @@ test('logout discards a late status check and clears its controls',async()=>{
  try{const q=s=>w.document.querySelector(s);q('[data-email-send]').click();await tick();let settle;w.fetch=()=>new Promise(resolve=>settle=resolve);q('[data-email-check]').click();await tick();w.NestAuth.identity={signedIn:false};w.document.dispatchEvent(new w.Event('nest-auth-change'));settle({ok:true,json:async()=>({requestId:sends[0].requestId,state:'accepted',accepted:1})});await tick();assert.equal(q('[data-email-status]').textContent,'');assert.equal(q('[data-email-check]').hidden,true);assert.equal(q('[data-email-send]').disabled,true);
  }finally{w.close();}
 });
+
+test('diagnostic failures cannot leave send controls frozen after a refused request',async()=>{
+ const {w,sends}=await nestMailApp(async()=>({ok:false,status:503,json:async()=>({error:'School verification is temporarily unavailable.'})}));
+ try{const q=s=>w.document.querySelector(s);w.NestAccessDiagnostics={record(){throw new Error('Diagnostic blocked');}};q('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.equal(q('[data-email-send]').disabled,false);assert.equal(q('[data-email-send]').textContent,'Send email');assert.equal(q('.group-email-message').contentEditable,'true');assert.match(q('[data-email-status]').textContent,/School verification/);}finally{w.close();}
+});

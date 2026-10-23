@@ -257,7 +257,7 @@
         else status.textContent=error.message;
       }finally{
         window.clearTimeout(progress);if(lastFailure)status.dataset.state='error';
-        if(own===generation&&identity()){window.NestAccessDiagnostics?.record(testing?'group-email-test-send':'group-email-send',lastFailure?(httpStatus||502):200,performance.now()-started);mail.sending=false;controls.forEach((el,i)=>el.disabled=disabled[i]);message.contentEditable='true';count();}
+        if(own===generation&&identity()){mail.sending=false;controls.forEach((el,i)=>el.disabled=disabled[i]);message.contentEditable='true';count();try{window.NestAccessDiagnostics?.record?.(testing?'group-email-test-send':'group-email-send',lastFailure?(httpStatus||502):200,performance.now()-started);}catch{}}
       }
     }
     q('[data-email-send]').addEventListener('click',()=>sendEmail(false));q('[data-email-test]').addEventListener('click',()=>sendEmail(true));
