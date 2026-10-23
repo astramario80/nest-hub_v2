@@ -52,3 +52,6 @@
 .weather-wheel-stage{position:relative;max-width:900px;isolation:isolate}
 #weather-lens{position:absolute;z-index:2;width:200px;height:160px;aspect-ratio:auto;max-height:none;margin:0;border:3px solid #17364b;border-radius:50%;box-shadow:0 4px 20px #0006;pointer-events:none;overflow:hidden}
 #weather-lens[hidden]{display:none}
+#weather-preview-counselor {margin:20px 0;padding:12px 16px;border-left:4px solid #ffb35c;background:#142d40;border-radius:8px}
+#weather-preview-counselor a {color:#ffce8e;text-decoration:underline;display:inline-block;margin-top:8px}
+#weather-preview-counselor a[hidden] {display:none}
