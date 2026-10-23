@@ -241,12 +241,12 @@
       if((!testing&&!emails.length)||!subject||!message.textContent.trim()){status.textContent='Choose recipients and add a subject and message.';return;}
       const own=generation,controls=[...dialog.querySelectorAll('input,select,.group-email-toolbar button')],disabled=controls.map(el=>el.disabled);
       const html=message.innerHTML,requestId=mail.requestId;
-      mail.sending=true;controls.forEach(el=>el.disabled=true);message.contentEditable='false';mailControls();status.textContent='Sending… Checking your access and recipients. Please keep this window open.';status.dataset.state='sending';clearFailure();
-      const progress=window.setTimeout(()=>{if(mail.sending&&own===generation&&identity())status.textContent='Still sending… School verification can take a little longer. Please keep this window open.';},12000);
+      mail.sending=true;controls.forEach(el=>el.disabled=true);message.contentEditable='false';mailControls();status.textContent='Sending… Checking your access and recipients. Please keep this window open.';status.dataset.state='sending';clearFailure();status.tabIndex=-1;status.focus({preventScroll:true});status.scrollIntoView?.({block:'nearest',behavior:'smooth'});
+      const progress=window.setTimeout(()=>{if(mail.sending&&own===generation&&identity())status.textContent='Still sending… Waiting for school verification and email confirmation. This can take up to 90 seconds; NEST will then check the send status.';},12000);
       let attempted=false,httpStatus=0;const started=performance.now();
       try{
         attempted=true;
-        const response=await fetch('/api/group-email-send',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({period,audience:'nest',recipients:testing?[]:emails,subject,html,requestId,testing}),signal:AbortSignal.timeout(180000)});
+        const response=await fetch('/api/group-email-send',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({period,audience:'nest',recipients:testing?[]:emails,subject,html,requestId,testing}),signal:AbortSignal.timeout(90000)});
         httpStatus=response.status;const result=await response.json();if(own!==generation||!identity())return;
         if(!response.ok){attempted=false;failure('send',httpStatus,'nest-send-rejected');throw new Error(result.error||'NEST could not start sending. Your draft is still here.');}
         if(!['accepted','rejected','partial','pending','unknown'].includes(result.state))throw new Error('Send result could not be confirmed.');
