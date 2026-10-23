@@ -30,6 +30,9 @@ function weatherStudent_(identity,period){
  if(matches.length!==1)return null;const row=matches[0];
  return {name:String(row[0]||'').trim(),email:address,period,division:String(row[4]||period).trim(),lastName:String(row[0]||'').split(',')[0].trim()};
 }
+function weatherPreviewStudent_(identity,period){
+ return weatherOwner_(identity)&&WEATHER_NATIVE_PERIODS.includes(period)?{period,name:'TEST — Administrator preview',email:identity,division:period,test:true}:null;
+}
 function weatherCalendars_(){
  if(WEATHER_CALENDARS_READ)return WEATHER_CALENDARS_READ;
  const raw=PropertiesService.getScriptProperties().getProperty('weather-calendars');
@@ -188,7 +191,7 @@ function weatherNativeDispatch_(session,r){
   if(owner)weatherSetup_();const leaders=weatherLeaders_(),periods=WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,false));
   const studentPeriods=WEATHER_NATIVE_PERIODS.filter(p=>weatherStudent_(identity,p));
   const today=weatherDate_(new Date()),currentYear=weatherYear_(today),currentTrimester=weatherTrimester_(today,currentYear);
-  return {status:200,admin:owner,periods,studentPeriods,currentYear,currentTrimester,alertPeriods:WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,true)),calendars:owner?weatherCalendars_():undefined,counselorCheckedAt:owner?JSON.parse(store.getProperty('weather-counselors')||'{}').checkedAt:undefined,counselorError:owner?store.getProperty('weather-counselor-error'):undefined};
+  return {status:200,admin:owner,periods,studentPeriods,testMode:owner&&!studentPeriods.length,previewPeriods:owner?WEATHER_NATIVE_PERIODS:[],currentYear,currentTrimester,alertPeriods:WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,true)),calendars:owner?weatherCalendars_():undefined,counselorCheckedAt:owner?JSON.parse(store.getProperty('weather-counselors')||'{}').checkedAt:undefined,counselorError:owner?store.getProperty('weather-counselor-error'):undefined};
  }
  if(operation==='alert-access'){const leaders=weatherLeaders_();return {status:200,eligible:WEATHER_NATIVE_PERIODS.some(p=>weatherLeadership_(identity,p,leaders,true))};}
  if(operation==='counselor'){const student=weatherStudent_(identity,r.period);return {status:200,counselor:weatherCounselor_(student)};}
@@ -200,13 +203,14 @@ function weatherNativeDispatch_(session,r){
  }
  if(operation==='confirm'||operation==='test'){
   if(!/^[a-f0-9-]{36}$/.test(r.draft||''))return {status:400};const emotion=WEATHER_EMOTIONS.find(x=>x.id===r.emotion);if(!emotion)return {status:400};
-  let student;if(operation==='test'){if(!owner)return {status:403};student={period:WEATHER_NATIVE_PERIODS.includes(r.period)?r.period:'1',name:'TEST — Administrator preview'};}else{student=weatherStudent_(identity,r.period);if(!student)return {status:403};}
-  const result=weatherAlert_(identity,student,emotion,r.draft,operation==='test');if(result.confirmed)result.counselor=weatherCounselor_(student);return result;
+  let student;if(operation==='test'){if(!owner)return {status:403};student={period:WEATHER_NATIVE_PERIODS.includes(r.period)?r.period:'1',name:'TEST — Administrator preview'};}else{student=weatherStudent_(identity,r.period)||weatherPreviewStudent_(identity,r.period);if(!student)return {status:403};}
+  const result=weatherAlert_(identity,student,emotion,r.draft,operation==='test'||student.test===true);result.test=operation==='test'||student.test===true;if(result.confirmed)result.counselor=weatherCounselor_(student);return result;
  }
  if(operation==='submit'){
-  const student=weatherStudent_(identity,r.period),emotion=WEATHER_EMOTIONS.find(x=>x.id===r.emotion);if(!student)return {status:403};
+  const student=weatherStudent_(identity,r.period)||weatherPreviewStudent_(identity,r.period),emotion=WEATHER_EMOTIONS.find(x=>x.id===r.emotion);if(!student)return {status:403};
   if(!emotion||!/^[a-f0-9-]{36}$/.test(r.draft||'')||![r.pacing,r.challenge,r.safety].every(n=>Number.isInteger(n)&&n>=1&&n<=5)||![r.working,r.change].every(x=>typeof x==='string'&&x.length<=5000))return {status:400};
   const confirmation=weatherConfirmation_(identity,r.draft);if(!confirmation||confirmation.emotion!==emotion.id)return {status:409,error:'Confirm your emotion before submitting.'};
+  if(student.test)return {status:200,saved:true,test:true};
   const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};try{
    const id=hash_(identity+':'+r.draft),rows=weatherNativeRows_();if(rows.some(row=>row[0]===id))return {status:200,saved:true};
    const now=new Date(),day=weatherDate_(now),year=weatherYear_(day);

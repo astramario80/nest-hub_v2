@@ -37,7 +37,7 @@
   try{
    const data=await api('confirm',{period,draft:before,emotion:item.id},true);if(request!==confirmationRequest)return;
    if(!data.confirmed)throw new Error('That confirmation was already used. Choose the emotion again.');confirmed=item.id;confirmedDraft=before;$('weather-emotion-answer').value=item.answer;
-   confirmStatus.textContent=data.alerted?'Emotion confirmed. A support alert is available to Mr. Penalver, your division manager, and partner liaison.':'Emotion confirmed.';
+   confirmStatus.textContent=data.test?(data.alerted?'Test emotion confirmed. The support alert is visible only to you.':'Test emotion confirmed.'):data.alerted?'Emotion confirmed. A support alert is available to Mr. Penalver, your division manager, and partner liaison.':'Emotion confirmed.';
    if(item.charged&&data.counselor){$('weather-counselor').hidden=false;const link=$('weather-counselor-link');link.href=data.counselor.url;link.textContent=data.counselor.unmatched?'Find your counselor and appointment link':'Schedule with '+data.counselor.name;}
   }catch(error){if(request===confirmationRequest)confirmStatus.textContent=error.message;}
   finally{busy=false;$('weather-wheel').setAttribute('aria-busy','false');}
@@ -45,12 +45,12 @@
  $('weather-period').addEventListener('change',clearConfirmation);
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
-  if(submitted){form.reset();$('weather-submit').formNoValidate=false;submitted=false;clearConfirmation();preview=null;$('weather-emotion-answer').value='';$('weather-submit').textContent='Submit weather report';submitStatus.textContent='Ready for a new check-in.';return;}
+  if(submitted){form.reset();$('weather-submit').formNoValidate=false;submitted=false;clearConfirmation();preview=null;$('weather-emotion-answer').value='';$('weather-submit').textContent=config?.testMode?'Complete administrator test':'Submit weather report';submitStatus.textContent=config?.testMode?'Ready for another administrator test.':'Ready for a new check-in.';return;}
   if(!form.reportValidity())return;
   if(!confirmed||!confirmedDraft){submitStatus.textContent='Click an emotion on the wheel to confirm it before submitting.';$('weather-wheel').querySelector('[tabindex="0"]')?.focus();return;}
-  busy=true;$('weather-submit').disabled=true;submitStatus.textContent='Saving your weather report…';const current=identityKey;
+  busy=true;$('weather-submit').disabled=true;submitStatus.textContent=config?.testMode?'Validating your administrator test…':'Saving your weather report…';const current=identityKey;
   try{const data=await api('submit',{draft:confirmedDraft,period:$('weather-period').value,emotion:confirmed,pacing:Number($('weather-pacing').value),challenge:Number($('weather-challenge').value),safety:Number($('weather-safety').value),working:$('weather-working').value,change:$('weather-change').value},true);if(current!==identityKey)return;
-   if(data.saved){submitted=true;$('weather-submit').formNoValidate=true;submitStatus.textContent='Your weather report has been saved. Thank you for checking in.';$('weather-submit').textContent='Start another check-in';}
+   if(data.saved){submitted=true;$('weather-submit').formNoValidate=true;submitStatus.textContent=data.test?'Administrator test completed. No student report was added; test support alerts are visible only to you.':'Your weather report has been saved. Thank you for checking in.';$('weather-submit').textContent=data.test?'Start another test':'Start another check-in';}
   }catch(error){if(current===identityKey)submitStatus.textContent=error.message;}
   finally{busy=false;$('weather-submit').disabled=false;}
  });
@@ -80,8 +80,8 @@
   if(!window.NestAuth?.identity?.signedIn){status.textContent='Sign in to NEST to check in.';window.NestWeather.ready=Promise.resolve(null);return;}
   status.textContent='Loading your check-in…';const pending=api('bootstrap');window.NestWeather.ready=pending;
   try{const data=await pending;await wheelReady;if(version!==loadVersion)return;config=data;window.NestWeather.config=data;
-   $('weather-admin-tab').hidden=!data.admin;$('weather-period').replaceChildren(...data.studentPeriods.map(p=>option(p,periodLabel(p))));$('weather-fields').disabled=!data.studentPeriods.length;
-   status.textContent=data.studentPeriods.length?'Choose the emotion that fits how you feel today.':data.admin?'Your administrator account can review the archive and test support alerts. Student check-ins require a matching enrolled-student record.':'Your school email and period could not be matched to the enrolled-student directory. Ask Mr. Penalver to check your linked email and enrollment.';
+   $('weather-admin-tab').hidden=!data.admin;const formPeriods=data.testMode?data.previewPeriods:data.studentPeriods;$('weather-period').replaceChildren(...formPeriods.map(p=>option(p,periodLabel(p))));$('weather-fields').disabled=!formPeriods.length;$('weather-submit').textContent=data.testMode?'Complete administrator test':'Submit weather report';
+   status.textContent=data.testMode?'Administrator test mode: choose any division and try the complete form. Alerts are visible only to you. Completing this test does not add a student report.':data.studentPeriods.length?'Choose the emotion that fits how you feel today.':data.admin?'Your administrator account can review the archive and test support alerts. Student check-ins require a matching enrolled-student record.':'Your school email and period could not be matched to the enrolled-student directory. Ask Mr. Penalver to check your linked email and enrollment.';
    const currentYear=Object.keys(data.calendars||{}).sort().at(-1);if(currentYear){$('weather-calendar-year').value=currentYear;['start','t1','t2','end'].forEach((k,i)=>$('weather-calendar-'+k).value=data.calendars[currentYear][i]);}
    $('weather-counselor-health').textContent=data.counselorError|| (data.counselorCheckedAt?'Directory checked '+new Date(data.counselorCheckedAt).toLocaleString():'Directory has not been checked yet.');
    document.dispatchEvent(new CustomEvent('nest-weather-ready',{detail:data}));

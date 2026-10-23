@@ -110,3 +110,20 @@ test('June 30 fallback fills only a missing school-year end, never conflicting e
  events.push({title:'Last Day of School',start:'2025-06-13',end:'2025-06-14'});assert.equal(s.ctx.weatherCalendarDates_(events,'2025-06-30'),null);
  events.splice(1,1);assert.equal(s.ctx.weatherCalendarDates_(events,'2025-06-30'),null);
 });
+
+test('administrator without enrollment can complete a private full-form test without affecting reports or leadership alerts',()=>{
+ const s=school();s.ctx.weatherSetup_=()=>{};const boot=s.call(OWNER,'bootstrap');assert.equal(boot.testMode,true);assert.equal(boot.studentPeriods.length,0);assert.ok(boot.previewPeriods.includes('1'));
+ const fields={period:'1',emotion:s.emotion,draft:uuid,pacing:3,challenge:3,safety:5,working:'Synthetic check',change:'Synthetic feedback'};
+ assert.equal(s.call(OWNER,'submit',fields).status,409);const receipt=s.call(OWNER,'confirm',fields);assert.equal(receipt.confirmed,true);assert.equal(receipt.test,true);assert.equal(s.alerts[0][7],true);
+ assert.equal(s.call(OWNER,'alerts').events.length,1);assert.equal(s.call(DM,'alerts').events.length,0);assert.equal(s.call(PL,'alerts').events.length,0);
+ assert.equal(s.call(OWNER,'submit',{...fields,safety:0}).status,400);assert.equal(s.call(OWNER,'submit',fields).test,true);assert.equal(s.call(OWNER,'submit',fields).saved,true);assert.equal(s.reports.length,0);
+ assert.equal(s.call(OWNER,'confirm',{...fields,period:'invalid'}).status,403);assert.equal(s.call(STUDENT,'confirm',{...fields,period:'2',testMode:true}).status,403);
+});
+
+test('administrator test form enables division and rating controls and reports private completion',async t=>{
+ const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;t.after(()=>w.close());w.NestAuth={identity:{signedIn:true,email:OWNER},ready:Promise.resolve()};w.AbortSignal.timeout=()=>undefined;
+ const catalog=JSON.parse(fs.readFileSync('assets/weather-emotions.json','utf8'));w.fetch=async(url,opts={})=>String(url).endsWith('.json')?{ok:true,json:async()=>catalog}:String(url).endsWith('.svg')?{ok:true,text:async()=>fs.readFileSync('assets/emotional-check-in.svg','utf8')}:{ok:true,json:async()=>opts.body?{confirmed:true,saved:true,test:true}:{admin:true,testMode:true,studentPeriods:[],previewPeriods:['1','2'],periods:['1','2']}};
+ w.eval(fs.readFileSync('js/weather-form.js','utf8'));await new Promise(r=>setImmediate(r));assert.equal(w.document.getElementById('weather-fields').disabled,false);assert.equal(w.document.getElementById('weather-period').options.length,2);assert.match(w.document.getElementById('weather-form-status').textContent,/Administrator test mode/);
+ w.document.querySelector('#weather-wheel [data-emotion="e0"]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await new Promise(r=>setImmediate(r));for(const id of ['weather-pacing','weather-challenge','weather-safety'])w.document.getElementById(id).value='3';w.document.getElementById('weather-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setImmediate(r));assert.match(w.document.getElementById('weather-submit-status').textContent,/No student report was added/);assert.equal(w.document.getElementById('weather-submit').textContent,'Start another test');
+ w.document.getElementById('weather-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));assert.equal(w.document.getElementById('weather-submit').textContent,'Complete administrator test');
+});
