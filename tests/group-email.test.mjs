@@ -218,3 +218,12 @@ test('diagnostic failures cannot leave send controls frozen after a refused requ
  const {w,sends}=await nestMailApp(async()=>({ok:false,status:503,json:async()=>({error:'School verification is temporarily unavailable.'})}));
  try{const q=s=>w.document.querySelector(s);w.NestAccessDiagnostics={record(){throw new Error('Diagnostic blocked');}};q('[data-email-send]').click();await tick();assert.equal(sends.length,1);assert.equal(q('[data-email-send]').disabled,false);assert.equal(q('[data-email-send]').textContent,'Send email');assert.equal(q('.group-email-message').contentEditable,'true');assert.match(q('[data-email-status]').textContent,/School verification/);}finally{w.close();}
 });
+
+test('sending without a subject shows an inline requirement, focuses Subject and never starts a send',async()=>{
+ for(const control of ['send','test']){
+  const {w,sends}=await nestMailApp();try{const q=s=>w.document.querySelector(s),subject=q('[data-email-subject]');subject.value='   ';q('[data-email-'+control+']').click();await tick();
+   assert.equal(sends.length,0);assert.equal(w.document.activeElement,subject);assert.equal(subject.getAttribute('aria-invalid'),'true');assert.equal(subject.required,true);assert.equal(q('[data-email-subject-error]').hidden,false);assert.match(q('[data-email-subject-error]').textContent,/Add a subject before sending/);assert.equal(q('[data-email-'+control+']').disabled,false);
+   subject.value='Team meeting';subject.dispatchEvent(new w.Event('input'));assert.equal(subject.hasAttribute('aria-invalid'),false);assert.equal(q('[data-email-subject-error]').hidden,true);q('[data-email-'+control+']').click();await tick();assert.equal(sends.length,1);
+  }finally{w.close();}
+ }
+});

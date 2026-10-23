@@ -27,3 +27,6 @@
 .group-email-message + .group-email-notice{margin-top:24px;margin-bottom:16px}
 
 .email-archive-tools{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin:16px 0}.email-archive-tools label{display:grid;gap:6px;flex:1;min-width:200px}.email-archive-tools input,.email-master-archive button{font:inherit;padding:10px;border:1px solid #9ca8ba;border-radius:7px}.email-master-archive [hidden],.email-history-tabs [hidden]{display:none!important}.email-master-archive iframe{margin-top:16px}
+
+.group-email-field-error{color:#a51d26;font-size:.875rem;font-weight:600;}
+.group-email-subject input[aria-invalid="true"]{border-color:#a51d26;}
