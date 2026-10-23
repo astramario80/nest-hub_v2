@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import {createHash} from 'node:crypto';
+import {JSDOM} from 'jsdom';
+import handler from '../api/group-email-archive.mjs';
+import {emailSenderKey} from '../lib/postmark-email.mjs';
+const requestId='b'.repeat(64),archiveId='c'.repeat(64),owner='mpenalver@bethelsd.org',member='member@students.bethelsd.org';
+function school(){
+ const store=new Map(),rows=[];let creates=0;
+ const col=s=>[...s].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0)-1;
+ const values={get(_id,range){const m=range.match(/!([A-Z]+)(\d+):([A-Z]+)(\d+)?/),start=Number(m[2])-1,end=m[4]?Number(m[4]):rows.length;return {values:rows.slice(start,end).map(row=>row.slice(col(m[1]),col(m[3])+1))};},update(body,_id,range,options){assert.equal(options.valueInputOption,'RAW');const m=range.match(/!([A-Z]+)(\d+):/),index=Number(m[2])-1;rows[index]||=[];body.values[0].forEach((v,i)=>rows[index][col(m[1])+i]=v);return {};},append(body,_id,_range,options){assert.equal(options.valueInputOption,'RAW');rows.push(body.values[0]);return {updates:{updatedRange:'Messages!A'+rows.length+':S'+rows.length}};}};
+ const ctx=vm.createContext({PropertiesService:{getScriptProperties:()=>({getProperty:k=>store.get(k),setProperty:(k,v)=>store.set(k,v)})},Sheets:{Spreadsheets:{create:()=>{creates++;return {spreadsheetId:'private-school-book'};},Values:values}},authSession_:s=>s==='owner'?{email:owner,username:'admin'}:s==='member'?{email:member}:null,OWNER_EMAILS:[owner],email_:v=>v,accountEmail_:v=>typeof v==='string'&&v.includes('@')?v:'',hash_:v=>createHash('sha256').update(v).digest('hex'),LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},accounts_:()=>[{email:owner,username:'admin',passwordHash:'private'}]});
+ vm.runInContext(fs.readFileSync('google-spinner/EmailArchive.js','utf8'),ctx);
+ return {ctx,rows,store,get creates(){return creates;}};
+}
+const doc=()=>({senderKey:'a'.repeat(64),subject:'=Meeting',html:'<p>Hello</p>',text:'Hello',recipients:[member],testing:false});
+test('archive keeps original content permanently, writes RAW cells and deduplicates repeated imports',()=>{
+ const s=school(),r={requestId,count:1,archive:doc()},saved=s.ctx.emailArchiveReserve_(r,{email:owner,username:'admin'},owner);assert.equal(s.creates,1);assert.equal(s.rows.length,2);assert.equal(s.rows[1][5],'=Meeting');assert.equal(s.rows[1][13],'<p>Hello</p>');assert.ok(s.store.has('NEST_EMAIL_ARCHIVE_WORKBOOK'));assert.doesNotMatch(JSON.stringify(s.rows),/expires/);
+ s.ctx.emailArchiveFinish_({archiveId:saved.archiveId,archiveRow:saved.row},{requestId,state:'accepted',accepted:1,rejected:0,outcomes:[{email:member,messageId:'provider-id',errorCode:0}]});
+ const list=s.ctx.emailArchiveDispatch_({session:'owner',operation:'list'});assert.equal(list.total,1);assert.equal(list.messages[0].state,'accepted');assert.equal(list.messages[0].html,undefined);const detail=s.ctx.emailArchiveDispatch_({session:'owner',operation:'detail',archiveId:saved.archiveId});assert.equal(detail.message.html,'<p>Hello</p>');assert.equal(detail.message.recipients[0],member);
+ const imported={...doc(),requestId,sender:owner,sentAt:new Date().toISOString(),replyTo:owner,state:'accepted',accepted:1};s.ctx.emailArchiveDispatch_({session:'owner',operation:'import',messages:[imported]});assert.equal(s.rows.length,2);
+ assert.throws(()=>s.ctx.emailArchiveFinish_({archiveId:'wrong',archiveRow:saved.row},{requestId,state:'accepted',accepted:1,rejected:0}),/ownership/);
+});
+test('archive rejects non-admins before touching school storage and exposes no password fields',()=>{
+ const s=school();for(const operation of ['access','list','detail','import','identities'])assert.equal(s.ctx.emailArchiveDispatch_({session:'member',operation}).status,403);assert.equal(s.creates,0);assert.equal(s.ctx.emailArchiveDispatch_({session:'expired',operation:'list'}).status,401);const result=s.ctx.emailArchiveDispatch_({session:'owner',operation:'identities'});assert.doesNotMatch(JSON.stringify(result),/password|private/);
+});
+async function api({student=false,post=false}={}){
+ const env={...process.env},old=globalThis.fetch,calls=[];Object.assign(process.env,{SPINNER_BRIDGE_URL:'https://school.invalid',SPINNER_BRIDGE_TOKEN:'archive-bridge',POSTMARK_SERVER_TOKEN:'postmark-private'});const actor=emailSenderKey(owner),messageId='11111111-1111-4111-8111-111111111111';
+ globalThis.fetch=async(url,init)=>{if(url==='https://school.invalid'){const b=JSON.parse(init.body);calls.push(b);return new Response(JSON.stringify(b.action==='auth-me'?{status:200,email:student?member:owner}:b.operation==='identities'?{status:200,identities:[{email:owner,username:'admin'}]}:b.operation==='import'?{status:200,imported:b.messages.length}:{status:200,messages:[],permanent:true}));}if(String(url).includes('/details'))return new Response(JSON.stringify({MessageID:messageId,Metadata:{nestActor:actor,nestRequestId:requestId},Subject:'Meeting',ReceivedAt:'2026-10-22T18:00:00Z',HtmlBody:'<!-- NEST_MESSAGE_START --><p>Hello</p><!-- NEST_MESSAGE_END -->',Body:'Reply-To: '+owner}));return new Response(JSON.stringify({TotalCount:1,Messages:[{MessageID:messageId,Metadata:{nestActor:actor,nestRequestId:requestId},Tag:'nest-'+requestId,Recipients:[member]}]}));};
+ try{const res={setHeader(){},status(n){this.code=n;return this;},json(v){this.data=v;return this;}};await handler({method:post?'POST':'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64),origin:'https://gknest.org',host:'gknest.org','content-type':'application/json'},query:{},body:post?{operation:'import',offset:0}:undefined},res);return {res,calls};}finally{globalThis.fetch=old;for(const k of Object.keys(process.env))if(!(k in env))delete process.env[k];Object.assign(process.env,env);}
+}
+test('archive API blocks ordinary senders and imports only verified NEST messages into private storage',async()=>{
+ const denied=await api({student:true});assert.equal(denied.res.code,403);assert.equal(denied.calls.filter(c=>c.action==='auth-email-archive').length,0);const imported=await api({post:true});assert.equal(imported.res.code,200);const saved=imported.calls.find(c=>c.operation==='import');assert.equal(saved.messages.length,1);assert.equal(saved.messages[0].sender,owner);assert.equal(saved.messages[0].html,'<p>Hello</p>');assert.doesNotMatch(JSON.stringify(imported.res.data),/postmark-private|archive-bridge/);
+});
+const tick=()=>new Promise(r=>setTimeout(r,20));
+test('administrator gets a third archive tab, student access stays hidden, and Communications returns to Compose',async()=>{
+ const dom=new JSDOM('<div data-hq-communications><section class="group-email-inline"><textarea>Saved draft</textarea></section></div>',{url:'https://gknest.org/divisions/2',runScripts:'outside-only'}),w=dom.window;w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.NestDivisionHQ={allowed:true};w.AbortSignal=AbortSignal;w.fetch=async url=>({ok:true,json:async()=>url.includes('action=access')?{administrator:true}:{messages:[{archiveId,subject:'Archived meeting',sender:owner,username:'admin',sentAt:'2026-10-22T18:00:00Z',state:'accepted'}],total:1,nextOffset:50,hasMore:false}});
+ try{w.eval(fs.readFileSync('js/email-archive.js','utf8'));w.eval(fs.readFileSync('js/group-email-history.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));await tick();const tab=w.document.getElementById('email-archive-tab');assert.equal(tab.hidden,false);tab.click();await tick();assert.equal(w.document.getElementById('email-archive-panel').hidden,false);assert.match(w.document.querySelector('[data-archive-list]').textContent,/Archived meeting/);w.document.dispatchEvent(new w.CustomEvent('nest-hq-tab-change',{detail:{tab:'communications'}}));assert.equal(w.document.getElementById('email-compose-tab').getAttribute('aria-selected'),'true');assert.equal(w.document.querySelector('textarea').value,'Saved draft');w.NestAuth.identity={signedIn:false};w.document.dispatchEvent(new w.Event('nest-auth-change'));assert.equal(tab.hidden,true);assert.equal(w.document.querySelector('[data-archive-list]').textContent,'');}finally{w.close();}
+});
+
+test('archive chunk boundaries preserve emoji in long original message content',()=>{const s=school(),html='x'.repeat(29999)+'😀end';s.ctx.emailArchiveReserve_({requestId,count:1,archive:{...doc(),html,text:html}},{email:owner},owner);assert.equal(s.rows[1][13].length,29999);assert.equal(s.rows[1][14].slice(0,2),'😀');assert.equal(s.rows[1][13]+s.rows[1][14],html);assert.equal(s.rows[1][15]+s.rows[1][16],html);});

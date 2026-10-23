@@ -19,6 +19,15 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
+  if(r.action==='auth-email-archive'){
+    try{return json_(emailArchiveDispatch_(r));}catch(_){return json_({status:503});}
+  }
+  if(r.action==='auth-group-email-access'){
+    try{return json_(groupEmailAccess_(r));}catch(error){return json_(nestServiceFailure_(r.action,error));}
+  }
+  if(r.action==='auth-group-email'){
+    try{return json_(groupEmailDispatch_(r));}catch(error){return json_(nestServiceFailure_(r.action,error));}
+  }
   if(['finished-list-view','auth-finished-list-add','auth-finished-list-update','auth-finished-list-delete'].includes(r.action)){
     try{return json_(finishedDispatch_(r));}catch(_){return json_({status:503});}
   }
@@ -49,6 +58,13 @@ function nestRequest_(r){
       const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
       return json_(session?memberLeadershipDirectory_():{status:401});
     } catch(_){return json_({status:503});}
+  }
+  if(r.action==='auth-weather-native') {
+    try {
+      const empty=weatherNativePollEmpty_(r);if(empty)return json_(empty);
+      const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+      return json_(session?weatherNativeDispatch_(session,r):{status:401});
+    } catch(error){console.error('Native weather failed',String(error&&error.message||error).slice(0,160));return json_({status:503});}
   }
   if(r.action==='auth-weather') {
     try {
@@ -92,7 +108,7 @@ function nestRequest_(r){
     try { return json_(authDispatch_(r)); }
     catch(error) {
       console.error('NEST bridge dispatch failed',r.action,String(error&&error.message||error).slice(0,300));
-      return json_({status:503});
+      return json_(nestServiceFailure_(r.action,error));
     }
   }
   const lock=LockService.getScriptLock();
@@ -114,13 +130,19 @@ function nestAccessValues_(id,range){
  return result;
 }
 function withNestReadContext_(r,work){
- const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory';
- if(!readonly)return work();
+ const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory'||r.action==='auth-group-email-access';
+ if(!readonly){
+  if(!['auth-group-email','auth-email-archive','diagnostics-record','auth-weather-native'].includes(r.action))return work();
+  // Reuse account reads only inside this request; later requests recheck live data.
+  const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
+  try{return work();}finally{NEST_ACCESS_READS=previous;}
+ }
  const previous=NEST_ACCESS_READS;NEST_ACCESS_READS=new Map();
  try{
   const store=PropertiesService.getScriptProperties(),session=/^[a-f0-9]{64}$/.test(r.session||'')?read_(store,'authsession:'+hash_(r.session),Date.now()):null;
   if(session){
    const ranges=[AUTH_SHEET];
+   if(r.action==='auth-group-email-access'&&r.period==='all')Object.keys(PERIODS).forEach(period=>ranges.push("'"+(period==='CTSO'?'CTSO':'Period '+period)+"'!A2:C1000"));
    if(Object.prototype.hasOwnProperty.call(PERIODS,r.period))ranges.push("'"+(r.period==='CTSO'?'CTSO':'Period '+r.period)+"'!A2:C1000");
    if(r.action==='auth-hiring-view'&&r.period!=='CTSO')ranges.push("'CTSO'!A2:C1000");
    const groups=[{id:NEST_DATABASE,ranges:[...new Set(ranges)]},{id:LEADERSHIP_DATABASE,ranges:["'Imported'!B2:F"]}];
@@ -279,4 +301,11 @@ function memberLeadershipDirectory_() {
     };
   }).filter(row=>row.position&&row.firstName&&row.lastName&&row.email&&/^(?:Period (?:1|2|3|4|5|7)|NEST Robotics)$/.test(row.division)&&!/^(vacant|open|we.?re hiring|hiring|tbd|n\/a)$/i.test(row.firstName));
   return {status:200,leaders};
+}
+
+// Bounded, content-free service fault categories for the owner diagnostic.
+function nestServiceFailure_(action,error){
+ const message=String(error&&error.message||''),code=/quota|too many times|rate.?limit|RESOURCE_EXHAUSTED/i.test(message)?'school-quota':/permission|denied|authorized|forbidden/i.test(message)?'school-permission':error&&error.name==='ReferenceError'?'school-reference':/timed? out|timeout/i.test(message)?'school-timeout':'school-service';
+ try{PropertiesService.getScriptProperties().setProperty('nest-service-fault:'+action,JSON.stringify({action,code,time:new Date().toISOString()}));}catch(_){}
+ return {status:503,code};
 }

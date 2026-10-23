@@ -31,3 +31,22 @@ test('parallel service errors fall back to fresh Sheets reads; invalid sessions 
  app.request.session='b'.repeat(64);const before=app.parallel.length;assert.equal(app.read().status,401);assert.equal(app.parallel.length,before);
  app.ctx.nestAccessValues_('leadership',"'Imported'!B2:F");assert.equal(app.fallback.length,2);
 });
+
+test('send, archive and diagnostic requests reuse account reads without retaining revoked access',()=>{
+ for(const action of ['auth-group-email','auth-email-archive','diagnostics-record']){
+  const app=service(true),check=()=>app.ctx.withNestReadContext_({action},()=>{
+   const session=app.ctx.authSession_(token,app.ctx.PropertiesService.getScriptProperties(),Date.now());
+   if(session){app.ctx.accountByEmail_(session.email);app.ctx.memberEmail_(session.email,'1');}
+   return session;
+  });
+  assert.equal(check().username,'manager');assert.equal(app.fallback.filter(range=>range.includes('StudentNESTAccess')).length,1);
+  app.account[4]=false;assert.equal(check(),null);assert.equal(app.fallback.filter(range=>range.includes('StudentNESTAccess')).length,2);
+  assert.equal(app.parallel.length,0);
+ }
+});
+test('service fault categories retain no raw exception contents',()=>{
+ const app=service();
+ assert.equal(app.ctx.nestServiceFailure_('auth-group-email-access',new Error('Quota exceeded private account name')).code,'school-quota');
+ assert.equal(app.ctx.nestServiceFailure_('auth-group-email',new Error('Permission denied private workbook')).code,'school-permission');
+ assert.equal(app.ctx.nestServiceFailure_('auth-me',new Error('Unexpected private data')).code,'school-service');
+});

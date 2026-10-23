@@ -31,3 +31,6 @@ README-diagnostics.md
 school-readback/
 school-stage/
 school-verified/
+
+output/
+tmp/

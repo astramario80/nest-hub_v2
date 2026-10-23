@@ -31,6 +31,7 @@
     "api/leadership.mjs": {
       "maxDuration": 50
     },
+    "api/weather-native.mjs": {"maxDuration": 60},
     "api/weather.mjs": {
       "maxDuration": 30
     },
@@ -62,6 +63,18 @@
     "api/group-email.mjs": {
       "maxDuration": 120
     },
+    "api/group-email-send.mjs": {
+      "maxDuration": 180,
+      "regions": [
+        "sfo1"
+      ]
+    },
+    "api/group-email-history.mjs": {
+      "maxDuration": 90,
+      "regions": [
+        "sfo1"
+      ]
+    },
     "api/diagnostics.mjs": {
       "maxDuration": 30
     },
@@ -70,6 +83,12 @@
     },
     "api/finished-list.mjs": {
       "maxDuration": 60
+    },
+    "api/group-email-archive.mjs": {
+      "maxDuration": 180,
+      "regions": [
+        "sfo1"
+      ]
     }
   },
   "redirects": [

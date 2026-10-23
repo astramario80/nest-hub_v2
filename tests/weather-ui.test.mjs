@@ -3,13 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 
+function choose(w,value){const select=w.document.getElementById('weather-division');select.value=value;select.dispatchEvent(new w.Event('change'));}
 async function layoutUI(saved){
   const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;
   w.NestAuth={identity:{signedIn:true,username:'layout-tester'},ready:Promise.resolve()};
   const key='nest-weather-layout:layout-tester:1';if(saved)w.localStorage.setItem(key,JSON.stringify(saved));
   w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1','2']}:{division:'Period 1',summary:[],columns:['Date','Report'],rows:[['Today','A long report with details that should remain available.']],hasMore:true}});
   w.eval(fs.readFileSync('js/weather.js','utf8'));await new Promise(resolve=>setImmediate(resolve));
-  w.document.querySelectorAll('#weather-divisions button')[1].click();await new Promise(resolve=>setImmediate(resolve));return {w,key};
+  choose(w,'1');await new Promise(resolve=>setImmediate(resolve));return {w,key};
 }
 test('weather sizes can be adjusted with keyboard and restored to responsive fit',async()=>{
   const {w,key}=await layoutUI(),table=w.document.getElementById('weather-responses');
@@ -35,8 +36,8 @@ test('weather drag sizes are bounded, stop on cancellation, and stay separate be
   pointer(column,'pointerdown',100,0);pointer(w.document,'pointermove',-1000,0);assert.equal(table.querySelector('col').style.width,'40px');
   pointer(w.document,'pointercancel',-1000,0);pointer(w.document,'pointermove',1000,0);assert.equal(table.querySelector('col').style.width,'40px');
   pointer(row,'pointerdown',0,100);pointer(w.document,'pointermove',0,2000);assert.equal(table.querySelector('.weather-cell').style.height,'900px');pointer(w.document,'pointerup',0,2000);
-  w.document.querySelectorAll('#weather-divisions button')[2].click();await new Promise(resolve=>setImmediate(resolve));assert.equal(table.style.width,'100%');assert.equal(table.querySelector('.weather-cell').style.height,'144px');
-  w.document.querySelectorAll('#weather-divisions button')[1].click();await new Promise(resolve=>setImmediate(resolve));assert.equal(table.querySelector('col').style.width,'40px');assert.equal(table.querySelector('.weather-cell').style.height,'900px');w.close();
+  choose(w,'2');await new Promise(resolve=>setImmediate(resolve));assert.equal(table.style.width,'100%');assert.equal(table.querySelector('.weather-cell').style.height,'144px');
+  choose(w,'1');await new Promise(resolve=>setImmediate(resolve));assert.equal(table.querySelector('col').style.width,'40px');assert.equal(table.querySelector('.weather-cell').style.height,'900px');w.close();
 });
 test('invalid stored weather sizes fall back safely and remain adjustable',async()=>{
   const {w}=await layoutUI({widths:['bad',-5],heights:{'0:0':5000}}),table=w.document.getElementById('weather-responses');
@@ -51,15 +52,12 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1']}:{division:'Period 1',summary:[["Today's Trimester 1",'Pacing','Rigor','Safety'],['',3,3,5],['Trimester 1',3,3,5],['Trimester 2','','',''],['Trimester 3','','','']],columns:['Timestamp','Report'],rows:[['Today','Calm']],hasMore:false}});
   w.eval(fs.readFileSync('js/weather.js','utf8'));
   await new Promise(resolve=>setImmediate(resolve));
-  const buttons=[...w.document.querySelectorAll('#weather-divisions button')];
-  assert.deepEqual(buttons.map(button=>button.textContent),['Advisory','Period 1','Period 2','Period 3','Period 4','Period 5','CTSO']);
-  assert.equal(buttons[0].disabled,true);
-  assert.equal(buttons[1].disabled,false);
-  assert.match(w.document.querySelector('iframe').src,/viewform\?embedded=true/);
-  buttons[1].click();await new Promise(resolve=>setImmediate(resolve));
+  assert.deepEqual([...w.document.querySelector('#weather-division').options].map(o=>[o.value,o.textContent]),[['1','Division 1']]);
+  assert.equal(w.document.querySelector('iframe'),null);assert.ok(w.document.getElementById('weather-form'));
+  choose(w,'1');await new Promise(resolve=>setImmediate(resolve));
   assert.equal(w.document.querySelector('#weather-data').hidden,false);
   assert.equal(w.document.querySelectorAll('#weather-charts svg').length,3);
-  assert.match(w.document.querySelector('#weather-charts').textContent,/3 \/ 5/);
+  assert.match(w.document.querySelector('#weather-charts').textContent,/5 \/ 5/);
   const gauges=[...w.document.querySelectorAll('.weather-gauge svg')];
   const colors=gauge=>[...gauge.querySelectorAll('path')].map(path=>path.getAttribute('stroke'));
   assert.deepEqual(colors(gauges[0]),['#ec7950','#f6b149','#65ad6f','#f6b149','#ec7950']);
@@ -73,11 +71,26 @@ test('weather page keeps the form visible and renders only an authorized tab wit
   assert.deepEqual(paths(gauges[2]),[[180,120],[120,60],[60,0]].map(([from,to])=>arcPath(from,to)));
   assert.ok(Math.abs(Number(gauges[0].querySelector('line').getAttribute('x2'))-100)<0.00001);
   assert.equal(gauges[2].querySelector('line').getAttribute('x2'),'162');
-  assert.match(gauges[0].getAttribute('aria-label'),/best at 3/);
-  assert.match(gauges[1].getAttribute('aria-label'),/best at 3/);
+  assert.match(gauges[0].getAttribute('aria-label'),/3 means Just Right!/);assert.match(gauges[0].textContent,/Too Slow/);assert.match(gauges[0].textContent,/Too Fast/);assert.match(gauges[0].textContent,/Just Right!/);assert.doesNotMatch(gauges[0].textContent,/\/ 5/);
+  assert.match(gauges[1].getAttribute('aria-label'),/3 means Just Right!/);assert.equal(w.document.querySelectorAll('.weather-gauge h3')[1].textContent,'Grit');assert.match(gauges[1].textContent,/Too Easy/);assert.match(gauges[1].textContent,/Too Hard/);assert.doesNotMatch(gauges[1].textContent,/\/ 5/);
   assert.match(gauges[2].getAttribute('aria-label'),/best at 5/);
   assert.equal(w.document.querySelector('#weather-data tbody tr td').textContent,'Today');
-  assert.match(w.document.querySelector('#weather-data > h3').textContent,/this trimester/);
+  assert.match(w.document.querySelector('#weather-data > h3').textContent,/Responses/);
   assert.match(w.document.querySelector('#weather-status').textContent,/current-trimester responses/);
   dom.window.close();
+});
+
+test('native report filters default to current year and trimester and refresh immediately without stale responses',async t=>{
+ const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;t.after(()=>w.close());
+ const calls=[],waiting=[];const config={periods:['1','2'],admin:true,currentYear:'2026-2027',currentTrimester:'1'};
+ w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.NestWeather={config,ready:Promise.resolve(config),view:'compose',api:async(op,fields)=>{calls.push(fields);return new Promise(resolve=>waiting.push(resolve));}};
+ w.eval(fs.readFileSync('js/weather.js','utf8'));await new Promise(r=>setImmediate(r));
+ assert.equal(w.document.getElementById('weather-year').value,'2026-2027');assert.equal(w.document.getElementById('weather-trimester').value,'1');assert.equal(w.document.getElementById('weather-filter-apply'),null);
+ w.NestWeather.view='reports';w.document.dispatchEvent(new w.CustomEvent('nest-weather-view',{detail:{view:'reports'}}));assert.equal(calls[0].period,'1');assert.equal(calls[0].year,'2026-2027');assert.equal(calls[0].trimester,'1');
+ const response=title=>({division:title,years:['2025-2026'],summary:[],columns:['Report'],rows:[],hasMore:false,total:0});
+ w.document.getElementById('weather-trimester').value='2';w.document.getElementById('weather-trimester').dispatchEvent(new w.Event('change'));assert.equal(calls[1].trimester,'2');assert.equal(calls[1].page,0);
+ waiting[1](response('Current response'));await new Promise(r=>setImmediate(r));waiting[0](response('Stale response'));await new Promise(r=>setImmediate(r));assert.equal(w.document.getElementById('weather-title').textContent,'Current response');assert.equal(w.document.getElementById('weather-year').value,'2026-2027');
+ choose(w,'2');assert.equal(calls[2].period,'2');waiting[2](response('Division 2'));await new Promise(r=>setImmediate(r));
+ w.NestWeather.view='admin';w.document.dispatchEvent(new w.CustomEvent('nest-weather-view',{detail:{view:'admin'}}));assert.equal(calls[3].period,'all');assert.equal(w.document.getElementById('weather-division').options[0].textContent,'All divisions');waiting[3](response('All divisions'));await new Promise(r=>setImmediate(r));
+ w.document.getElementById('weather-year').value='2025-2026';w.document.getElementById('weather-year').dispatchEvent(new w.Event('change'));assert.equal(calls[4].year,'2025-2026');waiting[4](response('Previous year'));await new Promise(r=>setImmediate(r));
 });
