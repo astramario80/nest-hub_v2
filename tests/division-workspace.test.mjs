@@ -239,3 +239,10 @@ test('partner hires queue a sharing refresh on the permanent worker without rebu
  assert.equal(q.call({operation:'sync-access',job:undefined,email:undefined}).status,200);
  q.ctx.nestDivisionSlidesWorker();assert.deepEqual(synced,['1']);assert.equal(q.properties.has('nest-hiring-access:1'),false);assert.equal(q.updates.length,0);
 });
+
+test('editors distinguish original leadership decks from compiled meeting slides',async()=>{
+ const {w}=ui();try{await tick();const individual=w.document.querySelector('.division-individual');assert.match(w.document.querySelector('[data-manager-open]').href,new RegExp(DIVISIONS['1'].slides));
+  [...w.document.querySelectorAll('.division-window-positions button')].find(button=>button.textContent.includes('Assistant Manager')).click();await tick();assert.match(individual.querySelector('[role=status]').textContent,/editing the original Assistant Manager/);assert.match(individual.textContent,/Saved to Drive/);assert.match(individual.querySelector('[data-external]').href,new RegExp(LEADER_SLIDES['1'][0].id));
+  individual.querySelector('[data-back]').click();w.document.querySelector('[data-edit-manager]').click();await tick();assert.match(individual.querySelector('[role=status]').textContent,/compiled meeting slideshow.*replaces slides after the title/);assert.match(individual.querySelector('[role=status]').textContent,/private backup/);
+ }finally{w.close();}
+});
