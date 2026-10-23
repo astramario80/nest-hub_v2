@@ -56,7 +56,7 @@ test('wheel hover only previews; explicit confirmation sends one request and exp
  w.fetch=async(url,opts={})=>{const u=String(url);if(u.endsWith('weather-emotions.json'))return {ok:true,json:async()=>catalog};if(u.endsWith('.svg'))return {ok:true,text:async()=>fs.readFileSync('assets/emotional-check-in.svg','utf8')};const body=opts.body?JSON.parse(opts.body):null;if(body)calls.push(body);return {ok:true,json:async()=>body?{confirmed:true,alerted:true,counselor:{name:'Katie Kimball',url:'https://calendar.google.com/example'}}:{periods:[],studentPeriods:['1'],admin:false}};};
  w.eval(fs.readFileSync('js/weather-form.js','utf8'));await new Promise(r=>setTimeout(r,20));const emotion=catalog.find(x=>x.family==='Sad');const group=w.document.querySelector('[data-emotion="'+emotion.id+'"]');
  group.dispatchEvent(new w.MouseEvent('pointerover',{bubbles:true}));assert.equal(w.document.getElementById('weather-emotion-answer').value,emotion.answer);assert.equal(calls.length,0);
- w.document.getElementById('weather-confirm').click();await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);assert.equal(calls[0].operation,'confirm');assert.equal(w.document.getElementById('weather-counselor').hidden,false);
+ assert.equal(w.document.getElementById('weather-lens').hidden,false);group.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert.equal(w.document.getElementById('weather-lens').hidden,true);await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);assert.equal(calls[0].operation,'confirm');assert.equal(w.document.getElementById('weather-counselor').hidden,false);
  w.document.getElementById('weather-confirm').click();await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);
  const other=catalog.find(x=>x.family==='Happy');w.document.querySelector('[data-emotion="'+other.id+'"]').dispatchEvent(new w.MouseEvent('pointerover',{bubbles:true}));assert.equal(w.document.getElementById('weather-emotion-answer').value,emotion.answer);assert.equal(calls.length,1);
  const dialog=w.document.getElementById('weather-builder');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};w.document.getElementById('weather-change').value='Existing feedback.';w.document.getElementById('weather-builder-open').click();assert.equal(w.document.getElementById('weather-builder-feeling').value,'sad');
@@ -80,4 +80,24 @@ test('school-calendar import requires validated school-year boundaries and saves
  s.ctx.CalendarApp={getCalendarById:()=>({getEvents:()=>definitions.map(([title,start,end])=>({isAllDayEvent:()=>true,getTitle:()=>title,getAllDayStartDate:()=>new Date(start+'T12:00:00Z'),getAllDayEndDate:()=>new Date(end+'T12:00:00Z')}))})};
  const result=s.call(OWNER,'import-calendar',{year:'2026-2027'});assert.equal(result.status,200);assert.deepEqual(Array.from(result.dates),['2026-08-31','2026-11-24','2027-03-10','2027-06-15']);
  assert.equal(s.call(OWNER,'import-calendar',{year:'2026-2028'}).status,400);s.ctx.CalendarApp.getCalendarById=()=>({getEvents:()=>[]});assert.equal(s.call(OWNER,'import-calendar',{year:'2025-2026'}).status,409);
+});
+
+test('global support alerts remain visible inside open modal dialogs without repeated announcements',async t=>{
+ const dom=new JSDOM('<html><head></head><body><dialog open><p>Another NEST dialog</p></dialog></body></html>',{runScripts:'outside-only',url:'https://gknest.org/'}),w=dom.window;w.AbortSignal.timeout=()=>undefined;w.NestAuth={identity:{signedIn:true,email:DM},ready:Promise.resolve()};t.after(()=>dom.window.close());
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('alert-access')?{eligible:true}:{eligible:true,events:[{id:'test-id',student:'Synthetic student',period:'1',emotion:'Sad',at:new Date().toISOString(),test:true}],cursor:'1'}});
+ w.eval(fs.readFileSync('js/weather-alerts.js','utf8'));await new Promise(resolve=>setImmediate(resolve));const panel=w.document.querySelector('.nest-weather-alert');assert.ok(panel);assert.equal(panel.parentElement.tagName,'DIALOG');assert.match(panel.textContent,/Synthetic student/);
+ await w.NestWeatherAlerts.check();assert.equal(w.document.querySelector('.nest-weather-alert'),panel);w.document.querySelector('dialog').remove();await new Promise(resolve=>setImmediate(resolve));assert.equal(w.document.querySelector('.nest-weather-alert').parentElement,w.document.body);
+ w.document.querySelector('.nest-weather-alert button').click();assert.equal(w.document.querySelector('.nest-weather-alert'),null);assert.doesNotMatch([...Array(w.localStorage.length)].map((_,i)=>w.localStorage.getItem(w.localStorage.key(i))).join(''),/Synthetic student|Sad/);dom.window.close();
+});
+
+test('trimester parsing prioritizes MS/HS events and supports ordinal numbers, Tri abbreviations, and inferred adjacent boundaries',()=>{
+ const s=school(),events=[{title:'First day of school',start:'2026-08-31',end:'2026-09-01'},{title:'ES End of 1st Trimester',start:'2026-11-20',end:'2026-11-21'},{title:'MS/HS End of 1st Trimester - Grade Prep - Early Dismissal Gr. 6-12',start:'2026-11-24',end:'2026-11-25'},{title:'MS/HS End of Tri2 - Grade Prep',start:'2027-03-10',end:'2027-03-11'},{title:'Last day of school',start:'2027-06-15',end:'2027-06-16'}];
+ assert.deepEqual(Array.from(s.ctx.weatherCalendarDates_(events)),['2026-08-31','2026-11-24','2027-03-10','2027-06-15']);
+ events[2]={title:'MS/HS 2nd Trimester Begins',start:'2026-11-25',end:'2026-11-26'};assert.deepEqual(Array.from(s.ctx.weatherCalendarDates_(events)),['2026-08-31','2026-11-24','2027-03-10','2027-06-15']);
+});
+
+test('school calendar imports timed First Day of School events as local date boundaries',()=>{
+ const s=school(),defs=[['First Day of School','2023-08-30','2023-08-30',false],['End of 1st Trimester','2023-11-30','2023-12-01',true],['End of 2nd Trimester','2024-03-14','2024-03-15',true],['Last Day of School','2024-06-14','2024-06-15',true]];
+ s.ctx.CalendarApp={getCalendarById:()=>({getEvents:()=>defs.map(([title,start,end,allDay])=>({isAllDayEvent:()=>allDay,getTitle:()=>title,getAllDayStartDate:()=>new Date(start+'T12:00:00Z'),getAllDayEndDate:()=>new Date(end+'T12:00:00Z'),getStartTime:()=>new Date(start+'T14:15:00Z'),getEndTime:()=>new Date(end+'T21:45:00Z')}))})};
+ const result=s.call(OWNER,'import-calendar',{year:'2023-2024'});assert.equal(result.status,200);assert.deepEqual(Array.from(result.dates),['2023-08-30','2023-11-30','2024-03-14','2024-06-14']);
 });

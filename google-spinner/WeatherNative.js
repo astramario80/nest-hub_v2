@@ -3,7 +3,7 @@ let WEATHER_DIRECTORY_ROWS,WEATHER_CALENDARS_READ;
 const WEATHER_STUDENT_DIRECTORY='12XogWM3af3PLIvEyrFR39hzkI0kEmfiCZkr66y3eDcU';
 const WEATHER_COUNSELOR_PAGE='https://gkhs.bethelsd.org/counseling-career-centers/counseling-centers';
 const WEATHER_NATIVE_PERIODS=['Advisory','1','2','3','4','5','7','CTSO'];
-const WEATHER_NATIVE_HEADERS=['Report ID','Timestamp','School year','Trimester','Name','Email','Period','Division','Emotion','Emotion family','Pacing','Challenge','Safety','What is working','What can we change'];
+const WEATHER_NATIVE_HEADERS=['Report ID','Timestamp','School year','Trimester','Name','Email','Period','Division','Emotion','Emotion family','Pacing','Grit','Safety','What is working','What can we change'];
 function weatherOwner_(identity){return OWNER_EMAILS.includes(email_(identity));}
 function weatherPeriod_(value){return String(value||'').replace(/^(period|division)\s*/i,'').trim().replace(/^advisory$/i,'Advisory').replace(/^ctso$/i,'CTSO');}
 function weatherLeaders_(){return (typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];}
@@ -68,7 +68,8 @@ function weatherCounselor_(student){
  return matches.length===1&&Date.now()-Date.parse(directory.checkedAt)<8*86400000?{...matches[0],checkedAt:directory.checkedAt}:{name:'School counseling center',url:WEATHER_COUNSELOR_PAGE,unmatched:true};
 }
 function weatherSetup_(){
- weatherStore_(true);
+ const id=weatherStore_(true),props=PropertiesService.getScriptProperties();
+ if(props.getProperty('weather-schema')!=='2'){Sheets.Spreadsheets.Values.update({values:[['Grit']]},id,"'Reports'!L1",{valueInputOption:'RAW'});props.setProperty('weather-schema','2');}
  if(!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='weatherRefreshCounselors_'))ScriptApp.newTrigger('weatherRefreshCounselors_').timeBased().everyDays(1).atHour(5).create();
  const saved=PropertiesService.getScriptProperties().getProperty('weather-counselors');if(!saved||Date.now()-Date.parse(JSON.parse(saved).checkedAt)>86400000)weatherRefreshCounselors_();
 }
@@ -121,7 +122,7 @@ function weatherFiltered_(identity,r,leaders){
 }
 function weatherSummary_(rows){
  const mean=(list,index)=>{const vals=list.map(r=>Number(r[index])).filter(x=>x>=1&&x<=5);return vals.length?Number((vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2)):'';};
- return [['Report period','Pacing','Challenge','Safety'],['Selected reports',... [10,11,12].map(i=>mean(rows,i))],...['1','2','3'].map(t=>['Trimester '+t,...[10,11,12].map(i=>mean(rows.filter(r=>String(r[3])===t),i))])];
+ return [['Report period','Pacing','Grit','Safety'],['Selected reports',... [10,11,12].map(i=>mean(rows,i))],...['1','2','3'].map(t=>['Trimester '+t,...[10,11,12].map(i=>mean(rows.filter(r=>String(r[3])===t),i))])];
 }
 function weatherExport_(identity,r,leaders){
  if(!weatherOwner_(identity))return {status:403};const data=weatherFiltered_(identity,r,leaders);if(data.status!==200)return data;
@@ -130,34 +131,55 @@ function weatherExport_(identity,r,leaders){
  sheet.getRange(1,1,data.rows.length+1,15).setValues([WEATHER_NATIVE_HEADERS,...data.rows].map(row=>row.map(safe)));sheet.setFrozenRows(1);sheet.getRange(1,1,1,15).setFontWeight('bold').setBackground('#173b50').setFontColor('#ffffff');sheet.getDataRange().setWrap(true);sheet.setColumnWidths(1,15,145);sheet.setColumnWidths(14,2,350);
  const summary=book.insertSheet('Charts'),stats=weatherSummary_(data.rows);summary.getRange(1,1,stats.length,4).setValues(stats);summary.getRange(1,1,1,4).setFontWeight('bold');summary.setColumnWidths(1,4,150);
  const counts={};data.rows.forEach(row=>{const label=String(row[9]||row[8]||'Unspecified').trim().toLowerCase()||'unspecified';counts[label]=(counts[label]||0)+1;});const ranked=Object.entries(counts).sort((a,b)=>b[1]-a[1]),emotions=[['Emotion','Responses'],...ranked];summary.getRange(8,1,emotions.length,2).setValues(emotions);const displayed=ranked.length>8?[...ranked.slice(0,7),['Other reported emotions',ranked.slice(7).reduce((n,row)=>n+row[1],0)]]:ranked,chartEmotions=[['Emotion','Responses'],...displayed];summary.getRange(8,11,chartEmotions.length,2).setValues(chartEmotions);
- summary.insertChart(summary.newChart().setChartType(Charts.ChartType.COLUMN).addRange(summary.getRange(1,1,2,4)).setNumHeaders(1).setPosition(1,6,0,0).setOption('title','Selected reports: average ratings (1–5)').setOption('vAxis',{viewWindow:{min:0,max:5}}).build());
+ summary.insertChart(summary.newChart().setChartType(Charts.ChartType.COLUMN).addRange(summary.getRange(1,1,2,4)).setNumHeaders(1).setPosition(1,6,0,0).setOption('title','Average responses — Pacing/Grit: 3 ideal; Safety: 5 ideal').setOption('vAxis',{viewWindow:{min:0,max:5}}).build());
  if(emotions.length>1)summary.insertChart(summary.newChart().setChartType(Charts.ChartType.PIE).addRange(summary.getRange(8,11,chartEmotions.length,2)).setNumHeaders(1).setPosition(20,6,0,0).setOption('title','Most reported emotions').build());
- const printable=book.insertSheet('Printable report'),lines=[['NEST Weather Reports — '+data.rows.length+' responses'],['Division: '+r.period+' | School year: '+(r.year||'all')+' | Trimester: '+(r.trimester||'all')],...Array.from({length:32},()=>[''])];
+ const printable=book.insertSheet('Printable report'),lines=[['NEST Weather Reports — '+data.rows.length+' responses'],['Division: '+r.period+' | School year: '+(r.year||'all')+' | Trimester: '+(r.trimester||'all')],['Pacing: 1 Too Slow · 3 Just Right! · 5 Too Fast | Grit: 1 Too Easy · 3 Just Right! · 5 Too Hard | Safety: 5 ideal'],...Array.from({length:31},()=>[''])];
  const wrap=text=>{const value=String(text||'—').replace(/\r/g,'');return value.split('\n').flatMap(line=>line.match(/.{1,115}(?:\s|$)|.{1,115}/g)||['']);};
  data.rows.forEach(row=>{
   const entries=[row[1]+' | '+(row[4]||row[5])+' | Division '+row[6]+' | '+row[2]+' | Trimester '+row[3],
-   'Emotion: '+row[8], 'Pacing: '+row[10]+' / 5 | Challenge: '+row[11]+' / 5 | Safety: '+row[12]+' / 5',
+   'Emotion: '+row[8], 'Pacing: '+row[10]+' / 5 | Grit: '+row[11]+' / 5 | Safety: '+row[12]+' / 5',
    'What is working: '+row[13], 'What can we change: '+row[14],''];
   entries.forEach(text=>wrap(text).forEach(line=>lines.push([safe(line)])));
  });
  if(lines.length>printable.getMaxRows())printable.insertRowsAfter(printable.getMaxRows(),lines.length-printable.getMaxRows());
  printable.getRange(1,1,lines.length,1).setValues(lines).setFontSize(11);printable.setColumnWidth(1,900);printable.setRowHeights(1,lines.length,24);printable.getRange(1,1,1,1).setFontWeight('bold').setFontSize(16);
- printable.insertChart(printable.newChart().setChartType(Charts.ChartType.COLUMN).addRange(summary.getRange(1,1,2,4)).setNumHeaders(1).setPosition(4,1,0,0).setOption('width',850).setOption('height',300).setOption('title','Selected reports: average ratings (1–5)').setOption('vAxis',{viewWindow:{min:0,max:5}}).build());
+ printable.insertChart(printable.newChart().setChartType(Charts.ChartType.COLUMN).addRange(summary.getRange(1,1,2,4)).setNumHeaders(1).setPosition(4,1,0,0).setOption('width',850).setOption('height',300).setOption('title','Average responses — Pacing/Grit: 3 ideal; Safety: 5 ideal').setOption('vAxis',{viewWindow:{min:0,max:5}}).build());
  if(emotions.length>1)printable.insertChart(printable.newChart().setChartType(Charts.ChartType.PIE).addRange(summary.getRange(8,11,chartEmotions.length,2)).setNumHeaders(1).setPosition(18,1,0,0).setOption('width',850).setOption('height',300).setOption('title','Most reported emotions').build());
  SpreadsheetApp.flush();const base='https://docs.google.com/spreadsheets/d/'+book.getId();
  return {status:200,count:data.rows.length,spreadsheet:base+'/edit',xlsx:base+'/export?format=xlsx',pdf:base+'/export?format=pdf&gid='+printable.getSheetId()+'&portrait=false&fitw=true&sheetnames=false&printtitle=false&gridlines=false&pagenum=RIGHT',note:'Private to the school account that owns NEST. Sign in with that Google account to download.'};
 }
+const WEATHER_SCHOOL_CALENDAR='c_913e7cfd3fae4b0ebac48350ef736dd9ab300fee8390a21ce972c0cb8ca78049@group.calendar.google.com';
+function weatherCalendarDates_(events){
+ const starts={1:[],2:[],3:[]},ends={1:[],2:[],3:[]},first=[],last=[];
+ const shift=(day,n)=>new Date(Date.parse(day+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
+ const choose=values=>{if(!values.length)return '';const priority=Math.max(...values.map(x=>x.priority)),days=[...new Set(values.filter(x=>x.priority===priority).map(x=>x.day))];return days.length===1?days[0]:'';};
+ for(const event of events){
+  const name=String(event.title||'').toLowerCase();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(event.start)||!/^\d{4}-\d{2}-\d{2}$/.test(event.end)||event.end<=event.start)continue;
+  if(/\b(?:elementary|es)\b/.test(name)&&!/\b(?:ms|hs)\b|middle school|high school/.test(name))continue;
+  if(/\b(?:senior|seniors|kindergarten)\b/.test(name)&&!/k\s*[-–]\s*12|gr(?:ades?)?\.?\s*1\s*[-–]\s*12/.test(name))continue;
+  const secondary=/\b(?:ms|hs)\b|middle school|high school|gr(?:ades?)?\.?\s*6\s*[-–]\s*12/.test(name);
+  const priority=secondary?2:1,entry={day:event.start,priority};
+  const match=name.match(/\btri(?:mester)?\.?\s*(?:#|no\.?)?\s*([123])(?:st|nd|rd)?\b|\b([123])(?:st|nd|rd)?\s*tri(?:mester)?\b|\b(first|second|third)\s+tri(?:mester)?\b/);
+  const number=match?Number(match[1]||match[2]||({first:1,second:2,third:3})[match[3]]):0;
+  if(number&&/\b(?:end|ends|ending|last|grade prep|grades due)\b/.test(name))ends[number].push({day:shift(event.end,-1),priority});
+  if(number&&/\b(?:start|starts|starting|begin|begins|beginning|first day|1st day)\b/.test(name))starts[number].push(entry);
+  if(number&&!/\b(?:end|ends|ending|last|start|starts|begin|begins)\b/.test(name)&&Date.parse(event.end)-Date.parse(event.start)>20*86400000){starts[number].push(entry);ends[number].push({day:shift(event.end,-1),priority});}
+  if(/\bfirst day of school\b|\bschool (starts|begins)\b/.test(name))first.push(entry);
+  if(/\blast day of school\b/.test(name))last.push({day:shift(event.end,-1),priority});
+ }
+ const next2=choose(starts[2]),next3=choose(starts[3]);
+ const dates=[choose(starts[1])||choose(first),choose(ends[1])||(next2?shift(next2,-1):''),choose(ends[2])||(next3?shift(next3,-1):''),choose(ends[3])||choose(last)];
+ return dates.every((day,i)=>day&&(!i||day>dates[i-1]))?dates:null;
+}
 function weatherImportCalendar_(year){
  if(!/^20\d\d-20\d\d$/.test(year)||Number(year.slice(5))!==Number(year.slice(0,4))+1)return {status:400};
- const start=Number(year.slice(0,4)),events=[];
- SERVICE_CALENDARS.forEach(id=>{
-  const calendar=CalendarApp.getCalendarById(id);if(!calendar)throw new Error('School calendar unavailable');
-  const rows=calendar.getEvents(new Date(start+'-08-01T00:00:00-07:00'),new Date((start+1)+'-08-01T00:00:00-07:00'));if(rows.length>5000)throw new Error('School calendar capacity');
-  rows.filter(e=>e.isAllDayEvent()&&/\btri(?:mester)?\b|\bfirst day of school\b|\bschool (starts|begins)\b|\blast day of school\b/i.test(e.getTitle())).forEach(e=>events.push({title:e.getTitle(),allDay:true,start:weatherDate_(e.getAllDayStartDate()),end:weatherDate_(e.getAllDayEndDate())}));
- });
- const ranges=[start+'-10-15',(start+1)+'-01-15',(start+1)+'-05-15'].map(day=>serviceCalendarRange_(events,day));
- if(ranges.some((range,i)=>range.error||range.number!==i+1)||ranges[0].end>=ranges[1].start||ranges[1].end>=ranges[2].start)return {status:409,error:'The school calendars do not provide one unambiguous set of trimester dates for this year. Enter the official dates manually.'};
- const dates=[ranges[0].start,ranges[0].end,ranges[1].end,ranges[2].end],calendars=weatherCalendars_();calendars[year]=dates;PropertiesService.getScriptProperties().setProperty('weather-calendars',JSON.stringify(calendars));return {status:200,year,dates,source:'School Google calendars'};
+ const start=Number(year.slice(0,4)),calendar=CalendarApp.getCalendarById(WEATHER_SCHOOL_CALENDAR);if(!calendar)throw new Error('School calendar unavailable');
+ const rows=calendar.getEvents(new Date(start+'-08-01T00:00:00-07:00'),new Date((start+1)+'-08-01T00:00:00-07:00'));if(rows.length>5000)throw new Error('School calendar capacity');
+ const events=rows.filter(e=>/\btri(?:mester)?|\b[123](?:st|nd|rd)?\s*tri|\bfirst day of school\b|\bschool (starts|begins)\b|\blast day of school\b/i.test(e.getTitle())).map(e=>{const allDay=e.isAllDayEvent(),start=weatherDate_(allDay?e.getAllDayStartDate():e.getStartTime()),end=allDay?weatherDate_(e.getAllDayEndDate()):new Date(Date.parse(weatherDate_(e.getEndTime())+'T12:00:00Z')+86400000).toISOString().slice(0,10);return {title:e.getTitle(),start,end};});
+ const dates=weatherCalendarDates_(events);
+ if(!dates||dates.some(day=>weatherYear_(day)!==year))return {status:409,error:'The school calendar does not provide one unambiguous set of MS/HS trimester dates for this year. Enter the official dates manually.'};
+ const calendars=weatherCalendars_();calendars[year]=dates;PropertiesService.getScriptProperties().setProperty('weather-calendars',JSON.stringify(calendars));return {status:200,year,dates,source:'School Google calendar'};
 }
 function weatherNativeDispatch_(session,r){
  WEATHER_DIRECTORY_ROWS=null;WEATHER_CALENDARS_READ=null;
@@ -165,7 +187,8 @@ function weatherNativeDispatch_(session,r){
  if(operation==='bootstrap'){
   if(owner)weatherSetup_();const leaders=weatherLeaders_(),periods=WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,false));
   const studentPeriods=WEATHER_NATIVE_PERIODS.filter(p=>weatherStudent_(identity,p));
-  return {status:200,admin:owner,periods,studentPeriods,alertPeriods:WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,true)),calendars:owner?weatherCalendars_():undefined,counselorCheckedAt:owner?JSON.parse(store.getProperty('weather-counselors')||'{}').checkedAt:undefined,counselorError:owner?store.getProperty('weather-counselor-error'):undefined};
+  const today=weatherDate_(new Date()),currentYear=weatherYear_(today),currentTrimester=weatherTrimester_(today,currentYear);
+  return {status:200,admin:owner,periods,studentPeriods,currentYear,currentTrimester,alertPeriods:WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,true)),calendars:owner?weatherCalendars_():undefined,counselorCheckedAt:owner?JSON.parse(store.getProperty('weather-counselors')||'{}').checkedAt:undefined,counselorError:owner?store.getProperty('weather-counselor-error'):undefined};
  }
  if(operation==='alert-access'){const leaders=weatherLeaders_();return {status:200,eligible:WEATHER_NATIVE_PERIODS.some(p=>weatherLeadership_(identity,p,leaders,true))};}
  if(operation==='counselor'){const student=weatherStudent_(identity,r.period);return {status:200,counselor:weatherCounselor_(student)};}

@@ -47,3 +47,8 @@
 @media(max-width:800px){.weather-wheel-layout,.weather-ratings{grid-template-columns:1fr}.weather-selection{position:static}#weather-lens{max-width:360px}.weather-question-heading{display:block}.weather-tabs{flex-wrap:wrap}}
 
 #weather-lens {display:grid;place-items:center;color:#17364b;text-align:center}#weather-lens p {padding:24px;font-size:1rem}#weather-emotion-help {max-width:115ch;line-height:1.6;margin-bottom:20px}
+.weather-gauge svg {width:min(100%,280px)}
+
+.weather-wheel-stage{position:relative;max-width:900px;isolation:isolate}
+#weather-lens{position:absolute;z-index:2;width:200px;height:160px;aspect-ratio:auto;max-height:none;margin:0;border:3px solid #17364b;border-radius:50%;box-shadow:0 4px 20px #0006;pointer-events:none;overflow:hidden}
+#weather-lens[hidden]{display:none}

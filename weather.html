@@ -42,11 +42,10 @@
         <fieldset id="weather-fields" disabled>
           <label for="weather-period">Your division / period</label><select id="weather-period" required></select>
           <h3>How are you feeling right now?</h3>
-          <p id="weather-emotion-help">Hover to preview and enlarge a word. Click or tap the wheel, or choose a word below and select <strong>Confirm emotion</strong>. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
+          <p id="weather-emotion-help">Hover to magnify the wheel. Click or tap an emotion to select and confirm it immediately. You can also choose a word below and select <strong>Confirm emotion</strong>. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
           <div class="weather-wheel-layout">
-            <div id="weather-wheel" aria-describedby="weather-emotion-help"></div>
+            <div class="weather-wheel-stage"><div id="weather-wheel" aria-describedby="weather-emotion-help"></div><div id="weather-lens" aria-hidden="true" hidden></div></div>
             <div class="weather-selection">
-              <div id="weather-lens" aria-hidden="true"><p>Move over the wheel for a closer look.</p></div>
               <p id="weather-preview-status" aria-live="polite"></p>
               <label for="weather-emotion">Choose an emotion or sensation</label><select id="weather-emotion" required><option value="">Choose a word…</option></select>
               <label for="weather-emotion-answer">Emotional check-in answer</label><input id="weather-emotion-answer" readonly placeholder="Explore the wheel above">
@@ -57,7 +56,7 @@
           </div>
           <div class="weather-ratings">
             <label>How is the pace of your supervisor?<select id="weather-pacing" required><option value="">Choose…</option><option value="1">1 — Much too slow</option><option value="2">2 — A little slow</option><option value="3">3 — Just right</option><option value="4">4 — A little fast</option><option value="5">5 — Much too fast</option></select></label>
-            <label>Is the learning challenging you?<select id="weather-challenge" required><option value="">Choose…</option><option value="1">1 — Much too easy</option><option value="2">2 — A little easy</option><option value="3">3 — Just right</option><option value="4">4 — A little difficult</option><option value="5">5 — Much too difficult</option></select></label>
+            <label>Grit — how challenging is the learning?<select id="weather-challenge" required><option value="">Choose…</option><option value="1">1 — Much too easy</option><option value="2">2 — A little easy</option><option value="3">3 — Just right</option><option value="4">4 — A little hard</option><option value="5">5 — Much too hard</option></select></label>
             <label>How safe do you feel here?<select id="weather-safety" required><option value="">Choose…</option><option value="1">1 — Not safe</option><option value="2">2 — A little safe</option><option value="3">3 — Somewhat safe</option><option value="4">4 — Mostly safe</option><option value="5">5 — Very safe</option></select></label>
           </div>
           <label for="weather-working">What are we doing right, even if it is something small?</label><textarea id="weather-working" rows="3" maxlength="5000"></textarea>
@@ -71,12 +70,11 @@
     </section>
     <section id="weather-report-view" hidden>
       <div class="weather-filters internal-actions">
+        <label for="weather-division">Division<select id="weather-division"></select></label>
         <label>School year<select id="weather-year"></select></label><label>Trimester<select id="weather-trimester"><option value="all">All trimesters</option><option value="1">Trimester 1</option><option value="2">Trimester 2</option><option value="3">Trimester 3</option><option value="Unassigned">Outside configured dates</option></select></label>
-        <button type="button" id="weather-filter-apply">Apply filters</button>
       </div>
       <div id="weather-admin-tools" class="internal-card" hidden>
         <h2>Private administrator archive</h2>
-        <label>Division<select id="weather-admin-division"><option value="all">All divisions</option></select></label>
         <button type="button" id="weather-export">Prepare spreadsheet and PDF</button><div id="weather-export-status" role="status"></div>
         <details><summary>Test support alerts and manage counselor links</summary>
           <p>The test is labeled TEST and appears only for your current administrator account. It does not notify division leaders or create a student report.</p>
@@ -90,11 +88,11 @@
           <button type="button" id="weather-calendar-save">Save trimester dates</button><p id="weather-calendar-status" role="status"></p>
         </details>
       </div>
-    <nav id="weather-divisions" class="internal-actions weather-division-buttons" aria-label="Division weather reports"></nav>
     <div id="weather-status" role="status">Checking division access…</div>
     <section id="weather-data" class="internal-card" hidden>
       <h2 id="weather-title"></h2>
       <div id="weather-charts" class="weather-charts" aria-label="Weather report charts"></div>
+      <p class="internal-muted">Pacing and Grit are best in the middle: 3 means “Just Right!” Safety is best as close to 5 as possible.</p>
       <div id="weather-trimesters" class="weather-trimesters"></div>
       <h3>Responses</h3>
       <div class="internal-actions" id="weather-pages" hidden>
