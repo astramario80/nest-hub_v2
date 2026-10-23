@@ -149,7 +149,7 @@ function weatherExport_(identity,r,leaders){
  return {status:200,count:data.rows.length,spreadsheet:base+'/edit',xlsx:base+'/export?format=xlsx',pdf:base+'/export?format=pdf&gid='+printable.getSheetId()+'&portrait=false&fitw=true&sheetnames=false&printtitle=false&gridlines=false&pagenum=RIGHT',note:'Private to the school account that owns NEST. Sign in with that Google account to download.'};
 }
 const WEATHER_SCHOOL_CALENDAR='c_913e7cfd3fae4b0ebac48350ef736dd9ab300fee8390a21ce972c0cb8ca78049@group.calendar.google.com';
-function weatherCalendarDates_(events){
+function weatherCalendarDates_(events,fallbackEnd){
  const starts={1:[],2:[],3:[]},ends={1:[],2:[],3:[]},first=[],last=[];
  const shift=(day,n)=>new Date(Date.parse(day+'T12:00:00Z')+n*86400000).toISOString().slice(0,10);
  const choose=values=>{if(!values.length)return '';const priority=Math.max(...values.map(x=>x.priority)),days=[...new Set(values.filter(x=>x.priority===priority).map(x=>x.day))];return days.length===1?days[0]:'';};
@@ -169,7 +169,7 @@ function weatherCalendarDates_(events){
   if(/\blast day of school\b/.test(name))last.push({day:shift(event.end,-1),priority});
  }
  const next2=choose(starts[2]),next3=choose(starts[3]);
- const dates=[choose(starts[1])||choose(first),choose(ends[1])||(next2?shift(next2,-1):''),choose(ends[2])||(next3?shift(next3,-1):''),choose(ends[3])||choose(last)];
+ const dates=[choose(starts[1])||choose(first),choose(ends[1])||(next2?shift(next2,-1):''),choose(ends[2])||(next3?shift(next3,-1):''),choose(ends[3])||choose(last)||(!ends[3].length&&!last.length?fallbackEnd:'')];
  return dates.every((day,i)=>day&&(!i||day>dates[i-1]))?dates:null;
 }
 function weatherImportCalendar_(year){
@@ -177,7 +177,7 @@ function weatherImportCalendar_(year){
  const start=Number(year.slice(0,4)),calendar=CalendarApp.getCalendarById(WEATHER_SCHOOL_CALENDAR);if(!calendar)throw new Error('School calendar unavailable');
  const rows=calendar.getEvents(new Date(start+'-08-01T00:00:00-07:00'),new Date((start+1)+'-08-01T00:00:00-07:00'));if(rows.length>5000)throw new Error('School calendar capacity');
  const events=rows.filter(e=>/\btri(?:mester)?|\b[123](?:st|nd|rd)?\s*tri|\bfirst day of school\b|\bschool (starts|begins)\b|\blast day of school\b/i.test(e.getTitle())).map(e=>{const allDay=e.isAllDayEvent(),start=weatherDate_(allDay?e.getAllDayStartDate():e.getStartTime()),end=allDay?weatherDate_(e.getAllDayEndDate()):new Date(Date.parse(weatherDate_(e.getEndTime())+'T12:00:00Z')+86400000).toISOString().slice(0,10);return {title:e.getTitle(),start,end};});
- const dates=weatherCalendarDates_(events);
+ const dates=weatherCalendarDates_(events,(start+1)+'-06-30');
  if(!dates||dates.some(day=>weatherYear_(day)!==year))return {status:409,error:'The school calendar does not provide one unambiguous set of MS/HS trimester dates for this year. Enter the official dates manually.'};
  const calendars=weatherCalendars_();calendars[year]=dates;PropertiesService.getScriptProperties().setProperty('weather-calendars',JSON.stringify(calendars));return {status:200,year,dates,source:'School Google calendar'};
 }

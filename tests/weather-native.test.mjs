@@ -101,3 +101,12 @@ test('school calendar imports timed First Day of School events as local date bou
  s.ctx.CalendarApp={getCalendarById:()=>({getEvents:()=>defs.map(([title,start,end,allDay])=>({isAllDayEvent:()=>allDay,getTitle:()=>title,getAllDayStartDate:()=>new Date(start+'T12:00:00Z'),getAllDayEndDate:()=>new Date(end+'T12:00:00Z'),getStartTime:()=>new Date(start+'T14:15:00Z'),getEndTime:()=>new Date(end+'T21:45:00Z')}))})};
  const result=s.call(OWNER,'import-calendar',{year:'2023-2024'});assert.equal(result.status,200);assert.deepEqual(Array.from(result.dates),['2023-08-30','2023-11-30','2024-03-14','2024-06-14']);
 });
+
+
+test('June 30 fallback fills only a missing school-year end, never conflicting explicit events',()=>{
+ const s=school(),events=[{title:'First Day of School',start:'2024-08-28',end:'2024-08-29'},{title:'End of Trimester 1',start:'2024-11-26',end:'2024-11-27'},{title:'End of Trimester 2',start:'2025-03-12',end:'2025-03-13'}];
+ assert.deepEqual(Array.from(s.ctx.weatherCalendarDates_(events,'2025-06-30')),['2024-08-28','2024-11-26','2025-03-12','2025-06-30']);
+ events.push({title:'Last Day of School',start:'2025-06-12',end:'2025-06-13'});assert.equal(s.ctx.weatherCalendarDates_(events,'2025-06-30')[3],'2025-06-12');
+ events.push({title:'Last Day of School',start:'2025-06-13',end:'2025-06-14'});assert.equal(s.ctx.weatherCalendarDates_(events,'2025-06-30'),null);
+ events.splice(1,1);assert.equal(s.ctx.weatherCalendarDates_(events,'2025-06-30'),null);
+});
