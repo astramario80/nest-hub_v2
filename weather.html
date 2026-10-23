@@ -42,14 +42,12 @@
         <fieldset id="weather-fields" disabled>
           <label for="weather-period">Your division / period</label><select id="weather-period" required></select>
           <h3>How are you feeling right now?</h3>
-          <p id="weather-emotion-help">Hover to magnify the wheel. Click or tap an emotion to select and confirm it immediately. You can also choose a word below and select <strong>Confirm emotion</strong>. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
+          <p id="weather-emotion-help">Hover to magnify the wheel. Click or tap an emotion to select and confirm it immediately. Use arrow keys to explore the wheel and Enter or Space to confirm. Confirming an emotion in the Sad, Anger, Fear, or Disgust family sends a support alert to Mr. Penalver, your division manager, and partner liaison, even before you submit the report.</p>
           <div class="weather-wheel-layout">
             <div class="weather-wheel-stage"><div id="weather-wheel" aria-describedby="weather-emotion-help"></div><div id="weather-lens" aria-hidden="true" hidden></div></div>
             <div class="weather-selection">
               <p id="weather-preview-status" aria-live="polite"></p>
-              <label for="weather-emotion">Choose an emotion or sensation</label><select id="weather-emotion" required><option value="">Choose a word…</option></select>
               <label for="weather-emotion-answer">Emotional check-in answer</label><input id="weather-emotion-answer" readonly placeholder="Explore the wheel above">
-              <button type="button" id="weather-confirm">Confirm emotion</button>
               <p id="weather-confirm-status" role="status"></p>
               <div id="weather-counselor" hidden><p>You can also talk with your school counselor.</p><a id="weather-counselor-link" target="_blank" rel="noopener noreferrer">Schedule an appointment</a></div>
             </div>

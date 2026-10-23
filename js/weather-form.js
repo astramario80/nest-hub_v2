@@ -12,9 +12,10 @@
  function clearConfirmation(){confirmationRequest++;confirmed='';confirmedDraft='';draft=crypto.randomUUID();attemptedEmotion='';confirmStatus.textContent='';$('weather-counselor').hidden=true;}
  function select(item,point,explicit=false){
   if(explicit&&confirmed&&confirmed!==item.id)clearConfirmation();
-  preview=item;if(!confirmed||explicit){$('weather-emotion').value=item.id;$('weather-emotion-answer').value=item.answer;}
+  preview=item;if(!confirmed||explicit){$('weather-emotion-answer').value=item.answer;}
   $('weather-preview-status').textContent=(explicit?'Selected: ':'Preview: ')+item.answer;
   const svg=$('weather-wheel').querySelector('svg'),group=svg?.querySelector('[data-emotion="'+item.id+'"]');
+  if(explicit&&group){svg.querySelectorAll('[data-emotion]').forEach(n=>n.setAttribute('tabindex',n===group?'0':'-1'));}
   svg?.querySelectorAll('.selected').forEach(n=>n.classList.remove('selected'));group?.classList.add('selected');
   if(svg&&group){if(!lensSvg){lensSvg=svg.cloneNode(true);lensSvg.removeAttribute('role');lensSvg.removeAttribute('aria-label');lensSvg.querySelectorAll('[tabindex]').forEach(n=>n.removeAttribute('tabindex'));lensSvg.querySelectorAll('.selected').forEach(n=>n.classList.remove('selected'));$('weather-lens').replaceChildren(lensSvg);}const lens=lensSvg;let x=1000,y=1000;
    const holder=$('weather-wheel'),rect=holder.getBoundingClientRect(),popup=$('weather-lens');
@@ -32,23 +33,21 @@
   if(confirmed===item.id&&confirmedDraft){confirmStatus.textContent='This emotion is already confirmed.';return;}
   // Each deliberate changed confirmation receives a new ID; retries keep the same ID.
   if(attemptedEmotion&&attemptedEmotion!==item.id){draft=crypto.randomUUID();confirmed='';confirmedDraft='';}
-  attemptedEmotion=item.id;const request=++confirmationRequest,before=draft;busy=true;$('weather-confirm').disabled=true;confirmStatus.textContent='Confirming your emotion…';
+  attemptedEmotion=item.id;const request=++confirmationRequest,before=draft;busy=true;$('weather-wheel').setAttribute('aria-busy','true');confirmStatus.textContent='Confirming your emotion…';
   try{
    const data=await api('confirm',{period,draft:before,emotion:item.id},true);if(request!==confirmationRequest)return;
-   if(!data.confirmed)throw new Error('That confirmation was already used. Choose the emotion again.');confirmed=item.id;confirmedDraft=before;$('weather-emotion').value=item.id;$('weather-emotion-answer').value=item.answer;
+   if(!data.confirmed)throw new Error('That confirmation was already used. Choose the emotion again.');confirmed=item.id;confirmedDraft=before;$('weather-emotion-answer').value=item.answer;
    confirmStatus.textContent=data.alerted?'Emotion confirmed. A support alert is available to Mr. Penalver, your division manager, and partner liaison.':'Emotion confirmed.';
    if(item.charged&&data.counselor){$('weather-counselor').hidden=false;const link=$('weather-counselor-link');link.href=data.counselor.url;link.textContent=data.counselor.unmatched?'Find your counselor and appointment link':'Schedule with '+data.counselor.name;}
   }catch(error){if(request===confirmationRequest)confirmStatus.textContent=error.message;}
-  finally{busy=false;$('weather-confirm').disabled=false;}
+  finally{busy=false;$('weather-wheel').setAttribute('aria-busy','false');}
  }
- $('weather-confirm').addEventListener('click',confirm);
- $('weather-emotion').addEventListener('change',()=>{const item=catalog.find(x=>x.id===$('weather-emotion').value);if(item)select(item,undefined,true);});
  $('weather-period').addEventListener('change',clearConfirmation);
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy)return;
   if(submitted){form.reset();$('weather-submit').formNoValidate=false;submitted=false;clearConfirmation();preview=null;$('weather-emotion-answer').value='';$('weather-submit').textContent='Submit weather report';submitStatus.textContent='Ready for a new check-in.';return;}
   if(!form.reportValidity())return;
-  if(!confirmed||!confirmedDraft){submitStatus.textContent='Confirm your selected emotion before submitting.';$('weather-confirm').focus();return;}
+  if(!confirmed||!confirmedDraft){submitStatus.textContent='Click an emotion on the wheel to confirm it before submitting.';$('weather-wheel').querySelector('[tabindex="0"]')?.focus();return;}
   busy=true;$('weather-submit').disabled=true;submitStatus.textContent='Saving your weather report…';const current=identityKey;
   try{const data=await api('submit',{draft:confirmedDraft,period:$('weather-period').value,emotion:confirmed,pacing:Number($('weather-pacing').value),challenge:Number($('weather-challenge').value),safety:Number($('weather-safety').value),working:$('weather-working').value,change:$('weather-change').value},true);if(current!==identityKey)return;
    if(data.saved){submitted=true;$('weather-submit').formNoValidate=true;submitStatus.textContent='Your weather report has been saved. Thank you for checking in.';$('weather-submit').textContent='Start another check-in';}
@@ -69,7 +68,8 @@
  $('weather-export').addEventListener('click',async()=>{const button=$('weather-export'),status=$('weather-export-status');button.disabled=true;status.textContent='Preparing your private archive and charts…';try{const data=await api('export',{period:$('weather-division').value,year:$('weather-year').value,trimester:$('weather-trimester').value},true);status.textContent=data.count+' reports. '+data.note;for(const [key,label] of [['xlsx','Download spreadsheet'],['pdf','Download PDF'],['spreadsheet','Open private archive']]){const a=document.createElement('a');a.href=data[key];a.textContent=label;a.target='_blank';a.rel='noopener noreferrer';status.append(a);}}catch(error){status.textContent=error.message;}finally{button.disabled=false;}});
  const wheelReady=Promise.all([fetch('/assets/weather-emotions.json').then(r=>{if(!r.ok)throw new Error('Emotion list unavailable.');return r.json();}),fetch('/assets/emotional-check-in.svg').then(r=>{if(!r.ok)throw new Error('Emotion wheel unavailable.');return r.text();})]).then(([items,source])=>{
   catalog=items;const parsed=new DOMParser().parseFromString(source,'image/svg+xml');if(parsed.querySelector('parsererror,script,foreignObject'))throw new Error('Emotion wheel could not load.');
-  const svg=document.importNode(parsed.documentElement,true);$('weather-wheel').replaceChildren(svg);items.forEach(item=>$('weather-emotion').append(option(item.id,item.answer)));
+  const svg=document.importNode(parsed.documentElement,true);$('weather-wheel').replaceChildren(svg);svg.setAttribute('role','group');const groups=[...svg.querySelectorAll('[data-emotion]')];groups[0]?.setAttribute('tabindex','0');
+  svg.addEventListener('keydown',event=>{const group=event.target.closest('[data-emotion]');if(!group)return;let index=groups.indexOf(group);if(['ArrowRight','ArrowDown','ArrowLeft','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();index=event.key==='Home'?0:event.key==='End'?groups.length-1:(index+(['ArrowLeft','ArrowUp'].includes(event.key)?-1:1)+groups.length)%groups.length;groups.forEach(n=>n.setAttribute('tabindex','-1'));groups[index].setAttribute('tabindex','0');groups[index].focus();select(items.find(x=>x.id===groups[index].dataset.emotion));}else if(event.key==='Enter'||event.key===' '){event.preventDefault();group.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
   svg.addEventListener('pointerover',event=>{const group=event.target.closest('[data-emotion]'),item=items.find(x=>x.id===group?.dataset.emotion);if(item&&!busy&&!frozen)select(item,event);});
   svg.addEventListener('pointermove',event=>{const group=event.target.closest('[data-emotion]');if(group&&preview?.id===group.dataset.emotion&&!busy&&!frozen)select(preview,event);});
   svg.addEventListener('pointerleave',()=>{frozen=false;$('weather-lens').hidden=true;});
