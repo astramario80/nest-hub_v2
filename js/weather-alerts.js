@@ -1,7 +1,7 @@
 (() => {
  if(window.NestWeatherAlerts||!window.NestAuth)return;
  let identity='',cursor='',eligible=false,polling=false,generation=0,timer,events=[],panel,presentedKey='',seen=new Set();
- const style=document.createElement('style');style.textContent=`.nest-weather-alert{position:fixed;inset:auto 20px 20px auto;margin:0;text-align:left;z-index:10020;max-width:430px;width:calc(100% - 40px);box-sizing:border-box;padding:22px;background:#17364b;color:#fff;border:2px solid #ffc069;border-radius:14px;box-shadow:0 12px 48px #0008}.nest-weather-alert h2{font-size:1.15rem;margin:0 0 10px}.nest-weather-alert p{margin:10px 0;overflow-wrap:anywhere}.nest-weather-alert button,.nest-weather-alert a{display:inline-block;padding:9px 14px;margin:8px 8px 0 0;border:1px solid #ffd49a;border-radius:7px;background:#fff;color:#152c3c;text-decoration:none;font:inherit}.nest-weather-alert:focus{outline:3px solid #fff}`;document.head.append(style);
+ const style=document.createElement('style');style.textContent=`.nest-weather-alert{position:fixed;inset:24px auto auto 50%;transform:translateX(-50%);margin:0;text-align:left;z-index:10020;max-width:680px;width:calc(100% - 32px);max-height:calc(100dvh - 48px);overflow:auto;box-sizing:border-box;padding:26px;background:#fff0c2;color:#412b12;border:4px solid #d87513;border-radius:16px;box-shadow:0 12px 60px #0009}.nest-weather-alert h2{font-size:1.45rem;margin:0 0 14px;color:#793600}.nest-weather-alert p{margin:12px 0;overflow-wrap:anywhere}.nest-weather-alert .nest-weather-alert-student{font-size:1.3rem;font-weight:700}.nest-weather-alert .nest-weather-alert-emotion{font-size:1.2rem;font-weight:700}.nest-weather-alert button,.nest-weather-alert a{display:inline-block;padding:10px 14px;margin:8px 8px 0 0;border:1px solid #8c4d15;border-radius:7px;background:#fff;color:#582800;text-decoration:none;font:inherit;font-weight:600}.nest-weather-alert .nest-weather-alert-call{background:#713b12;color:#fff}.nest-weather-alert:focus{outline:3px solid #793600}@media(max-width:600px){.nest-weather-alert{inset:12px auto auto 50%;padding:18px;max-height:calc(100dvh - 24px)}}`;document.head.append(style);
  const key=()=> 'nest-weather-alert-seen:'+identity;
  function persist(){try{localStorage.setItem(key(),JSON.stringify([...seen].slice(-500)));}catch{}}
  function render(){
@@ -11,11 +11,15 @@
   panel?.remove();panel=null;if(!events.length)return;const item=events[0];
   panel=document.createElement('section');panel.className='nest-weather-alert';panel.setAttribute('role','alert');panel.setAttribute('aria-label',item.test?'Test support alert':'Student support alert');
   const heading=document.createElement('h2');heading.textContent=item.test?'TEST — Support alert':'A student may welcome support';
-  const content=document.createElement('p');content.textContent=`${item.student} · ${item.period==='CTSO'?'CTSO':'Division '+item.period} · ${item.emotion}`;
+  const content=document.createElement('p');content.className='nest-weather-alert-student';content.textContent='Student: '+item.student;
+  const emotion=document.createElement('p');emotion.className='nest-weather-alert-emotion';emotion.textContent='Emotion: '+item.emotion;
+  const division=document.createElement('p');division.textContent=item.period==='CTSO'?'CTSO':item.period==='Advisory'?'Advisory':'Division '+item.period;
   const time=document.createElement('p');time.textContent=new Date(item.at).toLocaleString()+(events.length>1?` · ${events.length} alerts waiting`:'');
   const dismiss=document.createElement('button');dismiss.type='button';dismiss.textContent='Acknowledge';dismiss.addEventListener('click',()=>{seen.add(item.id);persist();events.shift();render();});
   const link=document.createElement('a');link.href='/weather';link.textContent='Open weather reports';
-  panel.append(heading,content,time,dismiss,link);host.append(panel);
+  const counselor=document.createElement('a');const url=String(item.counselor?.url||'');counselor.href=/^https:\/\/(?:calendar\.google\.com|calendar\.app\.google|[a-z0-9-]+\.youcanbook\.me)\//i.test(url)?url:'https://gkhs.bethelsd.org/counseling-career-centers/counseling-centers';counselor.target='_blank';counselor.rel='noopener noreferrer';counselor.textContent=item.counselor&&!item.counselor.unmatched&&counselor.href===url?'Schedule with '+item.counselor.name:'Find counselor appointment';
+  const phone=document.createElement('a');phone.className='nest-weather-alert-call';phone.href='tel:+12538006176';phone.textContent='Call counselor office: 253-800-6176 (x6176)';
+  panel.append(heading,content,emotion,division,time,counselor,phone,dismiss,link);host.append(panel);
   // The top layer keeps alerts visible above announcements and resource dialogs.
   // Nest within an active modal so its inert background does not disable alert controls.
   if(typeof panel.showPopover==='function'){panel.setAttribute('popover','manual');try{panel.showPopover();}catch{panel.removeAttribute('popover');}}

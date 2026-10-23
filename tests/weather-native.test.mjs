@@ -84,8 +84,8 @@ test('school-calendar import requires validated school-year boundaries and saves
 
 test('global support alerts remain visible inside open modal dialogs without repeated announcements',async t=>{
  const dom=new JSDOM('<html><head></head><body><dialog open><p>Another NEST dialog</p></dialog></body></html>',{runScripts:'outside-only',url:'https://gknest.org/'}),w=dom.window;w.AbortSignal.timeout=()=>undefined;w.NestAuth={identity:{signedIn:true,email:DM},ready:Promise.resolve()};t.after(()=>dom.window.close());
- w.fetch=async url=>({ok:true,json:async()=>String(url).includes('alert-access')?{eligible:true}:{eligible:true,events:[{id:'test-id',student:'Synthetic student',period:'1',emotion:'Sad',at:new Date().toISOString(),test:true}],cursor:'1'}});
- w.eval(fs.readFileSync('js/weather-alerts.js','utf8'));await new Promise(resolve=>setImmediate(resolve));const panel=w.document.querySelector('.nest-weather-alert');assert.ok(panel);assert.equal(panel.parentElement.tagName,'DIALOG');assert.match(panel.textContent,/Synthetic student/);
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('alert-access')?{eligible:true}:{eligible:true,events:[{id:'test-id',student:'Synthetic student',period:'1',emotion:'Sad',counselor:{name:'Test counselor',url:'https://calendar.app.google/example'},at:new Date().toISOString(),test:true}],cursor:'1'}});
+ w.eval(fs.readFileSync('js/weather-alerts.js','utf8'));await new Promise(resolve=>setImmediate(resolve));const panel=w.document.querySelector('.nest-weather-alert');assert.ok(panel);assert.equal(panel.parentElement.tagName,'DIALOG');assert.match(panel.textContent,/Student: Synthetic student/);assert.match(panel.textContent,/Emotion: Sad/);assert.equal(panel.querySelector('.nest-weather-alert-call').getAttribute('href'),'tel:+12538006176');assert.equal([...panel.querySelectorAll('a')].find(a=>a.textContent==='Schedule with Test counselor').href,'https://calendar.app.google/example');
  await w.NestWeatherAlerts.check();assert.equal(w.document.querySelector('.nest-weather-alert'),panel);w.document.querySelector('dialog').remove();await new Promise(resolve=>setImmediate(resolve));assert.equal(w.document.querySelector('.nest-weather-alert').parentElement,w.document.body);
  w.document.querySelector('.nest-weather-alert button').click();assert.equal(w.document.querySelector('.nest-weather-alert'),null);assert.doesNotMatch([...Array(w.localStorage.length)].map((_,i)=>w.localStorage.getItem(w.localStorage.key(i))).join(''),/Synthetic student|Sad/);dom.window.close();
 });
@@ -134,4 +134,12 @@ test('seven administrator sample surnames use the live counselor matcher while s
  samples.forEach((previewSurname,i)=>{const result=s.call(OWNER,'counselor',{period:'1',previewSurname});assert.equal(result.counselor.name,expected[i]);assert.equal(result.counselor.unmatched,undefined);assert.match(result.counselor.url,/calendar|youcanbook/);});
  assert.equal(s.call(STUDENT,'counselor',{period:'1',previewSurname:'Williams'}).counselor.name,'Katie Kimball');assert.equal(s.call(OWNER,'counselor',{period:'1',previewSurname:'Unapproved'}).counselor.unmatched,true);
  const confirmed=s.call(OWNER,'confirm',{period:'1',previewSurname:'Penalver',emotion:s.emotion,draft:uuid});assert.equal(confirmed.test,true);assert.equal(confirmed.counselor.name,'Elizabeth Martinez');assert.equal(s.call(DM,'alerts').events.length,0);assert.equal(s.reports.length,0);
+});
+
+
+test('support alerts resolve the student counselor from current ranges, including older alert records',()=>{
+ const s=school(),counselors=s.ctx.weatherParseCounselors_(fs.readFileSync('tests/fixtures/weather-counselors.html','utf8'));s.properties['weather-counselors']=JSON.stringify({checkedAt:new Date().toISOString(),counselors});
+ s.call(STUDENT,'confirm',{period:'1',emotion:s.emotion,draft:uuid});assert.equal(s.alerts[0][9],'Clíné');assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Katie Kimball');
+ counselors[0].name='Updated counselor';counselors[0].url='https://calendar.app.google/updated';s.properties['weather-counselors']=JSON.stringify({checkedAt:new Date().toISOString(),counselors});assert.equal(s.call(DM,'alerts').events[0].counselor.url,'https://calendar.app.google/updated');
+ s.alerts[0].pop();assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Updated counselor');assert.equal(s.call(AM,'alerts').events.length,0);
 });
