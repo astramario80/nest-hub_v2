@@ -51,7 +51,7 @@ function serviceRead_(){
  const ids=new Set();requests.forEach(r=>{if(ids.has(r.id))throw new Error('Duplicate request ID');ids.add(r.id);});
  const events=batch?(batch[2].values||[]):(Sheets.Spreadsheets.Values.get(SERVICE_SOURCE,ranges[2]).values||[]);
  if(events.length>29995)throw new Error('Service event capacity requires review');
- requests.forEach(item=>{item.version=serviceVersion_(item.raw,events.filter(e=>e[1]===item.id).slice(-1)[0]||[]);});
+ requests.forEach(item=>{item.members=serviceStoredMembers_(item,events);item.version=serviceVersion_(item.raw,events.filter(e=>e[1]===item.id).slice(-1)[0]||[]);});
  return {requests,events,logTab,tabs};
 }
 function serviceColumnLetter_(number){let value='';while(number){number--;value=String.fromCharCode(65+number%26)+value;number=Math.floor(number/26);}return value;}
@@ -117,12 +117,25 @@ function serviceAssignment_(item,roster){
  return matches.length===1?matches[0]:null;
 }
 function serviceDivisionLeader_(email,leaders){return leaders.some(row=>['division manager','assistant manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()));}
+// Membership snapshots live in the existing append-only service event sheet.
+function serviceStoredMembers_(item,events){
+ const event=events.filter(e=>e[1]===item.id&&e[2]==='members').slice(-1)[0];if(!event)return [];
+ const members=JSON.parse(event[9]||'[]');if(!Array.isArray(members)||members.some(m=>typeof m.email!=='string'||typeof m.label!=='string'))throw new Error('Invalid project membership');return members;
+}
+function serviceCurrentMembers_(item,roster){return (item.members||[]).map(member=>roster.find(m=>m.email===member.email)||member);}
+function serviceMemberHistory_(item,events){return events.filter(e=>e[1]===item.id&&e[2]==='members').map(e=>({time:String(e[0]),actor:String(e[3]),note:String(e[5])}));}
+function serviceCanAssignMembers_(email,item,leaders,roster){
+ const assigned=serviceAssignment_(item,roster);if(!assigned)return false;
+ if(OWNER_EMAILS.includes(email_(email))||assigned.email===memberEmail_(email,assigned.period))return true;
+ return leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
+}
 function serviceTicketAccess_(email,item,leaders,roster){
  if(OWNER_EMAILS.includes(email_(email)))return {canEdit:true,canAssign:true,canChangeStatus:true,period:''};
  const canChangeAnyStatus=leaders.some(row=>['division manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()));
  const assigned=serviceAssignment_(item,roster);if(!assigned)return {canEdit:false,canChangeStatus:canChangeAnyStatus,canAssign:!String(item.manager||'').trim()&&item.status!=='Closed'&&serviceDivisionLeader_(email,leaders),period:''};
+ const member=(item.members||[]).some(m=>roster.some(student=>student.email===m.email&&student.email===memberEmail_(email,student.period)));
  const divisionLeader=leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
- return {canEdit:divisionLeader||assigned.email===memberEmail_(email,assigned.period),canChangeStatus:canChangeAnyStatus||divisionLeader||assigned.email===memberEmail_(email,assigned.period),canAssign:divisionLeader,period:assigned.period};
+ return {canEdit:member||divisionLeader||assigned.email===memberEmail_(email,assigned.period),canChangeStatus:member||canChangeAnyStatus||divisionLeader||assigned.email===memberEmail_(email,assigned.period),canAssign:divisionLeader,period:assigned.period};
 }
 function serviceCanManageNote_(entry,email){return OWNER_EMAILS.includes(email_(email))||email_(entry.actor)===email_(email);}
 function serviceMetrics_(requests,leaders){
@@ -170,20 +183,21 @@ function serviceEmailHistory_(item,events){return events.filter(e=>e[1]===item.i
 function serviceManagerRow_(r,events,email,leaders,roster){
   const access=serviceTicketAccess_(email,r,leaders,roster),assignmentChoices=access.canAssign?roster.filter(m=>OWNER_EMAILS.includes(email_(email))||!String(r.manager||'').trim()||m.period===access.period):[];
   const noteEntries=serviceLogEntries_(r,events),authors=new Map(noteEntries.map(entry=>[entry.entryId,entry]));
-  return {...serviceClientRow_(r,events),updates:serviceUpdates_(r,events).map(e=>({...e,canManageNote:access.canEdit&&serviceCanManageNote_(authors.get(e.entryId),email)})),copyChoices:access.canEdit?serviceCopyChoices_(r,email,leaders,roster):[],emailHistory:serviceEmailHistory_(r,events),closedAt:serviceClosedAt_(r,events),participantKeys:serviceParticipation_(r,events,roster),...access,canTestEmail:OWNER_EMAILS.includes(email_(email)),testEmail:OWNER_EMAILS.includes(email_(email))?email_(email):'',testEmailState:OWNER_EMAILS.includes(email_(email))?String(events.filter(e=>e[1]===r.id&&e[2]==='email-test'&&e[3]===email_(email)).slice(-1)[0]?.[7]||'none'):'none',assignmentChoices,version:r.version,email:r.email,name:r.name,phone:r.phone,urgency:r.urgency,attachment:r.attachment,legacyLog:serviceLegacyLog_(r,events),logAudit:serviceLogAudit_(r,events),emailState:serviceEmailState_(r,events),emailStates:{latest:serviceEmailState_(r,events,'latest'),entire:serviceEmailState_(r,events,'entire')},internalUpdates:noteEntries.filter(e=>!e.internalDeleted).map(e=>({time:e.time,actor:e.actor,note:e.internalNote,status:e.status,manager:e.manager,entryId:e.entryId,entryVersion:serviceEntryVersion_(e,'internal'),canManageNote:access.canEdit&&serviceCanManageNote_(e,email),updatedAt:e.internalUpdatedAt||''}))};
+  return {...serviceClientRow_(r,events),members:serviceCurrentMembers_(r,roster),canAssignMembers:serviceCanAssignMembers_(email,r,leaders,roster),memberChoices:serviceCanAssignMembers_(email,r,leaders,roster)?[...new Map(roster.filter(m=>/@students\.bethelsd\.org$/.test(m.email)).map(m=>[m.email,m])).values()]:[],memberHistory:serviceMemberHistory_(r,events),updates:serviceUpdates_(r,events).map(e=>({...e,canManageNote:access.canEdit&&serviceCanManageNote_(authors.get(e.entryId),email)})),copyChoices:access.canEdit?serviceCopyChoices_(r,email,leaders,roster):[],emailHistory:serviceEmailHistory_(r,events),closedAt:serviceClosedAt_(r,events),participantKeys:serviceParticipation_(r,events,roster),...access,canTestEmail:OWNER_EMAILS.includes(email_(email)),testEmail:OWNER_EMAILS.includes(email_(email))?email_(email):'',testEmailState:OWNER_EMAILS.includes(email_(email))?String(events.filter(e=>e[1]===r.id&&e[2]==='email-test'&&e[3]===email_(email)).slice(-1)[0]?.[7]||'none'):'none',assignmentChoices,version:r.version,email:r.email,name:r.name,phone:r.phone,urgency:r.urgency,attachment:r.attachment,legacyLog:serviceLegacyLog_(r,events),logAudit:serviceLogAudit_(r,events),emailState:serviceEmailState_(r,events),emailStates:{latest:serviceEmailState_(r,events,'latest'),entire:serviceEmailState_(r,events,'entire')},internalUpdates:noteEntries.filter(e=>!e.internalDeleted).map(e=>({time:e.time,actor:e.actor,note:e.internalNote,status:e.status,manager:e.manager,entryId:e.entryId,entryVersion:serviceEntryVersion_(e,'internal'),canManageNote:access.canEdit&&serviceCanManageNote_(e,email),updatedAt:e.internalUpdatedAt||''}))};
 }
 function serviceEmailMessage_(item,events,mode,roster){
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
  const stamp=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?d.toLocaleString('en-US',{timeZone:'America/Los_Angeles',year:'numeric',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}):'Not recorded';};
  const entries=serviceUpdates_(item,events),chosen=mode==='entire'?entries:entries.slice(-1),title=mode==='entire'?'The entire client-facing log':'The most recent log entry';
  const assigned=serviceAssignment_(item,roster||serviceRoster_()),managerEmail=assigned&&/^[a-z0-9._+-]+@(students\.)?bethelsd\.org$/.test(assigned.email)?assigned.email:'';
- const fields=[['Client',item.name],['Client email',item.email],['Contact phone',item.phone],['Submitted',stamp(item.created)],['Room',item.room],['Category',item.category],['Urgency',item.urgency],['Project manager',item.manager||'Unassigned'],['Current status',item.status]].filter(pair=>pair[1]);
+ const projectMembers=serviceCurrentMembers_(item,roster||serviceRoster_());
+ const fields=[['Client',item.name],['Client email',item.email],['Contact phone',item.phone],['Submitted',stamp(item.created)],['Room',item.room],['Category',item.category],['Urgency',item.urgency],['Project manager',item.manager||'Unassigned'],['Project members',projectMembers.map(m=>m.label).join(', ')],['Current status',item.status]].filter(pair=>pair[1]);
  const attachments=String(item.attachment||'').split(/,\s*/).filter(value=>/^https:\/\/drive\.google\.com\//.test(value)&&!/[\s<>"']/.test(value));
  const summary=fields.map(pair=>pair[0]+': '+pair[1]).join('\n')+'\nRequest: '+(item.description||'Not recorded')+(attachments.length?'\nAttachments: '+attachments.join(', '):'');
  const log=chosen.map(e=>stamp(e.time)+' · '+e.status+'\n'+e.note).join('\n\n'),link='https://gknest.org/service';
  const panel='<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border:1px solid #c8cbbf;border-radius:8px;background:#f5f6f1;margin:20px 0"><tr><td style="padding:20px"><h2 style="font-size:18px;margin:0 0 16px">'+title+'</h2>'+chosen.map(e=>'<div style="border-left:3px solid #d1ac68;padding:8px 16px;margin:16px 0"><p style="font-size:13px">'+escape(stamp(e.time))+' · '+escape(e.status)+'</p><p style="white-space:pre-wrap">'+escape(e.note).replace(/\r?\n/g,'<br>')+'</p></div>').join('')+'</td></tr></table>';
  return {body:'Service request '+item.id.slice(0,8).toUpperCase()+'\n\nOriginal request details\n'+summary+'\n\n========== '+title+' ==========\n\n'+log+'\n\n========================================\nView your requests securely: '+link+(item.status==='Closed'?'\nShare your feedback: https://forms.gle/J3xe3qBiy7mReFLq6':''),
- htmlBody:'<!doctype html><html><body style="margin:0;background:#f4f4f1;font-family:Arial,sans-serif;color:#25251f"><div style="max-width:640px;margin:auto;background:white"><a href="'+link+'"><img src="https://gknest.org/assets/nest-service-banner.png" alt="NEST™ — New Economy Skills Training" width="640" style="display:block;width:100%;max-width:640px;height:auto;border:0"></a><div style="padding:24px"><h1 style="font-size:22px">Service request '+escape(item.id.slice(0,8).toUpperCase())+'</h1><h2 style="font-size:18px">Original request details</h2><table role="presentation" width="100%" cellspacing="0" cellpadding="0">'+fields.map(pair=>'<tr><td style="padding:5px 10px 5px 0;vertical-align:top;width:135px;font-weight:bold">'+escape(pair[0])+'</td><td style="padding:5px 0;overflow-wrap:anywhere">'+(pair[0]==='Project manager'&&managerEmail?'<a href="mailto:'+escape(managerEmail)+'">'+escape(pair[1])+'</a>':escape(pair[1]))+'</td></tr>').join('')+'</table><p style="font-weight:bold;margin-bottom:6px">Request</p><p style="white-space:pre-wrap;margin-top:0">'+escape(item.description||'Not recorded').replace(/\r?\n/g,'<br>')+'</p>'+(attachments.length?'<p>Attachments: '+attachments.map((url,i)=>'<a href="'+escape(url)+'">Attachment '+(i+1)+'</a>').join(' · ')+'</p>':'')+panel+'<p><a href="'+link+'">View your request in NEST™</a></p>'+(item.status==='Closed'?'<p><a href="https://forms.gle/J3xe3qBiy7mReFLq6">Share your feedback</a></p>':'')+'</div></div></body></html>'};
+ htmlBody:'<!doctype html><html><body style="margin:0;background:#f4f4f1;font-family:Arial,sans-serif;color:#25251f"><div style="max-width:640px;margin:auto;background:white"><a href="'+link+'"><img src="https://gknest.org/assets/nest-service-banner.png" alt="NEST™ — New Economy Skills Training" width="640" style="display:block;width:100%;max-width:640px;height:auto;border:0"></a><div style="padding:24px"><h1 style="font-size:22px">Service request '+escape(item.id.slice(0,8).toUpperCase())+'</h1><h2 style="font-size:18px">Original request details</h2><table role="presentation" width="100%" cellspacing="0" cellpadding="0">'+fields.map(pair=>'<tr><td style="padding:5px 10px 5px 0;vertical-align:top;width:135px;font-weight:bold">'+escape(pair[0])+'</td><td style="padding:5px 0;overflow-wrap:anywhere">'+(pair[0]==='Project manager'&&managerEmail?'<a href="mailto:'+escape(managerEmail)+'">'+escape(pair[1])+'</a>':pair[0]==='Project members'?projectMembers.map(m=>'<a href="mailto:'+escape(m.email)+'">'+escape(m.label)+'</a>').join('<br>'):escape(pair[1]))+'</td></tr>').join('')+'</table><p style="font-weight:bold;margin-bottom:6px">Request</p><p style="white-space:pre-wrap;margin-top:0">'+escape(item.description||'Not recorded').replace(/\r?\n/g,'<br>')+'</p>'+(attachments.length?'<p>Attachments: '+attachments.map((url,i)=>'<a href="'+escape(url)+'">Attachment '+(i+1)+'</a>').join(' · ')+'</p>':'')+panel+'<p><a href="'+link+'">View your request in NEST™</a></p>'+(item.status==='Closed'?'<p><a href="https://forms.gle/J3xe3qBiy7mReFLq6">Share your feedback</a></p>':'')+'</div></div></body></html>'};
 }
 function serviceStoredRow_(row){const copy=[...row];while(copy.length&&(copy[copy.length-1]===''||copy[copy.length-1]==null))copy.pop();return copy;}
 function serviceVersion_(raw,event){return hash_(JSON.stringify([serviceStoredRow_(raw),serviceStoredRow_(event)]));}
@@ -195,7 +209,21 @@ function serviceWrite_(email,r){
  const leaders=serviceLeaders_(),roster=serviceRoster_(),access=serviceTicketAccess_(email,item,leaders,roster);
  if(!access.canEdit&&!((access.canAssign||access.canChangeStatus)&&r.action==='auth-service-update'))return {status:403};if(item.version!==r.version)return {status:409};
  const now=new Date().toISOString();
- if(['auth-service-edit-log','auth-service-delete-log'].includes(r.action)){
+ if(r.action==='auth-service-members'){
+  if(!serviceCanAssignMembers_(email,item,leaders,roster))return {status:403};
+  if(!Array.isArray(r.members)||r.members.some(v=>typeof v!=='string'||!/^\S+@students\.bethelsd\.org$/.test(v)))return {status:400};
+  const addresses=[...new Set(r.members.map(email_))].sort(),members=addresses.map(address=>roster.find(m=>m.email===address));
+  if(members.some(m=>!m)||JSON.stringify(members).length>45000)return {status:400};
+  const previous=item.members||[],added=members.filter(m=>!previous.some(p=>p.email===m.email)),removed=previous.filter(m=>!members.some(p=>p.email===m.email));
+  if(!added.length&&!removed.length)return {status:200,request:serviceManagerRow_(item,state.events,email,leaders,roster)};
+  const note=[added.length?'Project members added: '+added.map(m=>m.label).join('; '):'',removed.length?'Project members removed: '+removed.map(m=>m.label).join('; '):''].filter(Boolean).join('\n');
+  const eventId=Utilities.getUuid(),event=[now,item.id,'members',email,item.status,note,eventId,'',item.manager,JSON.stringify(members)],raw=[...item.raw];
+  raw[item.c.log]=now+' — '+email+'\n'+note+'\n\n'+item.legacyLog;
+  Sheets.Spreadsheets.batchUpdate({requests:[serviceAppend_(state.logTab,event),serviceUpdateCell_(item,item.c.log,raw[item.c.log])]},SERVICE_SOURCE);
+  const updated={...item,members,raw,legacyLog:raw[item.c.log],version:serviceVersion_(raw,event)};
+  return {status:200,eventId,request:serviceManagerRow_(updated,[...state.events,event],email,leaders,roster)};
+ }
+ if(['auth-service-edit-log' ,'auth-service-delete-log'].includes(r.action)){
   if(!['public','internal'].includes(r.scope)||!/^[a-f0-9-]{36}$/.test(r.eventId||'')||!/^[a-f0-9]{64}$/.test(r.entryVersion||''))return {status:400};
   const entry=serviceLogEntries_(item,state.events).find(e=>e.entryId===r.eventId);if(!entry)return {status:404};
   if(!serviceCanManageNote_(entry,email))return {status:403};
@@ -298,7 +326,7 @@ function serviceDispatch_(r){
    return {status:200,request:serviceManagerRow_(item,state.events,session.email,leaders,roster)};
   }
   if(['auth-service-manage','auth-service-reviews','auth-service-metrics'].includes(r.action))return serviceManage_(r.action.slice(13),session.email);
-  if(!['auth-service-update','auth-service-email','auth-service-edit-log','auth-service-delete-log','auth-service-test-email'].includes(r.action))return {status:400};
+  if(!['auth-service-members','auth-service-update','auth-service-email','auth-service-edit-log','auth-service-delete-log','auth-service-test-email'].includes(r.action))return {status:400};
   const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};
   try{return serviceWrite_(session.email,r);}finally{lock.releaseLock();}
  }catch(error){return {status:error.message==='SERVICE_SETUP_REQUIRED'?428:503};}

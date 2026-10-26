@@ -385,3 +385,39 @@ test('assigned project manager status access follows the current roster assignme
  assert.equal(ctx.serviceTicketAccess_('student@students.bethelsd.org',{...item,manager:''},state.leaders,roster).canChangeStatus,false);
  assert.equal(ctx.serviceTicketAccess_('student@students.bethelsd.org',item,state.leaders,[]).canChangeStatus,false);
 });
+
+test('project membership is restricted to the current PM, division managers/assistants and owners; writes are audited and revoke access',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org'],['Member, Two','two@students.bethelsd.org']];
+ state.leaders.push(['Period 2','','Division Manager','','manager@students.bethelsd.org'],['Period 2','','Assistant Manager','','assistant@students.bethelsd.org'],['Period 5','','Division Manager','','other-manager@students.bethelsd.org']);
+ const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),save=(email,members,version=current().version)=>ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version,members});
+ for(const email of ['director@students.bethelsd.org','other-manager@students.bethelsd.org','one@students.bethelsd.org'])assert.equal(save(email,['one@students.bethelsd.org']).status,403);
+ assert.equal(save('student@students.bethelsd.org',['unknown@students.bethelsd.org']).status,400);assert.equal(state.writes.length,0);
+ const version=current().version,result=save('student@students.bethelsd.org',['two@students.bethelsd.org','one@students.bethelsd.org','one@students.bethelsd.org']);assert.equal(result.status,200);assert.equal(result.request.members.length,2);assert.equal(result.request.memberHistory.length,1);assert.match(result.request.memberHistory[0].note,/Member, One/);assert.match(state.grids.ServiceRequests[1][2],/Project members added/);
+ assert.equal(save('assistant@students.bethelsd.org',[],version).status,409);
+ const roster=ctx.serviceRoster_(),leaders=state.leaders;assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canEdit,true);assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canAssign,false);assert.equal(ctx.serviceCanAssignMembers_('one@students.bethelsd.org',current(),leaders,roster),false);
+ for(const email of ['student@students.bethelsd.org','manager@students.bethelsd.org','assistant@students.bethelsd.org','owner@bethelsd.org'])assert.equal(ctx.serviceCanAssignMembers_(email,current(),leaders,roster),true);
+ assert.equal(save('manager@students.bethelsd.org',['two@students.bethelsd.org']).status,200);assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canEdit,false);assert.match(current().legacyLog,/Project members removed: Member, One/);
+ assert.equal(save('assistant@students.bethelsd.org',[]).status,200);assert.equal(save('owner@bethelsd.org',['one@students.bethelsd.org']).status,200);
+ ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org']];assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,ctx.serviceRoster_()).canEdit,false);
+});
+test('members can save ticket updates and only their own notes; membership survives close/reopen and email links appear below PM',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org']];
+ const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first);
+ let r=current();assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:first,version:r.version,members:['one@students.bethelsd.org']}).status,200);
+ r=current();let result=ctx.serviceWrite_('one@students.bethelsd.org',{action:'auth-service-update',id:first,version:r.version,manager:r.manager,status:'Closed',note:'Member note',publicNote:'Client update'});assert.equal(result.status,200);assert.equal(result.request.members[0].email,'one@students.bethelsd.org');assert.equal(result.request.internalUpdates.at(-1).canManageNote,true);
+ r=current();const mail=ctx.serviceEmailMessage_(r,state.grids.ServiceWebLog.slice(1),'entire',ctx.serviceRoster_());assert.match(mail.htmlBody,/mailto:one@students.bethelsd.org/);assert.ok(mail.htmlBody.indexOf('Project members')>mail.htmlBody.indexOf('Project manager'));assert.match(mail.body,/Project members: Member, One/);assert.doesNotMatch(mail.body,/Member note/);
+ const entry=result.request.internalUpdates.at(-1);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-delete-log',id:first,version:r.version,eventId:entry.entryId,entryVersion:entry.entryVersion,scope:'internal'}).status,403);
+ result=ctx.serviceWrite_('one@students.bethelsd.org',{action:'auth-service-update',id:first,version:r.version,manager:r.manager,status:'In Progress',note:'',publicNote:''});assert.equal(result.status,200);assert.equal(current().members.length,1);
+});
+test('unassigned tickets cannot receive project members, and no-op membership saves are idempotent',()=>{
+ const {ctx,state}=fixture();let r=ctx.serviceRead_().requests.find(r=>r.id===second);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:second,version:r.version,members:[]}).status,403);
+ r=ctx.serviceRead_().requests.find(r=>r.id===first);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:first,version:r.version,members:[]}).status,200);assert.equal(state.writes.length,0);
+});
+test('HTTP membership request accepts only validated addresses and forwards no caller-controlled member labels',async()=>{
+ const old=globalThis.fetch;process.env.SPINNER_BRIDGE_URL='https://script.google.com/test';process.env.SPINNER_BRIDGE_TOKEN='test';let forwarded;
+ globalThis.fetch=async(_url,opts)=>{forwarded=JSON.parse(opts.body);return {ok:true,json:async()=>({status:200,request:{id:first,members:[]}})};};
+ try{const send=async members=>{const res=response();await handler({method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json',cookie:'__Host-nest-auth='+'a'.repeat(64)},body:{operation:'members',id:first,version:'b'.repeat(64),members,canAssignMembers:true}},res);return res;};
+ for(const value of ['x',{},['staff@bethelsd.org'],['one@evil.org'],[{email:'one@students.bethelsd.org',label:'spoof'}]])assert.equal((await send(value)).code,400);
+ assert.equal((await send(['one@students.bethelsd.org'])).code,200);assert.equal(forwarded.action,'auth-service-members');assert.deepEqual(forwarded.members,['one@students.bethelsd.org']);assert.equal(forwarded.canAssignMembers,undefined);
+ }finally{globalThis.fetch=old;delete process.env.SPINNER_BRIDGE_URL;delete process.env.SPINNER_BRIDGE_TOKEN;}
+});

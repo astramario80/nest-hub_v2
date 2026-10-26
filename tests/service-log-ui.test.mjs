@@ -52,3 +52,14 @@ test('status-only leadership can save the dropdown without unlocking notes, assi
  d.getElementById('service-status').value='In Progress';d.getElementById('service-status').dispatchEvent(new w.Event('input',{bubbles:true}));d.getElementById('service-edit').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();
  assert.equal(payload.status,'In Progress');assert.equal(payload.manager,'PM');assert.equal(payload.note,'');assert.equal(payload.publicNote,'');assert.equal(d.getElementById('service-status').value,'In Progress');assert.equal(d.getElementById('service-status').disabled,false);assert.match(d.getElementById('service-save-status').textContent,/Update saved/);dom.window.close();
 });
+
+test('project member selection supports multiple students, search and saving without page refresh',async()=>{
+ const one={email:'one@students.bethelsd.org',label:'One (Period 2)'},two={email:'two@students.bethelsd.org',label:'Two (Period 3)'};
+ const {dom,w,calls}=await ui({canAssignMembers:true,memberChoices:[one,two],members:[one]}),d=w.document;let payload;
+ assert.equal(d.querySelectorAll('[data-project-member]').length,2);assert.equal(d.querySelector('[data-project-member]').checked,true);assert.match(d.getElementById('service-member-list').textContent,/One/);
+ d.getElementById('service-member-search').value='Two';d.getElementById('service-member-search').dispatchEvent(new w.Event('input'));assert.equal(d.querySelector('#service-member-options label').hidden,true);
+ const input=d.querySelectorAll('[data-project-member]')[1];input.checked=true;input.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(d.getElementById('service-save').disabled,true);
+ w.fetch=async(_url,options)=>{payload=JSON.parse(options.body);return reply({request:{id,version:'d'.repeat(64),status:'Assigned',manager:'PM',canEdit:true,canAssignMembers:true,memberChoices:[one,two],members:[one,two],memberHistory:[{time:'2026-10-26',actor:'PM',note:'Project members added: Two'}],updates:[],internalUpdates:[]}});};
+ d.getElementById('service-member-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(payload.operation,'members');assert.deepEqual(payload.members,['one@students.bethelsd.org','two@students.bethelsd.org']);assert.match(d.getElementById('service-member-list').textContent,/Two/);assert.match(d.getElementById('service-member-history').textContent,/Project members added/);assert.match(d.getElementById('service-member-status').textContent,/saved/);assert.equal(calls.filter(c=>c.op==='manage').length,1);dom.window.close();
+ const readonly=await ui({canAssignMembers:false,members:[one]});assert.equal(readonly.w.document.getElementById('service-member-save').hidden,true);assert.equal(readonly.w.document.querySelector('#service-member-list a').getAttribute('href'),'mailto:'+one.email);readonly.dom.window.close();
+});
