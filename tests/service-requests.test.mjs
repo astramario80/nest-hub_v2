@@ -421,3 +421,10 @@ test('HTTP membership request accepts only validated addresses and forwards no c
  assert.equal((await send(['one@students.bethelsd.org'])).code,200);assert.equal(forwarded.action,'auth-service-members');assert.deepEqual(forwarded.members,['one@students.bethelsd.org']);assert.equal(forwarded.canAssignMembers,undefined);
  }finally{globalThis.fetch=old;delete process.env.SPINNER_BRIDGE_URL;delete process.env.SPINNER_BRIDGE_TOKEN;}
 });
+test('authenticated log authors resolve to roster names without changing audit identities or client privacy',()=>{
+ const {ctx,state}=fixture();const r=ctx.serviceRead_().requests.find(x=>x.id===first);
+ state.grids.ServiceWebLog.push(['2026-10-26T19:00:00Z',first,'update','student@students.bethelsd.org','Assigned','Client update','44444444-4444-4444-8444-444444444444','',r.manager,'Internal update']);
+ const row=ctx.serviceManagerRow_(r,state.grids.ServiceWebLog.slice(1),'owner@bethelsd.org',state.leaders,ctx.serviceRoster_());
+ assert.equal(row.actors['student@students.bethelsd.org'].name,'Student, Test');assert.equal(row.actors['student@students.bethelsd.org'].email,'student@students.bethelsd.org');assert.equal(row.updates[0].actor,'student@students.bethelsd.org');assert.equal(row.internalUpdates[0].actor,'student@students.bethelsd.org');
+ const client=ctx.serviceClientRow_(r,state.grids.ServiceWebLog.slice(1));assert.equal(client.actors,undefined);assert.equal(client.updates[0].actor,undefined);
+});

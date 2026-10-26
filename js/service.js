@@ -59,6 +59,12 @@
   if(!visible.length)$('service-ticket-list').append(node('p','No matching requests.'));
   visible.forEach(r=>{const button=node('button',null,'service-ticket');button.type='button';button.setAttribute('aria-current',String(r.id===selected?.id));button.append(node('strong',r.name||r.email||'Request '+r.id.slice(0,8)),node('span',r.status+' · Room '+(r.room||'—')),node('span',(r.description||'Service request').slice(0,110)));button.addEventListener('click',()=>{if(busy||!allowDiscard())return;openTicket(r);});$('service-ticket-list').append(button);});
  }
+ function actorLink(actor){
+  const raw=String(actor||''),identity=selected?.actors?.[raw.trim().toLowerCase()],address=String(identity?.email||raw),name=identity?.name||raw||'Unknown author';
+  if(!/^[^\s@,;<>?:]+@[^\s@,;<>?:]+\.[^\s@,;<>?:]+$/.test(address))return node('span',name);
+  const link=node('a',name);link.href='mailto:'+address;return link;
+ }
+ function actorHeading(entry){const heading=node('strong',date(entry.time)+' · ');heading.append(actorLink(entry.actor));return heading;}
  function openTicket(r){
   clearDetail();selected=r;$('service-detail').hidden=false;$('service-detail-title').textContent='Request '+r.id.slice(0,8).toUpperCase();
   const fields=node('dl');[['Client',r.name],['Email',r.email],['Phone',r.phone],['Submitted',date(r.created)],['Room',r.room],['Category',r.category],['Urgency',r.urgency],['Request',r.description]].forEach(([label,value])=>{fields.append(node('dt',label),node('dd',value||'—'));});
@@ -69,10 +75,10 @@
   renderMembers(r);
   savedHistory($('service-public-history'),r.updates,'public');
   savedHistory($('service-internal-history'),r.internalUpdates||[],'internal');
-  (r.logAudit||[]).slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(node('strong',date(e.time)+' · '+e.actor),node('p',(e.scope==='public'?'Client-facing':'Internal')+' entry '+(e.action==='delete'?'deleted':'edited')),node('p','Previous text: '+e.previousNote));if(e.action==='edit')card.append(node('p','Updated text: '+e.note));$('service-log-audit').append(card);});
+  (r.logAudit||[]).slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(actorHeading(e),node('p',(e.scope==='public'?'Client-facing':'Internal')+' entry '+(e.action==='delete'?'deleted':'edited')),node('p','Previous text: '+e.previousNote));if(e.action==='edit')card.append(node('p','Updated text: '+e.note));$('service-log-audit').append(card);});
   (r.copyChoices||[]).forEach(choice=>{const label=node('label'),input=node('input');input.type='checkbox';input.value=choice.email;input.dataset.emailCopy='true';label.append(input,node('span',choice.label));$('service-copy-choices').append(label);});
   if(!r.copyChoices?.length)$('service-copy-choices').append(node('p','No current leadership members are available to copy for this ticket.'));
-  (r.emailHistory||[]).slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(node('strong',date(e.time)+' · '+e.actor),node('p',(e.testing?'Test email':'Client email')+' · '+(e.state==='sent'?'Sent':'Delivery uncertain')+' · '+(e.mode==='entire'?'Entire client-facing log':'Most recent entry')),node('p','To: '+e.to+(e.cc?.length?' · CC: '+e.cc.join(', '):'')));$('service-email-history').append(card);});
+  (r.emailHistory||[]).slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(actorHeading(e),node('p',(e.testing?'Test email':'Client email')+' · '+(e.state==='sent'?'Sent':'Delivery uncertain')+' · '+(e.mode==='entire'?'Entire client-facing log':'Most recent entry')),node('p','To: '+e.to+(e.cc?.length?' · CC: '+e.cc.join(', '):'')));$('service-email-history').append(card);});
   if(!r.emailHistory?.length)$('service-email-history').append(node('p','No recorded email sends.'));
   configureEmailOptions();
   $('service-legacy-history').textContent=r.legacyLog||'No earlier log entries.';
@@ -85,7 +91,7 @@
   $('service-member-help').textContent=r.canAssignMembers?'Select any number of current students. Saving records the change and gives assigned members ticket edit access.':'Membership is managed by the assigned project manager, that division’s manager or assistant manager, and the admin. Assign a current project manager first.';
   const choices=new Map((r.memberChoices||[]).map(m=>[m.email,m]));(r.members||[]).forEach(m=>{if(!choices.has(m.email))choices.set(m.email,m);});
   for(const m of choices.values()){const label=node('label'),input=node('input');input.type='checkbox';input.value=m.email;input.dataset.projectMember='true';input.checked=(r.members||[]).some(member=>member.email===m.email);label.append(input,node('span',m.label+' · '+m.email));$('service-member-options').append(label);}
-  (r.memberHistory||[]).slice().reverse().forEach(e=>{const entry=node('div',null,'service-update');entry.append(node('strong',date(e.time)+' · '+e.actor),node('p',e.note));$('service-member-history').append(entry);});
+  (r.memberHistory||[]).slice().reverse().forEach(e=>{const entry=node('div',null,'service-update');entry.append(actorHeading(e),node('p',e.note));$('service-member-history').append(entry);});
   $('service-member-picker').hidden=!r.canAssignMembers;$('service-member-search').hidden=!r.canAssignMembers;$('service-member-choices').hidden=!r.canAssignMembers;$('service-member-save').hidden=!r.canAssignMembers;
  }
  $('service-member-search').addEventListener('input',()=>{const query=$('service-member-search').value.trim().toLowerCase();$('service-member-options').querySelectorAll('label').forEach(label=>label.hidden=!label.textContent.toLowerCase().includes(query));});
@@ -244,7 +250,7 @@
  }
  function savedHistory(container,entries,scope){
   container.replaceChildren();if(!entries.length){container.append(node('p',scope==='public'?'No client updates yet.':'No internal entries.'));return;}
-  entries.slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(node('strong',date(e.time)+' · '+e.status));if(scope==='internal')card.append(node('p',e.actor+' · '+(e.manager||'Unassigned')));card.append(node('p',e.note||''));if(e.updatedAt)card.append(node('small','Edited '+date(e.updatedAt)));if(scope==='public'&&e.emailed)card.append(node('small','Included in an earlier email attempt. Sent emails cannot be changed.'));
+  entries.slice().reverse().forEach(e=>{const card=node('div',null,'service-update');card.append(node('strong',date(e.time)+' · '+e.status));if(e.actor){const author=node('p');author.append(actorLink(e.actor));if(scope==='internal')author.append(document.createTextNode(' · '+(e.manager||'Unassigned')));card.append(author);}card.append(node('p',e.note||''));if(e.updatedAt)card.append(node('small','Edited '+date(e.updatedAt)));if(scope==='public'&&e.emailed)card.append(node('small','Included in an earlier email attempt. Sent emails cannot be changed.'));
    if(selected?.canEdit!==false&&e.canManageNote===true&&e.note&&e.entryId&&e.entryVersion){const actions=node('div',null,'internal-actions');[['edit','Edit'],['delete','Delete']].forEach(([action,label])=>{const button=node('button',label);button.type='button';button.dataset.logAction=action;button.setAttribute('aria-label',label+' '+(scope==='public'?'client-facing':'internal')+' entry from '+date(e.time));button.addEventListener('click',()=>action==='edit'?beginLogEdit(e,scope):deleteLogEntry(e,scope));actions.append(button);});card.append(actions);}container.append(card);
   });
  }

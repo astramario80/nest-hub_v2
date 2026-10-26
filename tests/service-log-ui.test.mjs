@@ -73,3 +73,9 @@ test('unsaved ticket status and note drafts do not disable member selection and 
  w.fetch=async(_url,opts)=>{payload=JSON.parse(opts.body);return reply({request:{id,version:'d'.repeat(64),status:'Assigned',manager:'PM',canEdit:true,canAssignMembers:true,memberChoices:[one],members:[one],updates:[],internalUpdates:[]}});};
  d.getElementById('service-member-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(payload.operation,'members');assert.equal(payload.note,undefined);assert.equal(d.getElementById('service-status').value,'In Progress');assert.equal(d.getElementById('service-note').value,'Unsaved internal draft');assert.equal(d.getElementById('service-public-note').value,'Unsaved client draft');assert.equal(d.getElementById('service-save').disabled,false);assert.equal(d.querySelector('[data-project-member]').disabled,false);assert.match(d.getElementById('service-member-list').textContent,/One/);dom.window.close();
 });
+test('log author names are safe mailto links in internal/public notes, email history and membership history',async()=>{
+ const address='owner@example.org',actors={[address]:{name:'Student <Example>',email:'student@students.bethelsd.org'}};
+ const {dom,w}=await ui({actors,updates:[{...publicEntry,actor:address}],emailHistory:[{time:'2026-10-26',actor:address,state:'sent',to:'client@bethelsd.org'}],memberHistory:[{time:'2026-10-26',actor:address,note:'Member added'}],logAudit:[{time:'2026-10-26',actor:address,scope:'internal',action:'edit',previousNote:'Old',note:'New'}]});
+ for(const id of ['service-public-history','service-internal-history','service-email-history','service-member-history','service-log-audit']){const link=w.document.querySelector('#'+id+' a');assert.equal(link.textContent,'Student <Example>');assert.equal(link.getAttribute('href'),'mailto:student@students.bethelsd.org');assert.equal(w.document.querySelector('#'+id+' img'),null);}
+ dom.window.close();
+});
