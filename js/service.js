@@ -88,8 +88,8 @@
  $('service-member-search').addEventListener('input',()=>{const query=$('service-member-search').value.trim().toLowerCase();$('service-member-options').querySelectorAll('label').forEach(label=>label.hidden=!label.textContent.toLowerCase().includes(query));});
  $('service-member-options').addEventListener('change',()=>{memberDirty=true;applyAccess();});
  $('service-member-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(!selected?.canAssignMembers||busy||dirty||logEdit)return;const r=selected,epoch=managerEpoch,members=[...$('service-member-options').querySelectorAll('input:checked')].map(input=>input.value);setBusy(true);$('service-member-status').textContent='Saving project members…';
-  try{const result=await api('members',{id:r.id,version:r.version,members});if(epoch!==managerEpoch)return;memberDirty=false;if(!acceptSaved(result,r.id))await loadManager(r.id);$('service-member-status').textContent='Project members saved. Ticket access and membership log updated.';}
+  event.preventDefault();if(!selected?.canAssignMembers||busy||logEdit)return;const r=selected,epoch=managerEpoch,draft=dirty?{status:$('service-status').value,manager:$('service-manager').value,note:$('service-note').value,publicNote:$('service-public-note').value}:null,members=[...$('service-member-options').querySelectorAll('input:checked')].map(input=>input.value);setBusy(true);$('service-member-status').textContent='Saving project members…';
+  try{const result=await api('members',{id:r.id,version:r.version,members});if(epoch!==managerEpoch)return;memberDirty=false;dirty=false;if(!acceptSaved(result,r.id))await loadManager(r.id);if(draft&&selected?.id===r.id){$('service-status').value=draft.status;$('service-manager').value=draft.manager;$('service-note').value=draft.note;$('service-public-note').value=draft.publicNote;dirty=true;applyAccess();}$('service-member-status').textContent='Project members saved. Ticket access and membership log updated.';}
   catch(error){if(epoch===managerEpoch){$('service-member-status').textContent=error.message;if([401,403].includes(error.status))clearManager();}}
   finally{setBusy(false);}
  });
@@ -231,7 +231,7 @@
  $('service-email-mode').addEventListener('change',()=>{applyAccess();if(!busy&&!dirty)emailStatus();});
  $('service-period').addEventListener('change',renderList);
  ['service-filter','service-search'].forEach(id=>$(id).addEventListener('input',renderList));
- $('service-edit').addEventListener('input',event=>{if(event.target.dataset.emailCopy||['service-email-mode','service-test-log-mode'].includes(event.target.id))return;dirty=true;applyAccess();});
+ $('service-edit').addEventListener('input',event=>{if(event.target.dataset.emailCopy||event.target.dataset.projectMember||event.target.id==='service-member-search'||['service-email-mode','service-test-log-mode'].includes(event.target.id))return;dirty=true;applyAccess();});
  function acceptSaved(data,id){
   const row=data.request;if(!row||row.id!==id||!/^[a-f0-9]{64}$/.test(row.version||''))return false;
   tickets=tickets.map(r=>r.id===id?row:r);workspaceLoadedAt=Date.now();clientLoadedAt=0;dirty=false;openTicket(row);return true;
@@ -286,7 +286,7 @@
  $('service-log-editor-cancel').addEventListener('click',()=>{if(!busy&&selected)openTicket(selected);});
  function applyAccess(){
   const locked=busy||!selected||selected.canEdit===false,testing=$('service-email-mode').value==='test';$('service-save').disabled=busy||!selected||selected.canEdit===false&&selected.canAssign!==true&&selected.canChangeStatus!==true||Boolean(logEdit);$('service-save').textContent=selected?.canEdit===false&&selected.canChangeStatus===true?'Save status':selected?.canEdit===false&&selected.canAssign?'Assign project manager':'Save update';$('service-status').disabled=busy||!selected||Boolean(logEdit)||(selected.canEdit===false&&selected.canChangeStatus!==true);['service-note','service-public-note'].forEach(id=>$(id).disabled=locked||Boolean(logEdit));$('service-manager').disabled=busy||!selected||Boolean(logEdit)||selected.canAssign!==true;
-  $('service-member-save').disabled=busy||!selected?.canAssignMembers||dirty||Boolean(logEdit);$('service-member-search').disabled=busy;document.querySelectorAll('[data-project-member]').forEach(input=>input.disabled=busy||!selected?.canAssignMembers||dirty||Boolean(logEdit));
+  $('service-member-save').disabled=busy||!selected?.canAssignMembers||Boolean(logEdit);$('service-member-search').disabled=busy;document.querySelectorAll('[data-project-member]').forEach(input=>input.disabled=busy||!selected?.canAssignMembers||Boolean(logEdit));
   if(memberDirty){$('service-save').disabled=true;$('service-status').disabled=true;$('service-manager').disabled=true;['service-note','service-public-note'].forEach(id=>$(id).disabled=true);}
   $('service-test-mode-label').hidden=!testing||!selected?.canTestEmail;$('service-test-help').hidden=!testing||!selected?.canTestEmail;$('service-test-help').textContent=testing&&selected?.canTestEmail?'Test recipient: '+selected.testEmail+'. The client is not emailed.':'';$('service-email').textContent=testing?'Send test to my email':'Email log to client';
   $('service-email').disabled=locked||dirty||memberDirty||!selected?.updates?.length||(testing?!selected?.canTestEmail:(selected?.emailStates?.[$('service-email-mode').value]||selected?.emailState)!=='unsent');

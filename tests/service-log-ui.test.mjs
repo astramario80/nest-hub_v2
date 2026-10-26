@@ -65,3 +65,11 @@ test('project member selection supports multiple students, search and saving wit
 });
 
 test('new service script initializes member controls on a previously cached service page',async()=>{const {dom,w}=await ui({canAssignMembers:true,memberChoices:[],members:[]},true);assert.ok(w.document.getElementById('service-member-form'));assert.equal(w.document.getElementById('service-detail').hidden,false);assert.equal(w.document.getElementById('service-member-save').hidden,false);dom.window.close();});
+test('unsaved ticket status and note drafts do not disable member selection and survive a member save',async()=>{
+ const one={email:'one@students.bethelsd.org',label:'One (Period 2)'};const {dom,w}=await ui({canAssignMembers:true,memberChoices:[one],members:[]}),d=w.document;let payload;
+ d.getElementById('service-status').value='In Progress';d.getElementById('service-note').value='Unsaved internal draft';d.getElementById('service-public-note').value='Unsaved client draft';d.getElementById('service-note').dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(d.querySelector('[data-project-member]').disabled,false);assert.equal(d.getElementById('service-member-save').disabled,false);
+ const input=d.querySelector('[data-project-member]');input.checked=true;input.dispatchEvent(new w.Event('input',{bubbles:true}));input.dispatchEvent(new w.Event('change',{bubbles:true}));
+ w.fetch=async(_url,opts)=>{payload=JSON.parse(opts.body);return reply({request:{id,version:'d'.repeat(64),status:'Assigned',manager:'PM',canEdit:true,canAssignMembers:true,memberChoices:[one],members:[one],updates:[],internalUpdates:[]}});};
+ d.getElementById('service-member-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(payload.operation,'members');assert.equal(payload.note,undefined);assert.equal(d.getElementById('service-status').value,'In Progress');assert.equal(d.getElementById('service-note').value,'Unsaved internal draft');assert.equal(d.getElementById('service-public-note').value,'Unsaved client draft');assert.equal(d.getElementById('service-save').disabled,false);assert.equal(d.querySelector('[data-project-member]').disabled,false);assert.match(d.getElementById('service-member-list').textContent,/One/);dom.window.close();
+});
