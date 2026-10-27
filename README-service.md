@@ -1,5 +1,16 @@
 # NEST service requests
 
+## Current permissions and client recipients - October 27
+
+All current Client Relations Directors (either title order), division managers, assistant managers and configured owners may edit any service ticket, regardless of its assigned division. The current PM may edit and reassign their own ticket; assigned student members may update it but cannot change the PM, member roster or client recipient. Removing/replacing the PM immediately removes PM-derived rights; independent member or leadership rights remain. Leadership can manage unassigned, historical and cross-division tickets. Individual note revision/deletion remains original-author-only except for owners.
+
+The current PM and universal leadership/owners can add, replace or remove project members and PMs. PM choices use the full current roster. Removing a PM preserves existing project members and their ticket access, so leadership can finish routing or remove members independently. Every server write rechecks current roles, roster and ticket version.
+
+Change client recipient accepts a name and school staff @bethelsd.org email. It records the previous and new client plus actor/time in assignment history, updates future emails and client-portal ownership, and sends nothing automatically. An intentionally corrected recipient may receive the saved client update through the existing deliberate send action; earlier sent/unknown records retain their actual recipient and do not become misleading after a correction. Changes preserve unsaved note/status drafts. Cancel restores the saved contact. Student member accounts cannot alter the recipient.
+
+Cope delivery investigation: the school account's Sent folder contains the October 14 message to rcope@bethelsd.org (ticket C8A5D3A0). No matching bounce was found. The October 26 client-facing update has no subsequent email send record; saving updates does not email them automatically. No production contact was changed and no email was sent as a diagnostic test.
+
+
 ## October 17 status access and readability
 
 Status changes now use a separate canChangeStatus permission. Assigned current project managers retain access to their own tickets. Current division managers and client relations directors may change any ticket status, including unassigned and historical assignments. Existing division-scoped note, assignment and email permissions remain in force; note edit/delete stays original-author-only except website owners. Current assistant managers retain their existing own-division rights. Both director title word orders are recognized. Mutations recheck current school roles and ticket versions.

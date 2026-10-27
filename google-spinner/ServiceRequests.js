@@ -96,9 +96,14 @@ function serviceEmailKey_(item,events,mode){
  if(mode==='entire'&&events.some(e=>e[1]===item.id&&/^(edit|delete)-public$/.test(e[2])))return hash_(JSON.stringify(entries.map(e=>[e.entryId,e.eventId,e.note])));
  return last.eventId;
 }
+function serviceEmailRecipient_(item,event,events){
+ try{const meta=JSON.parse(event[9]||'{}');if(meta.to)return email_(meta.to);}catch(_){}
+ const change=events.find(e=>e[1]===item.id&&e[2]==='client-change');if(change){try{return email_(JSON.parse(change[9]).previousEmail);}catch(_){}}
+ return item.email;
+}
 function serviceEmailState_(item,events,mode){
  mode=mode||'latest';const key=serviceEmailKey_(item,events,mode);if(!key)return 'none';
- return String(events.filter(e=>e[1]===item.id&&e[2]==='email'&&e[6]===key&&(e[8]==='entire'?'entire':'latest')===mode).slice(-1)[0]?.[7]||'unsent');
+ return String(events.filter(e=>e[1]===item.id&&e[2]==='email'&&serviceEmailRecipient_(item,e,events)===item.email&&e[6]===key&&(e[8]==='entire'?'entire':'latest')===mode).slice(-1)[0]?.[7]||'unsent');
 }
 function serviceRoster_(){
  const periods=Object.keys(PERIODS),all=[];
@@ -123,19 +128,14 @@ function serviceStoredMembers_(item,events){
  const members=JSON.parse(event[9]||'[]');if(!Array.isArray(members)||members.some(m=>typeof m.email!=='string'||typeof m.label!=='string'))throw new Error('Invalid project membership');return members;
 }
 function serviceCurrentMembers_(item,roster){return (item.members||[]).map(member=>roster.find(m=>m.email===member.email)||member);}
-function serviceMemberHistory_(item,events){return events.filter(e=>e[1]===item.id&&e[2]==='members').map(e=>({time:String(e[0]),actor:String(e[3]),note:String(e[5])}));}
-function serviceCanAssignMembers_(email,item,leaders,roster){
- const assigned=serviceAssignment_(item,roster);if(!assigned)return false;
- if(OWNER_EMAILS.includes(email_(email))||assigned.email===memberEmail_(email,assigned.period))return true;
- return leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
-}
+function serviceMemberHistory_(item,events){return events.filter(e=>e[1]===item.id&&['members','client-change'].includes(e[2])).map(e=>({time:String(e[0]),actor:String(e[3]),note:String(e[5])}));}
+function serviceCanAssignMembers_(email,item,leaders,roster){return serviceTicketAccess_(email,item,leaders,roster).canAssign;}
 function serviceTicketAccess_(email,item,leaders,roster){
  if(OWNER_EMAILS.includes(email_(email)))return {canEdit:true,canAssign:true,canChangeStatus:true,period:''};
- const canChangeAnyStatus=leaders.some(row=>['division manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()));
- const assigned=serviceAssignment_(item,roster);if(!assigned)return {canEdit:false,canChangeStatus:canChangeAnyStatus,canAssign:!String(item.manager||'').trim()&&item.status!=='Closed'&&serviceDivisionLeader_(email,leaders),period:''};
+ const leader=serviceDivisionLeader_(email,leaders),assigned=serviceAssignment_(item,roster);
  const member=(item.members||[]).some(m=>roster.some(student=>student.email===m.email&&student.email===memberEmail_(email,student.period)));
- const divisionLeader=leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
- return {canEdit:member||divisionLeader||assigned.email===memberEmail_(email,assigned.period),canChangeStatus:member||canChangeAnyStatus||divisionLeader||assigned.email===memberEmail_(email,assigned.period),canAssign:divisionLeader,period:assigned.period};
+ const pm=Boolean(assigned&&assigned.email===memberEmail_(email,assigned.period));
+ return {canEdit:leader||member||pm,canChangeStatus:leader||member||pm,canAssign:leader||pm,period:assigned?.period||''};
 }
 function serviceCanManageNote_(entry,email){return OWNER_EMAILS.includes(email_(email))||email_(entry.actor)===email_(email);}
 function serviceMetrics_(requests,leaders){
@@ -178,7 +178,7 @@ function serviceCopyChoices_(item,email,leaders,roster){
 }
 function serviceEmailHistory_(item,events){return events.filter(e=>e[1]===item.id&&['email','email-test'].includes(e[2])&&['sent','unknown'].includes(e[7])).map(e=>{
  let meta={};try{meta=JSON.parse(e[9]||'{}');}catch(_){}
- return {time:String(e[0]),actor:String(e[3]),state:String(e[7]),testing:e[2]==='email-test',mode:e[8]==='entire'?'entire':'latest',to:meta.to||(e[2]==='email-test'?String(e[3]):item.email),cc:Array.isArray(meta.cc)?meta.cc:[]};
+ return {time:String(e[0]),actor:String(e[3]),state:String(e[7]),testing:e[2]==='email-test',mode:e[8]==='entire'?'entire':'latest',to:meta.to||(e[2]==='email-test'?String(e[3]):serviceEmailRecipient_(item,e,events)),cc:Array.isArray(meta.cc)?meta.cc:[]};
  });}
 function serviceActors_(events,roster,leaders){
  const actors={};for(const event of events){const actor=email_(event[3]);if(!actor||actors[actor])continue;
@@ -190,9 +190,9 @@ function serviceActors_(events,roster,leaders){
  }return actors;
 }
 function serviceManagerRow_(r,events,email,leaders,roster){
-  const access=serviceTicketAccess_(email,r,leaders,roster),assignmentChoices=access.canAssign?roster.filter(m=>OWNER_EMAILS.includes(email_(email))||!String(r.manager||'').trim()||m.period===access.period):[];
+  const access=serviceTicketAccess_(email,r,leaders,roster),assignmentChoices=access.canAssign?roster:[];
   const noteEntries=serviceLogEntries_(r,events),authors=new Map(noteEntries.map(entry=>[entry.entryId,entry]));
-  return {...serviceClientRow_(r,events),actors:serviceActors_(events.filter(e=>e[1]===r.id),roster,leaders),members:serviceCurrentMembers_(r,roster),canAssignMembers:serviceCanAssignMembers_(email,r,leaders,roster),memberChoices:serviceCanAssignMembers_(email,r,leaders,roster)?[...new Map(roster.filter(m=>/@students\.bethelsd\.org$/.test(m.email)).map(m=>[m.email,m])).values()]:[],memberHistory:serviceMemberHistory_(r,events),updates:serviceUpdates_(r,events).map(e=>({...e,actor:authors.get(e.entryId)?.actor||'',canManageNote:access.canEdit&&serviceCanManageNote_(authors.get(e.entryId),email)})),copyChoices:access.canEdit?serviceCopyChoices_(r,email,leaders,roster):[],emailHistory:serviceEmailHistory_(r,events),closedAt:serviceClosedAt_(r,events),participantKeys:serviceParticipation_(r,events,roster),...access,canTestEmail:OWNER_EMAILS.includes(email_(email)),testEmail:OWNER_EMAILS.includes(email_(email))?email_(email):'',testEmailState:OWNER_EMAILS.includes(email_(email))?String(events.filter(e=>e[1]===r.id&&e[2]==='email-test'&&e[3]===email_(email)).slice(-1)[0]?.[7]||'none'):'none',assignmentChoices,version:r.version,email:r.email,name:r.name,phone:r.phone,urgency:r.urgency,attachment:r.attachment,legacyLog:serviceLegacyLog_(r,events),logAudit:serviceLogAudit_(r,events),emailState:serviceEmailState_(r,events),emailStates:{latest:serviceEmailState_(r,events,'latest'),entire:serviceEmailState_(r,events,'entire')},internalUpdates:noteEntries.filter(e=>!e.internalDeleted).map(e=>({time:e.time,actor:e.actor,note:e.internalNote,status:e.status,manager:e.manager,entryId:e.entryId,entryVersion:serviceEntryVersion_(e,'internal'),canManageNote:access.canEdit&&serviceCanManageNote_(e,email),updatedAt:e.internalUpdatedAt||''}))};
+  return {...serviceClientRow_(r,events),canAssignClient:access.canAssign,actors:serviceActors_(events.filter(e=>e[1]===r.id),roster,leaders),members:serviceCurrentMembers_(r,roster),canAssignMembers:serviceCanAssignMembers_(email,r,leaders,roster),memberChoices:serviceCanAssignMembers_(email,r,leaders,roster)?[...new Map(roster.filter(m=>/@students\.bethelsd\.org$/.test(m.email)).map(m=>[m.email,m])).values()]:[],memberHistory:serviceMemberHistory_(r,events),updates:serviceUpdates_(r,events).map(e=>({...e,actor:authors.get(e.entryId)?.actor||'',canManageNote:access.canEdit&&serviceCanManageNote_(authors.get(e.entryId),email)})),copyChoices:access.canEdit?serviceCopyChoices_(r,email,leaders,roster):[],emailHistory:serviceEmailHistory_(r,events),closedAt:serviceClosedAt_(r,events),participantKeys:serviceParticipation_(r,events,roster),...access,canTestEmail:OWNER_EMAILS.includes(email_(email)),testEmail:OWNER_EMAILS.includes(email_(email))?email_(email):'',testEmailState:OWNER_EMAILS.includes(email_(email))?String(events.filter(e=>e[1]===r.id&&e[2]==='email-test'&&e[3]===email_(email)).slice(-1)[0]?.[7]||'none'):'none',assignmentChoices,version:r.version,email:r.email,name:r.name,phone:r.phone,urgency:r.urgency,attachment:r.attachment,legacyLog:serviceLegacyLog_(r,events),logAudit:serviceLogAudit_(r,events),emailState:serviceEmailState_(r,events),emailStates:{latest:serviceEmailState_(r,events,'latest'),entire:serviceEmailState_(r,events,'entire')},internalUpdates:noteEntries.filter(e=>!e.internalDeleted).map(e=>({time:e.time,actor:e.actor,note:e.internalNote,status:e.status,manager:e.manager,entryId:e.entryId,entryVersion:serviceEntryVersion_(e,'internal'),canManageNote:access.canEdit&&serviceCanManageNote_(e,email),updatedAt:e.internalUpdatedAt||''}))};
 }
 function serviceEmailMessage_(item,events,mode,roster){
  const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
@@ -216,8 +216,21 @@ function serviceUpdateCell_(item,column,value){return {updateCells:{range:{sheet
 function serviceWrite_(email,r){
  const state=serviceRead_(),item=state.requests.find(x=>x.id===r.id);if(!item)return {status:404};
  const leaders=serviceLeaders_(),roster=serviceRoster_(),access=serviceTicketAccess_(email,item,leaders,roster);
- if(!access.canEdit&&!((access.canAssign||access.canChangeStatus)&&r.action==='auth-service-update'))return {status:403};if(item.version!==r.version)return {status:409};
+ if(!access.canEdit&&!(access.canAssign&&r.action==='auth-service-members')&&!((access.canAssign||access.canChangeStatus)&&r.action==='auth-service-update'))return {status:403};if(item.version!==r.version)return {status:409};
  const now=new Date().toISOString();
+ if(r.action==='auth-service-client'){
+  if(!access.canAssign)return {status:403};
+  const address=email_(r.email),name=typeof r.name==='string'?r.name.trim():'';
+  if(!/^[^\s@,;<>]+@bethelsd\.org$/.test(address)||address.length>254||!name||name.length>200)return {status:400};
+  if(address===item.email&&name===item.name)return {status:200,request:serviceManagerRow_(item,state.events,email,leaders,roster)};
+  const nameColumn=item.c.name>=0?item.c.name:item.c.fallbackName;if(nameColumn<0)return {status:428};
+  const note='Client recipient changed from '+item.name+' <'+item.email+'> to '+name+' <'+address+'>. No email sent.',eventId=Utilities.getUuid(),event=[now,item.id,'client-change',email,item.status,note,eventId,'',item.manager,JSON.stringify({previousEmail:item.email,previousName:item.name,email:address,name})],raw=[...item.raw];
+  raw[item.c.email]=address;raw[nameColumn]=name;if(item.c.fallbackName>=0&&item.c.fallbackName!==nameColumn)raw[item.c.fallbackName]='';raw[item.c.log]=now+' — '+email+'\n'+note+'\n\n'+item.legacyLog;
+  const writes=[serviceAppend_(state.logTab,event),serviceUpdateCell_(item,item.c.email,address),serviceUpdateCell_(item,nameColumn,name),serviceUpdateCell_(item,item.c.log,raw[item.c.log])];if(item.c.fallbackName>=0&&item.c.fallbackName!==nameColumn)writes.push(serviceUpdateCell_(item,item.c.fallbackName,''));
+  Sheets.Spreadsheets.batchUpdate({requests:writes},SERVICE_SOURCE);
+  const updated={...item,email:address,name,raw,legacyLog:raw[item.c.log],version:serviceVersion_(raw,event)};
+  return {status:200,eventId,request:serviceManagerRow_(updated,[...state.events,event],email,leaders,roster)};
+ }
  if(r.action==='auth-service-members'){
   if(!serviceCanAssignMembers_(email,item,leaders,roster))return {status:403};
   if(!Array.isArray(r.members)||r.members.some(v=>typeof v!=='string'||!/^\S+@students\.bethelsd\.org$/.test(v)))return {status:400};
@@ -271,9 +284,9 @@ function serviceWrite_(email,r){
  if(!access.canEdit){
   if(r.note||r.publicNote)return {status:403};
   if(r.status!==item.status&&!access.canChangeStatus)return {status:403};
-  if(r.manager!==item.manager&&(!access.canAssign||!r.manager))return {status:403};
+  if(r.manager!==item.manager&&!access.canAssign)return {status:403};
  }
- const choices=roster.filter(m=>OWNER_EMAILS.includes(email_(email))||!String(item.manager||'').trim()||m.period===access.period),selected=choices.find(m=>m.email===r.manager);
+ const selected=roster.find(m=>m.email===r.manager);
  const current=serviceAssignment_(item,roster);
  if(!access.canAssign&&r.manager!==item.manager&&r.manager!==current?.email)return {status:403};
  if(r.manager&&r.manager!==item.manager&&!selected)return {status:400};
@@ -335,7 +348,7 @@ function serviceDispatch_(r){
    return {status:200,request:serviceManagerRow_(item,state.events,session.email,leaders,roster)};
   }
   if(['auth-service-manage','auth-service-reviews','auth-service-metrics'].includes(r.action))return serviceManage_(r.action.slice(13),session.email);
-  if(!['auth-service-members','auth-service-update','auth-service-email','auth-service-edit-log','auth-service-delete-log','auth-service-test-email'].includes(r.action))return {status:400};
+  if(!['auth-service-client','auth-service-members','auth-service-update','auth-service-email','auth-service-edit-log','auth-service-delete-log','auth-service-test-email'].includes(r.action))return {status:400};
   const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};
   try{return serviceWrite_(session.email,r);}finally{lock.releaseLock();}
  }catch(error){return {status:error.message==='SERVICE_SETUP_REQUIRED'?428:503};}

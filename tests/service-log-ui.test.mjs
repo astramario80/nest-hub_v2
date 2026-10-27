@@ -79,3 +79,10 @@ test('log author names are safe mailto links in internal/public notes, email his
  for(const id of ['service-public-history','service-internal-history','service-email-history','service-member-history','service-log-audit']){const link=w.document.querySelector('#'+id+' a');assert.equal(link.textContent,'Student <Example>');assert.equal(link.getAttribute('href'),'mailto:student@students.bethelsd.org');assert.equal(w.document.querySelector('#'+id+' img'),null);}
  dom.window.close();
 });
+test('authorized client recipient changes save separately, update contact fields and preserve an unsaved note',async()=>{
+ const {dom,w}=await ui({canAssignClient:true}),d=w.document;let payload;
+ assert.equal(d.getElementById('service-client-editor').hidden,false);d.getElementById('service-note').value='Draft note';d.getElementById('service-note').dispatchEvent(new w.Event('input',{bubbles:true}));
+ d.getElementById('service-client-name').value='Correct Client';d.getElementById('service-client-email').value='correct@bethelsd.org';d.getElementById('service-client-email').dispatchEvent(new w.Event('input',{bubbles:true}));assert.equal(d.getElementById('service-email').disabled,true);
+ w.fetch=async(_url,opts)=>{payload=JSON.parse(opts.body);return reply({request:{id,version:'d'.repeat(64),status:'Assigned',manager:'PM',name:payload.name,email:payload.email,canEdit:true,canAssignClient:true,updates:[],internalUpdates:[]}});};
+ d.getElementById('service-client-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await settle();assert.equal(payload.operation,'client');assert.equal(payload.email,'correct@bethelsd.org');assert.match(d.getElementById('service-detail-fields').textContent,/Correct Client/);assert.equal(d.getElementById('service-note').value,'Draft note');assert.match(d.getElementById('service-client-status').textContent,/No email was sent/);dom.window.close();
+});

@@ -43,13 +43,16 @@ async function handler(req,res){
    request={action:'service-client-view',session:jar[CLIENT_COOKIE]};
   }else{
    if(!validToken(jar[COOKIE]))return res.status(401).json({error:'Sign in to NEST to use Client Relations.'});
-   if(req.method==='GET'&&!['manage','reviews','metrics','ticket'].includes(op)||req.method==='POST'&&!['members','update','email','edit-log','delete-log','test-email'].includes(op))return res.status(400).json({error:'Invalid action.'});
+   if(req.method==='GET'&&!['manage','reviews','metrics','ticket'].includes(op)||req.method==='POST'&&!['client','members','update','email','edit-log','delete-log','test-email'].includes(op))return res.status(400).json({error:'Invalid action.'});
    request={action:'auth-service-'+op,session:jar[COOKIE]};
    if(op==='ticket'){if(!id(req.query?.id))return res.status(400).json({error:'Select a request.'});request.id=req.query.id;}
    if(req.method==='POST'){
     if(!id(body.id)||!digest(body.version))return res.status(400).json({error:'Refresh and select a request.'});
     Object.assign(request,{id:body.id,version:body.version});
-    if(op==='members'){
+    if(op==='client'){
+     if(typeof body.email!=='string'||body.email.length>254||! /^[^\s@,;<>]+@bethelsd\.org$/.test(body.email.trim().toLowerCase())||typeof body.name!=='string'||!body.name.trim()||body.name.length>200)return res.status(400).json({error:'Enter the client name and school staff email address.'});
+     request.email=body.email.trim().toLowerCase();request.name=body.name.trim();
+    }else if(op==='members'){
      if(!Array.isArray(body.members)||body.members.some(v=>typeof v!=='string'||v.length>254||! /^[^\s@,;<>]+@students\.bethelsd\.org$/.test(v)))return res.status(400).json({error:'Choose current students as project members.'});
      request.members=body.members;
     }else if(op==='update'){

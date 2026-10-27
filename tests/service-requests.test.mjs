@@ -171,29 +171,19 @@ test('calendar trimester detection matches ordinal and Tri. variants, all-day da
  assert.match(ctx.serviceCalendarRange_(events,'2027-07-01').error,/No single/);
 });
 
-test('ticket writes and client emails require the assigned current project manager or their own division leadership',()=>{
- const {ctx,state}=fixture();ctx.PERIODS['5']='other';ctx.rows_=p=>p==='2'?[['Student, Test','student@students.bethelsd.org'],['Replacement','replacement@students.bethelsd.org']]:[['Other PM','otherpm@students.bethelsd.org']];
- state.leaders.push(['Period 2','','Division Manager','DM','dm@students.bethelsd.org'],['Period 2','','Assistant Manager','AM','am@students.bethelsd.org'],['Period 5','','Division Manager','Other DM','otherdm@students.bethelsd.org']);
- ctx.authSession_=raw=>({email:raw});
- const r=ctx.serviceManage_('manage').requests[0],change={action:'auth-service-update',id:r.id,version:r.version,status:'In Progress',manager:r.manager,note:'Private log',publicNote:'Client update'};
- for(const session of ['otherdm@students.bethelsd.org','otherpm@students.bethelsd.org','coo@students.bethelsd.org'])assert.equal(ctx.serviceDispatch_({...change,session}).status,403);
- assert.equal(state.writes.length,0);assert.equal(state.mail.length,0);
- const pmView=ctx.serviceDispatch_({action:'auth-service-manage',session:'student@students.bethelsd.org'});assert.equal(pmView.status,200);assert.equal(pmView.requests.length,1);assert.equal(pmView.requests[0].canEdit,true);assert.equal(pmView.requests[0].canAssign,false);assert.equal(pmView.canReview,false);
- assert.equal(ctx.serviceDispatch_({...change,session:'student@students.bethelsd.org',manager:'replacement@students.bethelsd.org'}).status,403);
- assert.equal(ctx.serviceDispatch_({...change,session:'student@students.bethelsd.org'}).status,200);
- let updated=ctx.serviceManage_('manage').requests[0];const mail={action:'auth-service-email',id:r.id,version:updated.version,eventId:updated.updates.at(-1).eventId};
- assert.equal(ctx.serviceDispatch_({...mail,session:'otherdm@students.bethelsd.org'}).status,403);assert.equal(state.mail.length,0);
- assert.equal(ctx.serviceDispatch_({...mail,session:'am@students.bethelsd.org'}).status,200);assert.equal(state.mail.length,1);
- updated=ctx.serviceManage_('manage').requests[0];assert.equal(ctx.serviceDispatch_({...change,version:updated.version,session:'dm@students.bethelsd.org',manager:'otherpm@students.bethelsd.org'}).status,400);
- assert.equal(ctx.serviceDispatch_({...change,version:updated.version,session:'dm@students.bethelsd.org',manager:'replacement@students.bethelsd.org'}).status,200);
- updated=ctx.serviceManage_('manage').requests[0];assert.equal(ctx.serviceDispatch_({...change,version:updated.version,session:'student@students.bethelsd.org',manager:updated.manager}).status,403);
- state.leaders=state.leaders.filter(x=>x[4]!=='dm@students.bethelsd.org');assert.equal(ctx.serviceDispatch_({...change,version:updated.version,session:'dm@students.bethelsd.org',manager:updated.manager}).status,403);
- assert.equal(ctx.serviceDispatch_({...change,version:updated.version,session:'owner@bethelsd.org',manager:'otherpm@students.bethelsd.org'}).status,200);
+test('leadership has universal ticket editing and current PM can hand off only their assigned ticket',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Replacement','replacement@students.bethelsd.org']];state.leaders.push(['Period 5','','Assistant Manager','AM','otheram@students.bethelsd.org']);
+ const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),payload=()=>({action:'auth-service-update',id:first,version:current().version,status:'In Progress',manager:current().manager,note:'',publicNote:''});
+ assert.equal(ctx.serviceWrite_('outsider@students.bethelsd.org',payload()).status,403);
+ assert.equal(ctx.serviceWrite_('otheram@students.bethelsd.org',{...payload(),note:'Leadership internal',publicNote:'Client update'}).status,200);
+ const event=ctx.serviceUpdates_(current(),state.grids.ServiceWebLog.slice(1)).at(-1);assert.equal(ctx.serviceWrite_('otheram@students.bethelsd.org',{action:'auth-service-email',id:first,version:current().version,eventId:event.eventId}).status,200);
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{...payload(),manager:'replacement@students.bethelsd.org'}).status,200);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',payload()).status,403);
 });
-test('ambiguous, stale, and unassigned manager labels do not grant ticket editing',()=>{
+
+test('unassigned tickets permit leadership editing while stale or ambiguous PM labels never authorize a student',()=>{
  const {ctx,state}=fixture(),item=ctx.serviceManage_('manage').requests[0];
- assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{manager:''},state.leaders,ctx.serviceRoster_()).canEdit,false);
- assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{manager:'Removed (Period 2)'},state.leaders,ctx.serviceRoster_()).canEdit,false);
+ assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{manager:''},state.leaders,ctx.serviceRoster_()).canEdit,true);
+ assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{manager:'Removed (Period 2)'},state.leaders,ctx.serviceRoster_()).canEdit,true);
  const duplicate=[...ctx.serviceRoster_(),...ctx.serviceRoster_()];assert.equal(ctx.serviceTicketAccess_('student@students.bethelsd.org',item,state.leaders,duplicate).canEdit,false);
  for(const role of ['Division Manager','Assistant Manager','Director of Client Relations'])assert.equal(ctx.serviceTicketAccess_('leader@students.bethelsd.org',item,[['Period 2','',role,'','leader@students.bethelsd.org']],ctx.serviceRoster_()).canEdit,true);
 });
@@ -350,31 +340,29 @@ test('single-ticket refresh is authenticated and keeps assigned manager, leaders
 });
 test('only the assigned manager and division leaders can manage assigned tickets; note authorship limits revisions with admin override',()=>{
  const {ctx,state}=fixture();state.leaders.push(['Period 2','','Division Manager','DM','dm@students.bethelsd.org'],['Period 2','','Assistant Manager','AM','am@students.bethelsd.org'],['Period 3','','Division Manager','Other','other@students.bethelsd.org']);let item=ctx.serviceRead_().requests[0],result=ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-update',id:first,version:item.version,status:item.status,manager:item.manager,note:'PM internal',publicNote:'PM public'});assert.equal(result.status,200);
- for(const actor of ['student@students.bethelsd.org','director@students.bethelsd.org','dm@students.bethelsd.org','am@students.bethelsd.org'])assert.equal(ctx.serviceTicketAccess_(actor,ctx.serviceRead_().requests[0],state.leaders,ctx.serviceRoster_()).canEdit,true);assert.equal(ctx.serviceTicketAccess_('other@students.bethelsd.org',ctx.serviceRead_().requests[0],state.leaders,ctx.serviceRoster_()).canEdit,false);
+ for(const actor of ['student@students.bethelsd.org','director@students.bethelsd.org','dm@students.bethelsd.org','am@students.bethelsd.org'])assert.equal(ctx.serviceTicketAccess_(actor,ctx.serviceRead_().requests[0],state.leaders,ctx.serviceRoster_()).canEdit,true);assert.equal(ctx.serviceTicketAccess_('other@students.bethelsd.org',ctx.serviceRead_().requests[0],state.leaders,ctx.serviceRoster_()).canEdit,true);
  let row=ctx.serviceManagerRow_(ctx.serviceRead_().requests[0],ctx.serviceRead_().events,'director@students.bethelsd.org',state.leaders,ctx.serviceRoster_());assert.equal(row.updates[0].canManageNote,false);assert.equal(row.internalUpdates[0].canManageNote,false);const entry=row.updates[0],request={action:'auth-service-delete-log',id:first,version:row.version,eventId:entry.entryId,entryVersion:entry.entryVersion,scope:'public'};assert.equal(ctx.serviceWrite_('director@students.bethelsd.org',request).status,403);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',request).status,200);
  row=ctx.serviceManagerRow_(ctx.serviceRead_().requests[0],ctx.serviceRead_().events,'student@students.bethelsd.org',state.leaders,ctx.serviceRoster_());assert.equal(row.internalUpdates[0].canManageNote,true);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-edit-log',id:first,version:row.version,eventId:row.internalUpdates[0].entryId,entryVersion:row.internalUpdates[0].entryVersion,scope:'internal',note:'Own correction'}).status,200);
 });
-test('division leadership can assign open unassigned tickets without changing status or notes, then access follows assigned division',()=>{
- const {ctx,state}=fixture();let item=ctx.serviceRead_().requests.find(r=>r.id===second),leaders=state.leaders,roster=ctx.serviceRoster_();assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',item,leaders,roster).canAssign,true);assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',item,leaders,roster).canEdit,false);assert.equal(ctx.serviceTicketAccess_('coo@students.bethelsd.org',item,leaders,roster).canAssign,false);assert.equal(ctx.serviceTicketAccess_('student@students.bethelsd.org',item,leaders,roster).canAssign,false);assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{...item,status:'Closed'},leaders,roster).canAssign,false);assert.equal(ctx.serviceTicketAccess_('director@students.bethelsd.org',{...item,manager:'Removed PM'},leaders,roster).canAssign,false);
- const payload={action:'auth-service-update',id:second,version:item.version,status:item.status,manager:'student@students.bethelsd.org',note:'',publicNote:''};assert.equal(ctx.serviceWrite_('director@students.bethelsd.org',{...payload,note:'Forbidden before assignment'}).status,403);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{...payload,status:'Closed'}).status,403);const result=ctx.serviceWrite_('director@students.bethelsd.org',payload);assert.equal(result.status,200);assert.equal(result.request.manager,'Student, Test (Period 2)');assert.equal(result.request.canEdit,true);item=ctx.serviceRead_().requests.find(r=>r.id===second);assert.equal(ctx.serviceTicketAccess_('student@students.bethelsd.org',item,leaders,roster).canEdit,true);assert.equal(item.status,'New!');assert.equal(result.request.updates.length,0);
+test('leadership may edit a new unassigned ticket and assign a current PM; unrelated students cannot',()=>{
+ const {ctx,state}=fixture();const item=ctx.serviceRead_().requests.find(r=>r.id===second),roster=ctx.serviceRoster_();
+ const access=ctx.serviceTicketAccess_('director@students.bethelsd.org',item,state.leaders,roster);assert.equal(access.canAssign,true);assert.equal(access.canEdit,true);
+ const payload={action:'auth-service-update',id:second,version:item.version,status:'Assigned',manager:'student@students.bethelsd.org',note:'Intake note',publicNote:''};
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',payload).status,403);assert.equal(ctx.serviceWrite_('coo@students.bethelsd.org',payload).status,403);
+ const result=ctx.serviceWrite_('director@students.bethelsd.org',payload);assert.equal(result.status,200);assert.equal(result.request.manager,'Student, Test (Period 2)');assert.equal(result.request.internalUpdates[0].note,'Intake note');assert.equal(result.request.canEdit,true);
 });
-test('a leader may route an unassigned ticket to another division but cannot manage it after assignment',()=>{
- const {ctx,state}=fixture();state.leaders.push(['Period 3','','Division Manager','Other leader','other@students.bethelsd.org']);const item=ctx.serviceRead_().requests.find(r=>r.id===second);const before=ctx.serviceManagerRow_(item,ctx.serviceRead_().events,'other@students.bethelsd.org',state.leaders,ctx.serviceRoster_());assert.equal(before.canAssign,true);assert.equal(before.assignmentChoices[0].email,'student@students.bethelsd.org');const result=ctx.serviceWrite_('other@students.bethelsd.org',{action:'auth-service-update',id:second,version:item.version,status:item.status,manager:'student@students.bethelsd.org',note:'',publicNote:''});assert.equal(result.status,200);assert.equal(result.request.canEdit,false);assert.equal(result.request.canAssign,false);assert.equal(ctx.serviceWrite_('other@students.bethelsd.org',{action:'auth-service-update',id:second,version:result.request.version,status:item.status,manager:'student@students.bethelsd.org',note:'Forbidden after routing',publicNote:''}).status,403);
+
+test('leadership retains editing and assignment routing after a cross-division handoff',()=>{
+ const {ctx,state}=fixture();state.leaders.push(['Period 3','','Division Manager','Other leader','other@students.bethelsd.org']);const item=ctx.serviceRead_().requests.find(r=>r.id===second);const before=ctx.serviceManagerRow_(item,ctx.serviceRead_().events,'other@students.bethelsd.org',state.leaders,ctx.serviceRoster_());assert.equal(before.canAssign,true);assert.equal(before.assignmentChoices[0].email,'student@students.bethelsd.org');const result=ctx.serviceWrite_('other@students.bethelsd.org',{action:'auth-service-update',id:second,version:item.version,status:item.status,manager:'student@students.bethelsd.org',note:'',publicNote:''});assert.equal(result.status,200);assert.equal(result.request.canEdit,true);assert.equal(result.request.canAssign,true);assert.equal(ctx.serviceWrite_('other@students.bethelsd.org',{action:'auth-service-update',id:second,version:result.request.version,status:item.status,manager:'student@students.bethelsd.org',note:'Leadership after routing',publicNote:''}).status,200);
 });
 
 
-test('directors and division managers can change status across divisions including unassigned tickets, but not other protected fields',()=>{
- for(const role of ['Division Manager','Director of Client Relations','Client Relations Director']){
-  const {ctx,state}=fixture(),actor='crossdivision@students.bethelsd.org';state.leaders.push(['Period 5','',role,'Leader',actor]);ctx.authSession_=raw=>({email:raw});
-  let item=ctx.serviceRead_().requests.find(r=>r.id===first),row=ctx.serviceManagerRow_(item,[],actor,state.leaders,ctx.serviceRoster_());
-  assert.equal(row.canEdit,false);assert.equal(row.canAssign,false);assert.equal(row.canChangeStatus,true);
-  let payload={action:'auth-service-update',id:item.id,version:item.version,status:'In Progress',manager:item.manager,note:'',publicNote:''};
-  for(const extra of [{note:'Not allowed'},{publicNote:'Not allowed'},{manager:'student@students.bethelsd.org'}])assert.equal(ctx.serviceWrite_(actor,{...payload,...extra}).status,403);
-  assert.equal(state.writes.length,0);const saved=ctx.serviceDispatch_({...payload,session:actor});assert.equal(saved.status,200);assert.equal(saved.request.status,'In Progress');assert.equal(saved.request.manager,item.manager);assert.equal(saved.request.canChangeStatus,true);assert.equal(saved.request.canEdit,false);
-  assert.equal(state.mail.length,0);assert.equal(ctx.serviceWrite_(actor,{action:'auth-service-email',id:first,version:saved.request.version,eventId:'x'}).status,403);
-  item=ctx.serviceRead_().requests.find(r=>r.id===second);payload={...payload,id:item.id,version:item.version,manager:'',status:'Closed'};
-  assert.equal(ctx.serviceWrite_(actor,payload).status,200);assert.equal(ctx.serviceRead_().requests.find(r=>r.id===second).status,'Closed');
-  item=ctx.serviceRead_().requests.find(r=>r.id===first);state.leaders=state.leaders.filter(r=>r[4]!==actor);assert.equal(ctx.serviceWrite_(actor,{...payload,id:first,version:item.version,manager:item.manager}).status,403);
+test('both director titles, division managers and assistant managers may edit any ticket until their role is revoked',()=>{
+ for(const role of ['Division Manager','Assistant Manager','Director of Client Relations','Client Relations Director']){
+  const {ctx,state}=fixture(),actor='crossdivision@students.bethelsd.org';state.leaders.push(['Period 5','',role,'Leader',actor]);const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first);
+  const access=ctx.serviceTicketAccess_(actor,current(),state.leaders,ctx.serviceRoster_());assert.equal(access.canEdit,true);assert.equal(access.canAssign,true);assert.equal(access.canChangeStatus,true);
+  assert.equal(ctx.serviceWrite_(actor,{action:'auth-service-update',id:first,version:current().version,status:'In Progress',manager:current().manager,note:'Leadership update',publicNote:'Client update'}).status,200);
+  state.leaders=state.leaders.filter(row=>row[4]!==actor);assert.equal(ctx.serviceWrite_(actor,{action:'auth-service-update',id:first,version:current().version,status:'Closed',manager:current().manager,note:'',publicNote:''}).status,403);
  }
 });
 
@@ -390,7 +378,7 @@ test('project membership is restricted to the current PM, division managers/assi
  const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org'],['Member, Two','two@students.bethelsd.org']];
  state.leaders.push(['Period 2','','Division Manager','','manager@students.bethelsd.org'],['Period 2','','Assistant Manager','','assistant@students.bethelsd.org'],['Period 5','','Division Manager','','other-manager@students.bethelsd.org']);
  const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),save=(email,members,version=current().version)=>ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version,members});
- for(const email of ['other-manager@students.bethelsd.org','one@students.bethelsd.org'])assert.equal(save(email,['one@students.bethelsd.org']).status,403);
+ for(const email of ['outsider@students.bethelsd.org','one@students.bethelsd.org'])assert.equal(save(email,['one@students.bethelsd.org']).status,403);
  assert.equal(save('student@students.bethelsd.org',['unknown@students.bethelsd.org']).status,400);assert.equal(state.writes.length,0);
  const version=current().version,result=save('student@students.bethelsd.org',['two@students.bethelsd.org','one@students.bethelsd.org','one@students.bethelsd.org']);assert.equal(result.status,200);assert.equal(result.request.members.length,2);assert.equal(result.request.memberHistory.length,1);assert.match(result.request.memberHistory[0].note,/Member, One/);assert.match(state.grids.ServiceRequests[1][2],/Project members added/);
  assert.equal(save('assistant@students.bethelsd.org',[],version).status,409);
@@ -409,8 +397,8 @@ test('members can save ticket updates and only their own notes; membership survi
  const entry=result.request.internalUpdates.at(-1);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-delete-log',id:first,version:r.version,eventId:entry.entryId,entryVersion:entry.entryVersion,scope:'internal'}).status,403);
  result=ctx.serviceWrite_('one@students.bethelsd.org',{action:'auth-service-update',id:first,version:r.version,manager:r.manager,status:'In Progress',note:'',publicNote:''});assert.equal(result.status,200);assert.equal(current().members.length,1);
 });
-test('unassigned tickets cannot receive project members, and no-op membership saves are idempotent',()=>{
- const {ctx,state}=fixture();let r=ctx.serviceRead_().requests.find(r=>r.id===second);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:second,version:r.version,members:[]}).status,403);
+test('leadership can manage members without a PM and no-op saves remain idempotent',()=>{
+ const {ctx,state}=fixture();let r=ctx.serviceRead_().requests.find(r=>r.id===second);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:second,version:r.version,members:[]}).status,200);
  r=ctx.serviceRead_().requests.find(r=>r.id===first);assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:first,version:r.version,members:[]}).status,200);assert.equal(state.writes.length,0);
 });
 test('HTTP membership request accepts only validated addresses and forwards no caller-controlled member labels',async()=>{
@@ -429,12 +417,50 @@ test('authenticated log authors resolve to roster names without changing audit i
  const client=ctx.serviceClientRow_(r,state.grids.ServiceWebLog.slice(1));assert.equal(client.actors,undefined);assert.equal(client.updates[0].actor,undefined);
 });
 
-test('current client relations directors can manage members in their own division under either title; stale and other-division roles cannot',()=>{
+test('current client relations directors retain routing under either title and across divisions; revoked roles cannot',()=>{
  const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org']];
  const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),roster=ctx.serviceRoster_();
  const email='director@students.bethelsd.org';
  for(const title of ['Director of Client Relations','Client Relations Director']){state.leaders=[['Period 2','',title,'Director',email]];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),true);assert.equal(ctx.serviceManagerRow_(current(),state.grids.ServiceWebLog.slice(1),email,state.leaders,roster).canAssignMembers,true);}
- state.leaders=[['Period 4','','Director of Client Relations','Director',email]];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),false);assert.equal(ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:['one@students.bethelsd.org']}).status,403);
+ state.leaders=[['Period 4','','Director of Client Relations','Director',email]];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),true);assert.equal(ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:['one@students.bethelsd.org']}).status,200);
  state.leaders=[['Period 2','','Director of Client Relations','Director',email]];const saved=ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:['one@students.bethelsd.org']});assert.equal(saved.status,200);assert.equal(saved.request.members[0].email,'one@students.bethelsd.org');
  state.leaders=[];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),false);assert.equal(ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:[]}).status,403);
+});
+
+test('PM replacement and removal preserve members, revoke former-PM authority, and let leadership resolve or remove assignments',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Replacement','replacement@students.bethelsd.org'],['Member','member@students.bethelsd.org']];
+ state.leaders.push(['Period 4','','Assistant Manager','AM','assistant@students.bethelsd.org']);
+ const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),update=(actor,manager)=>ctx.serviceWrite_(actor,{action:'auth-service-update',id:first,version:current().version,status:current().status,manager,note:'',publicNote:''});
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-members',id:first,version:current().version,members:['member@students.bethelsd.org']}).status,200);
+ const oldVersion=current().version;assert.equal(update('student@students.bethelsd.org','replacement@students.bethelsd.org').status,200);assert.equal(current().members.length,1);assert.equal(update('student@students.bethelsd.org','').status,403);
+ assert.equal(ctx.serviceWrite_('replacement@students.bethelsd.org',{action:'auth-service-update',id:first,version:oldVersion,status:'Assigned',manager:'',note:'',publicNote:''}).status,409);
+ assert.equal(update('replacement@students.bethelsd.org','').status,200);assert.equal(current().manager,'');assert.equal(current().members.length,1);
+ assert.equal(ctx.serviceTicketAccess_('member@students.bethelsd.org',current(),state.leaders,ctx.serviceRoster_()).canEdit,true);assert.equal(update('member@students.bethelsd.org','student@students.bethelsd.org').status,403);
+ assert.equal(ctx.serviceWrite_('assistant@students.bethelsd.org',{action:'auth-service-members',id:first,version:current().version,members:[]}).status,200);assert.equal(current().members.length,0);
+ assert.equal(update('director@students.bethelsd.org','student@students.bethelsd.org').status,200);assert.equal(update('assistant@students.bethelsd.org','').status,200);assert.equal(update('owner@bethelsd.org','replacement@students.bethelsd.org').status,200);
+ assert.equal(update('owner@bethelsd.org','fake@students.bethelsd.org').status,400);
+});
+
+test('client correction changes portal ownership and email destination with audit, preserves earlier send recipients and sends nothing automatically',()=>{
+ const {ctx,state,store}=fixture();const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first);let r=current();
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-update',id:first,version:r.version,status:'Completed',manager:r.manager,note:'Internal',publicNote:'Ready for pickup'}).status,200);
+ let latest=ctx.serviceUpdates_(current(),state.grids.ServiceWebLog.slice(1)).at(-1);assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-email',id:first,version:current().version,eventId:latest.eventId}).status,200);assert.equal(state.mail[0].to,'staff@bethelsd.org');
+ const oldVersion=current().version;const change=ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-client',id:first,version:oldVersion,email:'corrected@bethelsd.org',name:'Correct Client'});assert.equal(change.status,200);assert.equal(change.request.email,'corrected@bethelsd.org');assert.equal(change.request.name,'Correct Client');assert.equal(state.mail.length,1);assert.match(current().legacyLog,/Client recipient changed/);assert.equal(change.request.emailStates.latest,'unsent');assert.equal(change.request.emailHistory[0].to,'staff@bethelsd.org');
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-client',id:first,version:oldVersion,email:'another@bethelsd.org',name:'Other'}).status,409);
+ const session='a'.repeat(64);store.setProperty('service-session:'+hash(session),JSON.stringify({email:'staff@bethelsd.org',expires:Date.now()+60000}));assert.equal(ctx.serviceDispatch_({action:'service-client-view',session}).requests.length,0);store.setProperty('service-session:'+hash(session),JSON.stringify({email:'corrected@bethelsd.org',expires:Date.now()+60000}));assert.equal(ctx.serviceDispatch_({action:'service-client-view',session}).requests[0].id,first);
+ assert.equal(ctx.serviceWrite_('student@students.bethelsd.org',{action:'auth-service-email',id:first,version:current().version,eventId:latest.eventId}).status,200);assert.equal(state.mail[1].to,'corrected@bethelsd.org');assert.match(state.mail[1].body,/Correct Client/);
+});
+test('ordinary project members cannot change client recipients and invalid staff addresses never write',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member','member@students.bethelsd.org']];const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first);
+ assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-members',id:first,version:current().version,members:['member@students.bethelsd.org']}).status,200);const writes=state.writes.length;
+ assert.equal(ctx.serviceWrite_('member@students.bethelsd.org',{action:'auth-service-client',id:first,version:current().version,email:'new@bethelsd.org',name:'New'}).status,403);
+ for(const email of ['outside@gmail.com','member@students.bethelsd.org','bad@bethelsd.org\nBcc:other@example.org'])assert.equal(ctx.serviceWrite_('owner@bethelsd.org',{action:'auth-service-client',id:first,version:current().version,email,name:'New'}).status,400);assert.equal(state.writes.length,writes);
+});
+test('HTTP client correction validates the staff address, name and ticket version before forwarding',async()=>{
+ const old=globalThis.fetch;process.env.SPINNER_BRIDGE_URL='https://script.google.com/test';process.env.SPINNER_BRIDGE_TOKEN='test';let sent;
+ globalThis.fetch=async(_url,opts)=>{sent=JSON.parse(opts.body);return {ok:true,json:async()=>({status:200,request:{id:first}})};};
+ try{const run=async patch=>{const res=response();await handler({method:'POST',headers:{origin:'https://gknest.org','content-type':'application/json',cookie:'__Host-nest-auth='+'a'.repeat(64)},body:{operation:'client',id:first,version:'b'.repeat(64),email:'correct@bethelsd.org',name:'Correct Client',...patch}},res);return res;};
+ for(const patch of [{email:'outside@gmail.com'},{email:'student@students.bethelsd.org'},{name:''},{version:'bad'}])assert.equal((await run(patch)).code,400);
+ assert.equal((await run({email:'Correct@bethelsd.org'})).code,200);assert.equal(sent.action,'auth-service-client');assert.equal(sent.email,'correct@bethelsd.org');
+ }finally{globalThis.fetch=old;delete process.env.SPINNER_BRIDGE_URL;delete process.env.SPINNER_BRIDGE_TOKEN;}
 });
