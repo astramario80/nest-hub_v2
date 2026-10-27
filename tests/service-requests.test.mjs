@@ -390,12 +390,12 @@ test('project membership is restricted to the current PM, division managers/assi
  const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org'],['Member, Two','two@students.bethelsd.org']];
  state.leaders.push(['Period 2','','Division Manager','','manager@students.bethelsd.org'],['Period 2','','Assistant Manager','','assistant@students.bethelsd.org'],['Period 5','','Division Manager','','other-manager@students.bethelsd.org']);
  const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),save=(email,members,version=current().version)=>ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version,members});
- for(const email of ['director@students.bethelsd.org','other-manager@students.bethelsd.org','one@students.bethelsd.org'])assert.equal(save(email,['one@students.bethelsd.org']).status,403);
+ for(const email of ['other-manager@students.bethelsd.org','one@students.bethelsd.org'])assert.equal(save(email,['one@students.bethelsd.org']).status,403);
  assert.equal(save('student@students.bethelsd.org',['unknown@students.bethelsd.org']).status,400);assert.equal(state.writes.length,0);
  const version=current().version,result=save('student@students.bethelsd.org',['two@students.bethelsd.org','one@students.bethelsd.org','one@students.bethelsd.org']);assert.equal(result.status,200);assert.equal(result.request.members.length,2);assert.equal(result.request.memberHistory.length,1);assert.match(result.request.memberHistory[0].note,/Member, One/);assert.match(state.grids.ServiceRequests[1][2],/Project members added/);
  assert.equal(save('assistant@students.bethelsd.org',[],version).status,409);
  const roster=ctx.serviceRoster_(),leaders=state.leaders;assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canEdit,true);assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canAssign,false);assert.equal(ctx.serviceCanAssignMembers_('one@students.bethelsd.org',current(),leaders,roster),false);
- for(const email of ['student@students.bethelsd.org','manager@students.bethelsd.org','assistant@students.bethelsd.org','owner@bethelsd.org'])assert.equal(ctx.serviceCanAssignMembers_(email,current(),leaders,roster),true);
+ for(const email of ['student@students.bethelsd.org','manager@students.bethelsd.org','assistant@students.bethelsd.org','director@students.bethelsd.org','owner@bethelsd.org'])assert.equal(ctx.serviceCanAssignMembers_(email,current(),leaders,roster),true);
  assert.equal(save('manager@students.bethelsd.org',['two@students.bethelsd.org']).status,200);assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,roster).canEdit,false);assert.match(current().legacyLog,/Project members removed: Member, One/);
  assert.equal(save('assistant@students.bethelsd.org',[]).status,200);assert.equal(save('owner@bethelsd.org',['one@students.bethelsd.org']).status,200);
  ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org']];assert.equal(ctx.serviceTicketAccess_('one@students.bethelsd.org',current(),leaders,ctx.serviceRoster_()).canEdit,false);
@@ -427,4 +427,14 @@ test('authenticated log authors resolve to roster names without changing audit i
  const row=ctx.serviceManagerRow_(r,state.grids.ServiceWebLog.slice(1),'owner@bethelsd.org',state.leaders,ctx.serviceRoster_());
  assert.equal(row.actors['student@students.bethelsd.org'].name,'Student, Test');assert.equal(row.actors['student@students.bethelsd.org'].email,'student@students.bethelsd.org');assert.equal(row.updates[0].actor,'student@students.bethelsd.org');assert.equal(row.internalUpdates[0].actor,'student@students.bethelsd.org');
  const client=ctx.serviceClientRow_(r,state.grids.ServiceWebLog.slice(1));assert.equal(client.actors,undefined);assert.equal(client.updates[0].actor,undefined);
+});
+
+test('current client relations directors can manage members in their own division under either title; stale and other-division roles cannot',()=>{
+ const {ctx,state}=fixture();ctx.rows_=()=>[['Student, Test','student@students.bethelsd.org'],['Member, One','one@students.bethelsd.org']];
+ const current=()=>ctx.serviceRead_().requests.find(r=>r.id===first),roster=ctx.serviceRoster_();
+ const email='director@students.bethelsd.org';
+ for(const title of ['Director of Client Relations','Client Relations Director']){state.leaders=[['Period 2','',title,'Director',email]];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),true);assert.equal(ctx.serviceManagerRow_(current(),state.grids.ServiceWebLog.slice(1),email,state.leaders,roster).canAssignMembers,true);}
+ state.leaders=[['Period 4','','Director of Client Relations','Director',email]];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),false);assert.equal(ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:['one@students.bethelsd.org']}).status,403);
+ state.leaders=[['Period 2','','Director of Client Relations','Director',email]];const saved=ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:['one@students.bethelsd.org']});assert.equal(saved.status,200);assert.equal(saved.request.members[0].email,'one@students.bethelsd.org');
+ state.leaders=[];assert.equal(ctx.serviceCanAssignMembers_(email,current(),state.leaders,roster),false);assert.equal(ctx.serviceWrite_(email,{action:'auth-service-members',id:first,version:current().version,members:[]}).status,403);
 });

@@ -127,7 +127,7 @@ function serviceMemberHistory_(item,events){return events.filter(e=>e[1]===item.
 function serviceCanAssignMembers_(email,item,leaders,roster){
  const assigned=serviceAssignment_(item,roster);if(!assigned)return false;
  if(OWNER_EMAILS.includes(email_(email))||assigned.email===memberEmail_(email,assigned.period))return true;
- return leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
+ return leaders.some(row=>String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase()===assigned.period&&['division manager','assistant manager','director of client relations','client relations director'].includes(String(row[2]||'').trim().toLowerCase().replace(/\s+/g,' '))&&email_(row[4])===memberEmail_(email,assigned.period));
 }
 function serviceTicketAccess_(email,item,leaders,roster){
  if(OWNER_EMAILS.includes(email_(email)))return {canEdit:true,canAssign:true,canChangeStatus:true,period:''};
