@@ -6,7 +6,7 @@ import {rosterPdf} from '../lib/field-trips/roster-pdf.mjs';
 import {permissionPdf,itineraryPdf,districtPacketPdf} from '../lib/field-trips/pdf.mjs';
 const PARENT='__Host-nest-trip-parent';
 const readOps=new Set(['roster-sync-plan','bootstrap','calendar-plan','download','open-form','blank-permission','preview-pdf','roster-pdf','itinerary-pdf','district-packet','previous-k12-answers']);
-const writeOps=new Set(['roster-groups','roster-sync','setup','sync-mail','create','save-details','participants','calendar-sync','link-k12','parent-contact','decline','verify','correction','paper-received','message','open-day','roll-call','check-in','request-out','approve-out','close-day','van-confirm','van-revoke','notify','district-manual','parent-start','parent-verify','parent-logout','sign-permission','refresh-template','inspect-k12']);
+const writeOps=new Set(['roster-groups','roster-sync','setup','sync-mail','create','save-details','participants','calendar-sync','link-k12','parent-contact','invite-parent','decline','verify','correction','paper-received','message','open-day','roll-call','check-in','request-out','approve-out','close-day','van-confirm','van-revoke','notify','district-manual','parent-start','parent-verify','parent-logout','sign-permission','refresh-template','inspect-k12']);
 export const fieldTripKey=()=>/^[a-f0-9]{64}$/.test(process.env.FIELD_TRIP_BRIDGE_TOKEN||'')?process.env.FIELD_TRIP_BRIDGE_TOKEN:'';
 export async function tripBridge(payload){
  if(!fieldTripKey())throw Error('Trip bridge is not configured');const endpoint=process.env.FIELD_TRIP_BRIDGE_URL||FIELD_TRIP_BRIDGE;if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(endpoint))throw Error('Trip bridge is not configured');
@@ -45,12 +45,6 @@ export function createFieldTripHandler(deps={tripBridge,bridge,permissionPdf,del
  if(validToken(session)){const identity=await deps.bridge({action:'auth-me',session},18000);if(identity.status===200&&identity.email)actor={email:identity.email,username:identity.username};}
  if(!actor&&!parentToken&&!['parent-start','parent-verify'].includes(operation))return res.status(401).json({error:'Sign in to NEST or use your private parent invitation.'});
  const payload={operation,actor,parentToken};for(const key of ['id','revision','trip','participantIds','groupIds','autoRoster','studentId','messageId','requestId','guardianConfirmed','name','email','message','day','value','reference','by','pickup','where','driver','reserved','keys','contacts','kind','note','inviteToken','challenge','code','url'])if(Object.hasOwn(input,key))payload[key]=input[key];
- if(operation==='parent-contact'){
-  const email=typeof input.email==='string'?input.email.trim().toLowerCase():'';
-  if(input.guardianConfirmed!==true)return res.status(400).json({error:'Confirm that the email belongs to your parent or legal guardian, not to you.'});
-  if(!email||email===String(actor?.email||'').toLowerCase()||/@students\.bethelsd\.org$/.test(email))return res.status(400).json({error:'Use your parent or guardian’s email address, not a student email address.'});
-  payload.email=email;
- }
  if(operation==='sign-permission'){
   const a=input.answers,required=['name','cellPhone','address','relationship','emergencyName1','emergencyPhone1'];if(!a||input.consent!==true||required.some(k=>typeof a[k]!=='string'||!a[k].trim())||Object.entries(a).some(([k,v])=>!['name','homePhone','workPhone','extension','cellPhone','address','medical','relationship','emergencyName1','emergencyPhone1','emergencyName2','emergencyPhone2','signaturePng'].includes(k)||typeof v!=='string'||v.length>(k==='signaturePng'?300000:k==='medical'?500:200)))return res.status(400).json({error:'Complete the parent fields and draw your signature.'});
   if(!/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(a.signaturePng||''))return res.status(400).json({error:'Draw your signature first.'});const png=Buffer.from(a.signaturePng.split(',')[1],'base64');if(png.length<32||png.subarray(0,8).toString('hex')!=='89504e470d0a1a0a'||png.readUInt32BE(16)>2500||png.readUInt32BE(20)>1500)return res.status(400).json({error:'The signature image is invalid.'});

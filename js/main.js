@@ -538,8 +538,6 @@ if (sopsButtons.length > 0) {
 
         if (!sopsData[label]) return;
 
-        window.resetMagicSpinner?.();
-
         sopsButtons.forEach(b => b.classList.remove("active"));
         button.classList.add("active");
 
@@ -571,7 +569,6 @@ let spinning = false;
 let spinnerInterval = null;
 window.resetMagicSpinner = function() {
   clearInterval(spinnerInterval);
-  window.SpinnerCelebration?.stop();
   remainingNames = [];
   spinning = false;
   const result = document.getElementById("spinner-result");
@@ -615,8 +612,6 @@ document.addEventListener("click", (event) => {
   }
 
   spinning = true;
-  window.SpinnerCelebration?.stop();
-  window.SpinnerCelebration?.prepare();
   statusEl.textContent = "Spinning…";
 
   const finalIndex = Math.floor(Math.random() * remainingNames.length);
@@ -633,8 +628,6 @@ document.addEventListener("click", (event) => {
 
       remainingNames.splice(finalIndex, 1);
       resultEl.textContent = finalName;
-
-      window.SpinnerCelebration?.celebrate();
 
       const li = document.createElement("li");
       li.textContent = finalName;
