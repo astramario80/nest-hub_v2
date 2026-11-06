@@ -2,9 +2,11 @@
 // existing Control Center's owner-run slide routine. No browser receives a token.
 const DIVISION_SLIDES_WEBAPP = 'https://script.google.com/macros/s/AKfycbwRXV7QLRzmTqBJJcJs8WdQ3Gy0kwbCwgQBqW_t5ujSkSGOwb9wGF8MCpvEvNNkR0oA/exec';
 function divisionSlidesPermissions_(identity,period,leaders){
- if(OWNER_EMAILS.includes(email_(identity)))return true;
+ if(websiteAdmin_(identity))return true;
+ if(staffIdentity_(identity))return staffManager_(identity,period);
  const email=memberEmail_(identity,period);
  const rows=leaders||((typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[]);
+ if(nestExecutive_(identity,rows))return true;
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===email&&
   (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));
 }
@@ -12,14 +14,15 @@ function divisionSlidesDispatch_(r){
  if(!Object.prototype.hasOwnProperty.call(PERIODS,r.period)||!['access','start','status'].includes(r.operation))return {status:400};
  const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
  if(!session)return {status:401};
- const email=memberEmail_(session.email,r.period),isOwner=OWNER_EMAILS.includes(email_(session.email));
+ const email=memberEmail_(session.email,r.period),isOwner=websiteAdmin_(session.email);
  const roster=rows_(r.period),members=new Set(roster.map(row=>email_(row[1])));
  const canViewRobotics=r.period==='CTSO'&&(typeof roboticsCanView_==='function'?roboticsCanView_(session.email):roboticsAccess_(session.email));
- if(!isOwner&&!members.has(email)&&!canViewRobotics)return {status:403};
  const leaders=(typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+ if(staffIdentity_(session.email)&&!staffRole_(session.email,r.period))return {status:403};
+ if(!isOwner&&!staffRole_(session.email,r.period)&&!members.has(email)&&!canViewRobotics&&!nestExecutive_(session.email,leaders))return {status:403};
  const canManage=divisionSlidesPermissions_(session.email,r.period,leaders);
  if(r.operation==='access'){
-  const roles=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&email_(row[4])===email).map(row=>String(row[2]||'').trim());
+  const roles=staffIdentity_(session.email)?[]:leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&email_(row[4])===email).map(row=>String(row[2]||'').trim());
   const team=leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===r.period&&members.has(email_(row[4]))).map(row=>{
    const name=String(row[3]||'').trim(),comma=name.indexOf(',');
    return {position:String(row[2]||'').trim(),name:comma>=0?name.slice(comma+1).trim()+' '+name.slice(0,comma).trim():name};
@@ -29,7 +32,7 @@ function divisionSlidesDispatch_(r){
  if(!canManage)return {status:403};
  if(!/^[a-f0-9-]{36}$/.test(r.job||''))return {status:400};
  if(!DIVISION_SLIDES_WEBAPP)return {status:503};
- let response=UrlFetchApp.fetch(DIVISION_SLIDES_WEBAPP,{method:'post',contentType:'application/json',payload:JSON.stringify({token:r.token,operation:r.operation,period:r.period,job:r.job,email:memberEmail_(session.email,r.period)}),muteHttpExceptions:true,followRedirects:false});
+ let response=UrlFetchApp.fetch(DIVISION_SLIDES_WEBAPP,{method:'post',contentType:'application/json',payload:JSON.stringify({token:r.token,operation:r.operation,period:r.period,job:r.job,email:memberEmail_(session.email,nestExecutive_(session.email,leaders)?'CTSO':r.period)}),muteHttpExceptions:true,followRedirects:false});
  if([301,302,303].includes(response.getResponseCode())){
   const headers=response.getAllHeaders(),target=String(headers.Location||headers.location||'');
   if(!/^https:\/\/script\.googleusercontent\.com\//.test(target))return {status:503};
@@ -54,4 +57,22 @@ function hiringQueueSlideAccess_(r){
   }
   return response.getResponseCode()===200&&JSON.parse(response.getContentText()).status===200;
  }catch(error){console.error('Hiring slide access queue unavailable');return false;}
+}
+
+// The trusted school bridge supplies only staff identities and period-specific roles.
+function staffSlideDelegates_(){
+ const all=PropertiesService.getScriptProperties().getProperties(),accounts=accounts_(),result={};Object.keys(PERIODS).forEach(p=>result[p]=[]);
+ Object.keys(all).filter(k=>k.startsWith('staff-access:')).forEach(k=>{
+  let grant;try{grant=JSON.parse(all[k]);}catch(_){return;}
+  if(!staffIdentity_(grant.email)||!['division','admin'].includes(grant.level))return;
+  const account=accounts.find(a=>a.email===grant.email);if(account&&!account.active)return;
+  Object.keys(PERIODS).forEach(period=>{const role=grant.level==='admin'?'manager':grant.divisions?.[period];if(['viewer','manager'].includes(role))result[period].push({email:grant.email,role});});
+ });return result;
+}
+function staffQueueSlideAccess_(r){
+ try{
+  let response=UrlFetchApp.fetch(DIVISION_SLIDES_WEBAPP,{method:'post',contentType:'application/json',payload:JSON.stringify({token:r.token,operation:'sync-staff-access',delegates:staffSlideDelegates_()}),muteHttpExceptions:true,followRedirects:false});
+  if([301,302,303].includes(response.getResponseCode())){const headers=response.getAllHeaders(),target=String(headers.Location||headers.location||'');if(!/^https:\/\/script\.googleusercontent\.com\//.test(target))return false;response=UrlFetchApp.fetch(target,{muteHttpExceptions:true,followRedirects:false});}
+  return response.getResponseCode()===200&&JSON.parse(response.getContentText()).status===200;
+ }catch(_){return false;}
 }

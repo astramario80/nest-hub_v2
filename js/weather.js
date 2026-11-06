@@ -15,11 +15,22 @@
     layoutKey='nest-weather-layout:'+String(window.NestAuth?.identity?.username||window.NestAuth?.identity?.email||'')+':'+period;
     try{layout=JSON.parse(localStorage.getItem(layoutKey)||'{}');if(!layout||typeof layout!=='object'||Array.isArray(layout))layout={};}catch{layout={};}
   }
+  let responseColumns=[];
+  const columnKey=value=>String(value).trim().toLowerCase();
+  const writtenColumn=value=>['what is working','what can we change'].includes(columnKey(value));
+  const defaultColumns=new Set(['timestamp','name','pace','pacing','grit','safety','what is working','what can we change']);
+  const columnLabel=value=>timestampColumn(value)?'Date & time (Pacific)':columnKey(value)==='pacing'?'Pace':String(value);
+  function defaultVisible(columns){return columns.filter(value=>!columns.some(writtenColumn)||defaultColumns.has(columnKey(value)));}
   function sizeColumns(){
-    const cols=[...responses.querySelectorAll('col')];
-    if(Array.isArray(layout.widths)&&layout.widths.length===cols.length&&layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500)){
-      cols.forEach((col,i)=>col.style.width=layout.widths[i]+'px');responses.style.width=layout.widths.reduce((a,b)=>a+b,0)+'px';
-    }else{responses.style.width='100%';cols.forEach(col=>col.style.width=(100/cols.length)+'%');}
+    const cols=[...responses.querySelectorAll('col')],indices=cols.map(col=>Number(col.dataset.columnIndex));
+    const custom=Array.isArray(layout.widths)&&layout.widths.length===responseColumns.length&&layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500);
+    responses.style.minWidth=!custom&&indices.some(i=>writtenColumn(responseColumns[i]))?'1100px':'';
+    if(custom){
+      cols.forEach((col,i)=>col.style.width=layout.widths[indices[i]]+'px');responses.style.width=indices.reduce((n,i)=>n+layout.widths[i],0)+'px';
+    }else{
+      const weighted=responseColumns.some(writtenColumn),weights=indices.map(i=>!weighted?1:writtenColumn(responseColumns[i])?3.4:['pace','pacing','grit','safety'].includes(columnKey(responseColumns[i]))?0.7:columnKey(responseColumns[i])==='name'?1.25:1.5),total=weights.reduce((n,x)=>n+x,0);
+      responses.style.width='100%';cols.forEach((col,i)=>col.style.width=(100*weights[i]/total)+'%');
+    }
   }
   function resizeHandle(handle,axis,read,write){
     handle.tabIndex=0;handle.setAttribute('role','separator');handle.setAttribute('aria-orientation',axis==='x'?'vertical':'horizontal');
@@ -39,24 +50,47 @@
       document.addEventListener('pointermove',move);document.addEventListener('pointerup',stop);document.addEventListener('pointercancel',stop);window.addEventListener('blur',cancel);
     });
   }
+  const reportTime=new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZoneName:'short'});
+  const timestampColumn=value=>/^timestamp$/i.test(String(value).trim());
+  function displayReportTime(value){
+    const raw=String(value??'');
+    // Only parse unambiguous timestamps; leave older display text and blanks intact.
+    if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(raw))return null;
+    const date=new Date(raw);return Number.isFinite(date.getTime())?reportTime.format(date):null;
+  }
   function renderResponses(data,period,page){
     stopResize?.();readLayout(period);
     if(!Array.isArray(layout.widths)||layout.widths.length!==data.columns.length||!layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500))delete layout.widths;
+    responseColumns=data.columns;
+    if(data.columns.some(writtenColumn)&&layout.columnViewVersion!==1){delete layout.widths;layout.columnViewVersion=1;saveLayout();}
+    const visible=Array.isArray(layout.visibleColumns)?data.columns.filter(value=>layout.visibleColumns.includes(value)):defaultVisible(data.columns);
+    const indices=data.columns.map((_,i)=>i).filter(i=>visible.includes(data.columns[i]));
+    const choices=document.getElementById('weather-column-choices');
+    choices.querySelectorAll('label').forEach(node=>node.remove());
+    data.columns.forEach((value,index)=>{
+      const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.checked=visible.includes(value);input.dataset.columnIndex=String(index);
+      input.addEventListener('change',()=>{layout.visibleColumns=[...choices.querySelectorAll('input:checked')].map(node=>data.columns[Number(node.dataset.columnIndex)]);saveLayout();renderResponses(data,period,page);choices.querySelector('[data-column-index="'+index+'"]').focus();});
+      label.append(input,document.createTextNode(columnLabel(value)));choices.append(label);
+    });
+    document.getElementById('weather-default-columns').onclick=()=>{delete layout.visibleColumns;delete layout.widths;saveLayout();renderResponses(data,period,page);};
+    responses.hidden=!indices.length;document.getElementById('weather-no-columns').hidden=!!indices.length;
     const head=document.createElement('tr');
-    responses.querySelector('colgroup').replaceChildren(...data.columns.map(()=>document.createElement('col')));
-    data.columns.forEach(value=>{const cell=document.createElement('th');cell.scope='col';cell.textContent=String(value);head.append(cell);});
+    responses.querySelector('colgroup').replaceChildren(...indices.map(index=>{const col=document.createElement('col');col.dataset.columnIndex=String(index);return col;}));
+    indices.forEach(index=>{const cell=document.createElement('th');cell.scope='col';cell.textContent=columnLabel(data.columns[index]);head.append(cell);});
     responses.querySelector('thead').replaceChildren(head);sizeColumns();
-    [...head.children].forEach((th,index)=>{
-      const handle=document.createElement('span');handle.className='weather-column-resize';handle.setAttribute('aria-label','Resize '+data.columns[index]+' column');
+    [...head.children].forEach((th,visibleIndex)=>{
+      const index=indices[visibleIndex],handle=document.createElement('span');handle.className='weather-column-resize';handle.setAttribute('aria-label','Resize '+data.columns[index]+' column');
       resizeHandle(handle,'x',()=>Array.isArray(layout.widths)?layout.widths[index]:Math.max(40,th.getBoundingClientRect().width||120),value=>{
-        if(!Array.isArray(layout.widths)||layout.widths.length!==data.columns.length||!layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500))layout.widths=[...head.children].map(cell=>Math.max(40,Math.min(1500,cell.getBoundingClientRect().width||120)));
+        if(!Array.isArray(layout.widths)||layout.widths.length!==data.columns.length||!layout.widths.every(x=>Number.isFinite(x)&&x>=40&&x<=1500)){
+          layout.widths=data.columns.map(()=>120);[...head.children].forEach((cell,i)=>{layout.widths[indices[i]]=Math.max(40,Math.min(1500,cell.getBoundingClientRect().width||120));});
+        }
         layout.widths[index]=Math.max(40,Math.min(1500,value));sizeColumns();
       });th.append(handle);
     });
     const body=document.createDocumentFragment();
     data.rows.forEach((row,index)=>{
       const tr=document.createElement('tr'),key=page+':'+index,height=layout.heights?.[key];
-      data.columns.forEach((_,col)=>{const td=document.createElement('td'),box=document.createElement('div');box.className='weather-cell';box.textContent=String(row[col]??'');box.style.height=(Number.isFinite(height)?Math.max(56,Math.min(900,height)):144)+'px';td.append(box);tr.append(td);});
+      indices.forEach(col=>{const td=document.createElement('td'),box=document.createElement('div');box.className='weather-cell';const raw=String(row[col]??''),formatted=timestampColumn(data.columns[col])?displayReportTime(raw):null;if(formatted){const time=document.createElement('time');time.dateTime=raw;time.textContent=formatted;box.append(time);}else box.textContent=raw;box.style.height=(Number.isFinite(height)?Math.max(56,Math.min(900,height)):144)+'px';td.append(box);tr.append(td);});
       if(tr.firstElementChild){
         const handle=document.createElement('span');handle.className='weather-row-resize';handle.setAttribute('aria-label','Resize response row '+(index+1));
         resizeHandle(handle,'y',()=>parseInt(tr.querySelector('.weather-cell').style.height)||144,value=>{

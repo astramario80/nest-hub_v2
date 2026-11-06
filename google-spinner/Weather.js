@@ -23,7 +23,8 @@ function weatherCurrentTrimester_() {
   return trimester&&{start:weatherSerial_(trimester.start),end:Math.min(weatherSerial_(trimester.end),weatherSerial_(today))};
 }
 function weatherRole_(email,period,leaders) {
-  if(OWNER_EMAILS.includes(email_(email)))return true;
+  if(websiteAdmin_(email))return true;
+  if(staffIdentity_(email))return staffManager_(email,period);
   leaders=leaders||Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   const ownEmail=memberEmail_(email,period);
   return leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period.toUpperCase() &&

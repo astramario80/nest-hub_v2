@@ -4,6 +4,7 @@ function groupEmailAccess_(r){
  const targets=r.period==='all'?Object.keys(PERIODS):[r.period],included=[];
  for(const period of targets){
   const access=divisionSlidesDispatch_({operation:'access',session:r.session,period});
+  if(access.status===200&&access.identity&&staffIdentity_(access.identity.email)&&!websiteAdmin_(access.identity.email)&&r.audience!=='division')return {status:403};
   if(access.status===401)return {status:401};if(![200,403].includes(access.status))return {status:503};
   if(access.status===200&&(access.isOwner===true||access.canManage===true||Array.isArray(access.roles)&&access.roles.some(role=>String(role||'').trim()))){included.push(period);if(r.audience==='nest')break;}
  }

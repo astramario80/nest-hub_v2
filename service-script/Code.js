@@ -602,7 +602,7 @@ function notifyLeadershipOnNewRequest(e) {
   if(!sheet.getRange(row,1).getValue())sheet.getRange(row,1).setValue('New!');
   const values=sheet.getRange(row,1,1,sheet.getLastColumn()).getValues()[0],headers=serviceHeaders_(sheet),urgency=Number(values[headers.findIndex(h=>/How fast do you need/i.test(h))]);
   const leaders=[...serviceEditorEmails_()];if(!leaders.length)return;
-  queueEmail_({to:leaders.join(','),subject:(urgency>=4?'URGENT: ':'')+'New NEST service request',htmlBody:'A new service request is ready. <a href="https://gknest.org/service#client-relations">Open Client Relations</a>.',sourceSheet:CONFIG.TABS.SERVICE_REQUESTS,sourceRow:row,logIcon:'📣'});
+  queueEmail_({to:leaders.join(','),subject:(urgency>=4?'URGENT: ':'')+'New NEST service request',htmlBody:'A new service request is ready. <a href="https://gknest.org/service/management">Open Client Relations</a>.',sourceSheet:CONFIG.TABS.SERVICE_REQUESTS,sourceRow:row,logIcon:'📣'});
 }
 
 function sendClientNotificationForRow(row) {

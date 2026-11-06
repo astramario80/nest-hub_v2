@@ -1,26 +1,27 @@
+import {staffContext} from './helpers/staff-context.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {JSDOM} from 'jsdom';
 import handler from '../api/weather-native.mjs';
 const OWNER='mpenalver@bethelsd.org',STUDENT='student@students.bethelsd.org',DM='manager@students.bethelsd.org',AM='assistant@students.bethelsd.org',PL='liaison@students.bethelsd.org';
-function school(){
+function school(directory=[['Clíné, Student','123',STUDENT,'Period 1','Division 1']]){
  const properties={'weather-native-store':'private'},reports=[],alerts=[],confirmations=[],reads=[],writes=[];let failReceipt=false;
  const store={getProperty:k=>properties[k]||null,setProperty(k,v){if(failReceipt&&k.startsWith('weather-confirm:')){failReceipt=false;throw Error('Receipt unavailable');}properties[k]=v;},deleteProperty:k=>delete properties[k],getProperties:()=>({...properties})};
  const leaders=[['Period 1','', 'Division Manager','',DM],['Period 1','','Assistant Manager','',AM],['Period 1','','Partner Liaison','',PL],['Period 2','','Division Manager','','other@students.bethelsd.org']];
- const ctx=vm.createContext({console,OWNER_EMAILS:[OWNER],WEATHER_DATABASE:'legacy',LEADERSHIP_DATABASE:'leaders',email_:v=>String(v||'').toLowerCase(),districtEmail_:v=>/@(?:students\.)?bethelsd\.org$/.test(v)?v:'',memberEmail_:v=>v==='manual:student'?STUDENT:v,
+ const ctx=staffContext({console,OWNER_EMAILS:[OWNER],WEATHER_DATABASE:'legacy',LEADERSHIP_DATABASE:'leaders',email_:v=>String(v||'').toLowerCase(),districtEmail_:v=>/@(?:students\.)?bethelsd\.org$/.test(v)?v:'',memberEmail_:v=>v==='manual:student'?STUDENT:v,
   hash_:v=>Buffer.from(v).toString('hex'),PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},
   Utilities:{getUuid:()=>crypto.randomUUID(),formatDate:(d,tz,format)=>format==='yyyy-MM-dd HH:mm:ss'?d.toISOString().slice(0,19).replace('T',' '):d.toISOString().slice(0,10),parseDate:s=>new Date(s+'Z')},
-  Sheets:{Spreadsheets:{Values:{get(id,range){reads.push([id,range]);if(id==='leaders')return {values:leaders};if(range.includes('CombinedStudentList'))return {values:[['Clíné, Student','123',STUDENT,'Period 1','Division 1']]};if(range.includes('Confirmations'))return {values:confirmations};if(range.includes('Reports'))return {values:reports};if(range.includes('Alerts'))return {values:alerts};return {values:[]};},append(data,id,range,opts){writes.push({data,id,range,opts});if(range.includes('Confirmations')&&failReceipt){failReceipt=false;throw Error('Receipt unavailable');}(range.includes('Alerts')?alerts:range.includes('Confirmations')?confirmations:reports).push(...data.values);}}}},UrlFetchApp:{fetch(){throw Error('offline');}}});
+  Sheets:{Spreadsheets:{Values:{get(id,range){reads.push([id,range]);if(id==='leaders')return {values:leaders};if(range.includes('CombinedStudentList'))return {values:directory};if(range.includes('Confirmations'))return {values:confirmations};if(range.includes('Reports'))return {values:reports};if(range.includes('Alerts'))return {values:alerts};return {values:[]};},append(data,id,range,opts){writes.push({data,id,range,opts});if(range.includes('Confirmations')&&failReceipt){failReceipt=false;throw Error('Receipt unavailable');}(range.includes('Alerts')?alerts:range.includes('Confirmations')?confirmations:reports).push(...data.values);}}}},UrlFetchApp:{fetch(){throw Error('offline');}}});
  vm.runInContext(fs.readFileSync('google-spinner/WeatherEmotions.js','utf8')+fs.readFileSync('google-spinner/WeatherNative.js','utf8'),ctx);
  const call=(email,operation,fields={})=>ctx.weatherNativeDispatch_({email},{operation,...fields});const emotion=vm.runInContext('WEATHER_EMOTIONS.find(x=>x.family==="Sad").id',ctx);
  return {ctx,call,emotion,properties,reports,alerts,reads,writes,failReceipt:()=>failReceipt=true};
 }
 const uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 test('confirmation uses enrolled linked email, emits once, and submission is permanently idempotent',()=>{
- const s=school();const request={period:'1',draft:uuid,emotion:s.emotion};const result=s.call('manual:student','confirm',request);assert.equal(result.confirmed,true);assert.equal(result.alerted,true);assert.equal(s.alerts.length,1);assert.equal(s.reports.length,0);
- assert.equal(s.alerts[0][3],'Clíné, Student');assert.equal(s.call('manual:student','confirm',request).confirmed,true);assert.equal(s.alerts.length,1);
+ const s=school();const request={period:'1',draft:uuid,emotion:s.emotion};const result=s.call('manual:student','confirm',request);assert.equal(result.confirmed,true);assert.equal(result.alerted,false);assert.equal(s.alerts.length,0);assert.equal(s.reports.length,0);
+ assert.equal(s.call('manual:student','notify',{...request,audience:['owner','manager','liaison']}).notified,true);assert.equal(s.alerts[0][3],'Clíné, Student');assert.equal(s.call('manual:student','confirm',request).confirmed,true);assert.equal(s.alerts.length,1);
  const fields={...request,pacing:3,challenge:3,safety:5,working:'Working well',change:'=HYPERLINK("bad")'};assert.equal(s.call('manual:student','submit',fields).saved,true);assert.equal(s.call('manual:student','submit',fields).saved,true);assert.equal(s.reports.length,1);assert.equal(s.reports[0][5],STUDENT);assert.equal(s.writes.at(-1).opts.valueInputOption,'RAW');
  assert.equal(s.call(STUDENT,'submit',{...fields,draft:crypto.randomUUID()}).status,409);
 });
-test('confirmation recovers from a lost receipt without duplicating an alert',()=>{const s=school(),r={period:'1',draft:uuid,emotion:s.emotion};s.failReceipt();assert.throws(()=>s.call(STUDENT,'confirm',r));assert.equal(s.alerts.length,1);assert.equal(s.call(STUDENT,'confirm',r).confirmed,true);assert.equal(s.alerts.length,1);});
+test('confirmation recovers from a lost receipt without creating an alert',()=>{const s=school(),r={period:'1',draft:uuid,emotion:s.emotion};s.failReceipt();assert.throws(()=>s.call(STUDENT,'confirm',r));assert.equal(s.alerts.length,0);assert.equal(s.call(STUDENT,'confirm',r).confirmed,true);assert.equal(s.alerts.length,0);});
 test('students cannot spoof identity, emotion, period, recipient audience, export or administer',()=>{
  const s=school();for(const operation of ['export','test','calendar','import-calendar','refresh-counselors'])assert.equal(s.call(STUDENT,operation,{draft:uuid,emotion:s.emotion}).status,403);
  assert.equal(s.call(STUDENT,'confirm',{period:'2',emotion:s.emotion,draft:uuid,email:OWNER}).status,403);
@@ -28,7 +29,7 @@ test('students cannot spoof identity, emotion, period, recipient audience, expor
  assert.equal(s.call(STUDENT,'reports',{period:'all'}).status,403);assert.equal(s.call(DM,'reports',{period:'2'}).status,403);assert.equal(s.call(AM,'reports',{period:'1'}).status,200);
 });
 test('alerts go only to owner, current division manager and partner liaison; tests stay private',()=>{
- const s=school();s.call(STUDENT,'confirm',{period:'1',emotion:s.emotion,draft:uuid});
+ const s=school();s.call(STUDENT,'confirm',{period:'1',emotion:s.emotion,draft:uuid});s.call(STUDENT,'notify',{period:'1',emotion:s.emotion,draft:uuid,audience:['owner','manager','liaison']});
  for(const user of [OWNER,DM,PL])assert.equal(s.call(user,'alerts').events.length,1);
  for(const user of [AM,STUDENT,'other@students.bethelsd.org'])assert.equal(s.call(user,'alerts').events.length,0);
  s.call(OWNER,'test',{period:'1',emotion:s.emotion,draft:crypto.randomUUID()});assert.equal(s.call(OWNER,'alerts').events.length,2);assert.equal(s.call(DM,'alerts').events.length,1);assert.equal(s.reports.length,0);
@@ -53,7 +54,7 @@ test('native API requires a session, same-origin JSON mutations, and never accep
 test('wheel hover only previews; explicit confirmation sends one request and exposes counselor appointment',async()=>{
  const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window,calls=[];
  w.NestAuth={identity:{signedIn:true,email:STUDENT},ready:Promise.resolve()};w.AbortSignal.timeout=()=>undefined;const catalog=JSON.parse(fs.readFileSync('assets/weather-emotions.json','utf8'));
- w.fetch=async(url,opts={})=>{const u=String(url);if(u.endsWith('weather-emotions.json'))return {ok:true,json:async()=>catalog};if(u.endsWith('.svg'))return {ok:true,text:async()=>fs.readFileSync('assets/emotional-check-in.svg','utf8')};const body=opts.body?JSON.parse(opts.body):null;if(body)calls.push(body);return {ok:true,json:async()=>body?{confirmed:true,alerted:true,counselor:{name:'Katie Kimball',url:'https://calendar.google.com/example'}}:{periods:[],studentPeriods:['1'],admin:false}};};
+ w.fetch=async(url,opts={})=>{const u=String(url);if(u.endsWith('weather-emotions.json'))return {ok:true,json:async()=>catalog};if(u.endsWith('.svg'))return {ok:true,text:async()=>fs.readFileSync('assets/emotional-check-in.svg','utf8')};const body=opts.body?JSON.parse(opts.body):null;if(body)calls.push(body);return {ok:true,json:async()=>body?{confirmed:true,notified:true,alerted:false,counselor:{name:'Katie Kimball',url:'https://calendar.google.com/example'}}:{periods:[],studentPeriods:['1'],admin:false}};};
  w.eval(fs.readFileSync('js/weather-form.js','utf8'));await new Promise(r=>setTimeout(r,20));const emotion=catalog.find(x=>x.family==='Sad');const group=w.document.querySelector('[data-emotion="'+emotion.id+'"]');
  group.dispatchEvent(new w.MouseEvent('pointerover',{bubbles:true}));assert.equal(w.document.getElementById('weather-emotion-answer').value,emotion.answer);assert.equal(calls.length,0);
  assert.equal(w.document.getElementById('weather-lens').hidden,false);group.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));assert.equal(w.document.getElementById('weather-lens').hidden,true);await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);assert.equal(calls[0].operation,'confirm');assert.equal(w.document.getElementById('weather-counselor').hidden,false);
@@ -61,6 +62,11 @@ test('wheel hover only previews; explicit confirmation sends one request and exp
  assert.equal(w.document.getElementById('weather-confirm'),null);const other=catalog.find(x=>x.family==='Happy');w.document.querySelector('[data-emotion="'+other.id+'"]').dispatchEvent(new w.MouseEvent('pointerover',{bubbles:true}));assert.equal(w.document.getElementById('weather-emotion-answer').value,emotion.answer);assert.equal(calls.length,1);
  const dialog=w.document.getElementById('weather-builder');dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;};w.document.getElementById('weather-change').value='Existing feedback.';w.document.getElementById('weather-builder-open').click();assert.equal(w.document.getElementById('weather-builder-feeling').value,'sad');
  for(const [key,value] of [['when','plans change'],['need','clarity'],['request','we agree first']])w.document.getElementById('weather-builder-'+key).value=value;w.document.getElementById('weather-builder-use').click();assert.equal(dialog.open,false);assert.match(w.document.getElementById('weather-change').value,/Existing feedback\.\n\nI feel sad when plans change/);
+ assert.equal(w.document.querySelectorAll('[name=supportAudience]:checked').length,0);assert.equal(w.document.getElementById('weather-next-steps').hidden,false);assert.equal(w.document.querySelectorAll('#weather-suggestions .weather-option-card').length,3);
+ assert.equal(w.document.getElementById('weather-next-steps').open,true);assert.equal(w.document.querySelectorAll('#weather-suggestions svg').length,3);assert.ok(w.document.querySelector('#weather-suggestions a[target="_blank"]'));w.document.getElementById('weather-options-close').click();assert.equal(w.document.getElementById('weather-next-steps').open,false);w.document.getElementById('weather-options-open').click();assert.equal(w.document.getElementById('weather-next-steps').open,true);w.document.getElementById('weather-support-open').click();assert.equal(w.document.getElementById('weather-support-panel').hidden,false);
+ const flip=w.document.querySelector('#weather-suggestions .weather-flip-card'),front=flip.querySelector('.weather-card-front'),back=flip.querySelector('.weather-card-back');assert.equal(back.hidden,true);front.click();assert.equal(back.hidden,false);assert.equal(front.getAttribute('aria-expanded'),'true');back.querySelector('.weather-card-return').click();assert.equal(back.hidden,true);assert.equal(w.document.querySelectorAll('.weather-options-body .weather-source-note a').length,4);
+ const beforeSupport=calls.length;w.document.getElementById('weather-request-support').click();await new Promise(r=>setImmediate(r));assert.equal(calls.length,beforeSupport);
+ w.document.querySelector('[name=supportAudience][value=assistant]').click();assert.equal(calls.length,beforeSupport);w.document.getElementById('weather-request-support').click();await new Promise(r=>setImmediate(r));assert.equal(calls.at(-1).operation,'notify');assert.deepEqual(calls.at(-1).audience,['assistant']);assert.equal(w.document.getElementById('weather-request-support').disabled,true);
  for(const id of ['weather-pacing','weather-challenge','weather-safety'])w.document.getElementById(id).value='3';w.document.getElementById('weather-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setImmediate(r));assert.equal(calls.at(-1).operation,'submit');assert.equal(calls.at(-1).emotion,emotion.id);assert.equal(w.document.getElementById('weather-emotion'),null);const happyGroup=w.document.querySelector('#weather-wheel [data-emotion="'+other.id+'"]');happyGroup.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true}));await new Promise(r=>setImmediate(r));assert.equal(calls.at(-1).operation,'confirm');assert.equal(calls.at(-1).emotion,other.id);assert.equal(w.document.getElementById('weather-emotion-answer').value,other.answer);dom.window.close();
 });
 test('archive calendar lookup is reused across historical rows inside one request',()=>{
@@ -114,7 +120,7 @@ test('June 30 fallback fills only a missing school-year end, never conflicting e
 test('administrator without enrollment can complete a private full-form test without affecting reports or leadership alerts',()=>{
  const s=school();s.ctx.weatherSetup_=()=>{};const boot=s.call(OWNER,'bootstrap');assert.equal(boot.testMode,true);assert.equal(boot.studentPeriods.length,0);assert.ok(boot.previewPeriods.includes('1'));
  const fields={period:'1',emotion:s.emotion,draft:uuid,pacing:3,challenge:3,safety:5,working:'Synthetic check',change:'Synthetic feedback'};
- assert.equal(s.call(OWNER,'submit',fields).status,409);const receipt=s.call(OWNER,'confirm',fields);assert.equal(receipt.confirmed,true);assert.equal(receipt.test,true);assert.equal(s.alerts[0][7],true);
+ assert.equal(s.call(OWNER,'submit',fields).status,409);const receipt=s.call(OWNER,'confirm',fields);assert.equal(receipt.confirmed,true);assert.equal(receipt.test,true);assert.equal(s.alerts.length,0);assert.equal(s.call(OWNER,'notify',{...fields,audience:['manager','liaison']}).notified,true);assert.equal(s.alerts[0][7],true);
  assert.equal(s.call(OWNER,'alerts').events.length,1);assert.equal(s.call(DM,'alerts').events.length,0);assert.equal(s.call(PL,'alerts').events.length,0);
  assert.equal(s.call(OWNER,'submit',{...fields,safety:0}).status,400);assert.equal(s.call(OWNER,'submit',fields).test,true);assert.equal(s.call(OWNER,'submit',fields).saved,true);assert.equal(s.reports.length,0);
  assert.equal(s.call(OWNER,'confirm',{...fields,period:'invalid'}).status,403);assert.equal(s.call(STUDENT,'confirm',{...fields,period:'2',testMode:true}).status,403);
@@ -139,7 +145,118 @@ test('seven administrator sample surnames use the live counselor matcher while s
 
 test('support alerts resolve the student counselor from current ranges, including older alert records',()=>{
  const s=school(),counselors=s.ctx.weatherParseCounselors_(fs.readFileSync('tests/fixtures/weather-counselors.html','utf8'));s.properties['weather-counselors']=JSON.stringify({checkedAt:new Date().toISOString(),counselors});
- s.call(STUDENT,'confirm',{period:'1',emotion:s.emotion,draft:uuid});assert.equal(s.alerts[0][9],'Clíné');assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Katie Kimball');
+ s.call(STUDENT,'confirm',{period:'1',emotion:s.emotion,draft:uuid});s.call(STUDENT,'notify',{period:'1',emotion:s.emotion,draft:uuid,audience:['manager']});assert.equal(s.alerts[0][9],'Clíné');assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Katie Kimball');
  counselors[0].name='Updated counselor';counselors[0].url='https://calendar.app.google/updated';s.properties['weather-counselors']=JSON.stringify({checkedAt:new Date().toISOString(),counselors});assert.equal(s.call(DM,'alerts').events[0].counselor.url,'https://calendar.app.google/updated');
- s.alerts[0].pop();assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Updated counselor');assert.equal(s.call(AM,'alerts').events.length,0);
+ s.alerts[0][9]='';assert.equal(s.call(DM,'alerts').events[0].counselor.name,'Updated counselor');assert.equal(s.call(AM,'alerts').events.length,0);
+});
+
+
+test('identical enrollment imports enable the student division and check-in without duplicate reports',()=>{
+ const row=['Clíné, Student','123',STUDENT,'Period 1','Division 1'];
+ const s=school([row,[...row],[...row]]);
+ assert.deepEqual(Array.from(s.call(STUDENT,'bootstrap').studentPeriods),['1']);
+ assert.deepEqual(Array.from(s.call('manual:student','bootstrap').studentPeriods),['1']);
+ const request={period:'1',draft:uuid,emotion:s.emotion};
+ assert.equal(s.call(STUDENT,'confirm',request).confirmed,true);
+ assert.equal(s.call(STUDENT,'submit',{...request,pacing:3,challenge:3,safety:5,working:'Test',change:''}).saved,true);
+ assert.equal(s.reports.length,1);assert.equal(s.alerts.length,0);
+});
+test('conflicting enrollment identities remain blocked after duplicate handling',()=>{
+ const row=['Clíné, Student','123',STUDENT,'Period 1','Division 1'];
+ for(const [column,value] of [[0,'Different, Student'],[1,'456']]){
+  const conflict=[...row];conflict[column]=value;const s=school([row,[...row],conflict]);
+  assert.equal(s.call(STUDENT,'bootstrap').studentPeriods.length,0);
+  assert.equal(s.call(STUDENT,'confirm',{period:'1',draft:uuid,emotion:s.emotion}).status,403);
+  assert.equal(s.writes.length,0);
+ }
+});
+test('duplicate enrollment resolution stays scoped to verified email and requested period',()=>{
+ const row=['Clíné, Student','123',STUDENT,'Period 1','Division 1'];
+ const other=[...row];other[3]='Period 2';other[4]='Division 2';const s=school([row,[...row],other,[...other]]);
+ assert.deepEqual(Array.from(s.call(STUDENT,'bootstrap').studentPeriods),['1','2']);
+ assert.equal(s.call('outsider@students.bethelsd.org','bootstrap').studentPeriods.length,0);
+ assert.equal(s.call(STUDENT,'confirm',{period:'3',draft:uuid,emotion:s.emotion}).status,403);
+});
+
+
+test('two course labels in one period identify one student and enable all check-in controls',()=>{
+ const row=['Student, Alex','123',STUDENT,'Period 4','DRONE PILOTING'];
+ const second=[...row];second[4]='ENGINEERING ESSENTIALS';const s=school([row,second]);
+ assert.deepEqual(Array.from(s.call(STUDENT,'bootstrap').studentPeriods),['4']);
+ const student=s.ctx.weatherStudent_(STUDENT,'4');assert.equal(student.division,'Division 4');assert.equal(student.email,STUDENT);
+ const request={period:'4',draft:uuid,emotion:s.emotion};assert.equal(s.call(STUDENT,'confirm',request).confirmed,true);
+ assert.equal(s.call(STUDENT,'submit',{...request,pacing:3,challenge:3,safety:5,working:'Test',change:''}).saved,true);
+ assert.equal(s.reports[0][6],'4');assert.equal(s.reports[0][7],'Division 4');
+});
+test('manual usernames use the account linked student email, never the shared owner recovery email',()=>{
+ const student='student@students.bethelsd.org',accounts=[['renameduser','manual:originaluser','','',true,1,'','','4',OWNER,student]];
+ let roster=[['Student, Example','123',student]];
+ const ctx=staffContext({Sheets:{Spreadsheets:{Values:{get(_id,range){
+  if(range.includes('StudentNESTAccess'))return {values:accounts};
+  if(range.includes('CombinedStudentList'))return {values:[['Student, Example','123',student,'Period 4','DRONE PILOTING']]};
+  if(range.includes('Period 4'))return {values:roster};
+  return {values:[]};
+ }}}}});
+ vm.runInContext(['Code.js','WeatherEmotions.js','WeatherNative.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n'),ctx);
+ assert.equal(ctx.weatherStudent_('manual:originaluser','4').email,student);
+ assert.equal(ctx.weatherOwner_('manual:originaluser'),false);
+ assert.equal(ctx.weatherStudent_('manual:originaluser','2'),null);
+ roster=[];assert.equal(ctx.weatherStudent_('manual:originaluser','4'),null);
+ roster=[['Student, Example','123',student]];accounts[0][10]='';
+ assert.equal(ctx.weatherStudent_('manual:originaluser','4'),null);
+ accounts[0][10]=student;accounts[0][4]=false;
+ assert.equal(ctx.weatherStudent_('manual:originaluser','4'),null);
+});
+
+
+test('every emotion family can be confirmed and submitted without any notification',()=>{
+ const catalog=JSON.parse(fs.readFileSync('assets/weather-emotions.json','utf8'));
+ for(const family of new Set(catalog.map(x=>x.family))){
+  const s=school(),fields={period:'1',draft:uuid,emotion:catalog.find(x=>x.family===family).id,pacing:3,challenge:3,safety:5,working:'',change:''};
+  assert.equal(s.call(STUDENT,'confirm',fields).alerted,false,family);assert.equal(s.call(STUDENT,'submit',fields).saved,true);assert.equal(s.alerts.length,0,family);
+ }
+});
+test('support notifications are explicit, scoped to selected roles, permanent on retry, and reject recipient injection',()=>{
+ for(const [role,selected] of [['owner',OWNER],['manager',DM],['assistant',AM],['liaison',PL]]){
+  const s=school(),fields={period:'1',draft:uuid,emotion:s.emotion,audience:[role]};
+  assert.equal(s.call(STUDENT,'notify',fields).status,409);s.call(STUDENT,'confirm',fields);assert.equal(s.alerts.length,0);
+  assert.equal(s.call(STUDENT,'notify',{...fields,audience:[]}).status,400);assert.equal(s.call(STUDENT,'notify',{...fields,audience:['evil@example.org']}).status,400);
+  assert.equal(s.call(STUDENT,'notify',fields).notified,true);assert.equal(s.call(STUDENT,'notify',fields).notified,true);assert.equal(s.alerts.length,1);
+  for(const viewer of [OWNER,DM,AM,PL,STUDENT])assert.equal(s.call(viewer,'alerts').events.length,viewer===selected?1:0,role+' '+viewer);
+  assert.equal(s.call(STUDENT,'notify',{...fields,audience:role==='owner'?['manager']:['owner']}).status,409);
+  const row=s.alerts[0];row[10]='';for(const viewer of [OWNER,DM,AM,PL])assert.equal(s.call(viewer,'alerts').events.length,0,'legacy automatic alerts stay suppressed');
+ }
+});
+test('selected role notifications follow current leadership, not browser-provided recipients',()=>{
+ const s=school(),fields={period:'1',draft:uuid,emotion:s.emotion};s.call(STUDENT,'confirm',fields);s.call(STUDENT,'notify',{...fields,audience:['manager']});
+ assert.equal(s.call(DM,'alerts').events.length,1);s.ctx.weatherLeaders_=()=>[['Period 1','','Division Manager','','new@students.bethelsd.org']];
+ assert.equal(s.call(DM,'alerts').events.length,0);assert.equal(s.call('new@students.bethelsd.org','alerts').events.length,1);
+});
+
+test('support choices stay inside their card and builder returns without reconfirming an emotion',async t=>{
+ const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;t.after(()=>w.close());
+ const calls=[],catalog=JSON.parse(fs.readFileSync('assets/weather-emotions.json','utf8'));
+ w.NestAuth={identity:{signedIn:true,email:STUDENT},ready:Promise.resolve()};w.AbortSignal.timeout=()=>undefined;
+ for(const dialog of w.document.querySelectorAll('dialog')){dialog.showModal=()=>{dialog.open=true;};dialog.close=()=>{dialog.open=false;dialog.dispatchEvent(new w.Event('close'));};}
+ w.fetch=async(url,opts={})=>{if(String(url).endsWith('.json'))return {ok:true,json:async()=>catalog};if(String(url).endsWith('.svg'))return {ok:true,text:async()=>fs.readFileSync('assets/emotional-check-in.svg','utf8')};if(opts.body)calls.push(JSON.parse(opts.body));return {ok:true,json:async()=>opts.body?{confirmed:true}:{studentPeriods:['1'],periods:[],admin:false}};};
+ w.eval(fs.readFileSync('js/weather-form.js','utf8'));await new Promise(r=>setTimeout(r,20));
+ const d=w.document,emotion=catalog.find(x=>x.family==='Anger'),popup=d.getElementById('weather-next-steps'),builder=d.getElementById('weather-builder'),support=d.getElementById('weather-support-card'),panel=d.getElementById('weather-support-panel');
+ d.querySelector('[data-emotion="'+emotion.id+'"]').dispatchEvent(new w.MouseEvent('click',{bubbles:true}));await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);
+ support.querySelector('.weather-card-front').click();d.getElementById('weather-support-open').click();assert.equal(panel.closest('.weather-card-back').closest('#weather-support-card'),support);assert.equal(panel.hidden,false);assert.match(panel.textContent,/Requests appear when/);
+ support.querySelector('.weather-card-return').click();assert.equal(panel.hidden,true);assert.equal(support.querySelector('.weather-card-back').hidden,false);
+ d.getElementById('weather-support-open').click();d.getElementById('weather-next-title').click();assert.equal(panel.hidden,true);assert.equal(popup.open,true);
+ d.getElementById('weather-support-open').click();const escape=new w.Event('cancel',{cancelable:true});popup.dispatchEvent(escape);assert.equal(escape.defaultPrevented,true);assert.equal(panel.hidden,true);
+ const statement=[...d.querySelectorAll('#weather-suggestions button')].find(x=>x.textContent==='Build an I/Me statement');statement.closest('.weather-flip-card').querySelector('.weather-card-front').click();statement.click();assert.equal(builder.open,true);assert.equal(popup.open,false);assert.equal(d.getElementById('weather-builder-back').hidden,false);
+ d.getElementById('weather-builder-back').click();assert.equal(popup.open,true);assert.equal(builder.open,false);assert.equal(d.getElementById('weather-emotion-answer').value,emotion.answer);
+ statement.click();d.getElementById('weather-builder-close').click();assert.equal(popup.open,true);assert.equal(calls.length,1);assert.equal(calls[0].operation,'confirm');
+ statement.click();
+ for(const [key,phrase] of [['feeling','overwhelmed'],['when','several tasks are due at the same time'],['need','a manageable amount of work'],['request','we could decide which task to do first']]){
+  const ideas=d.getElementById('weather-builder-'+key+'-ideas');assert.ok(ideas.querySelectorAll('optgroup').length>=5);ideas.value=phrase;ideas.dispatchEvent(new w.Event('change'));assert.equal(d.getElementById('weather-builder-'+key).value,phrase);
+ }
+ assert.match(d.getElementById('weather-builder-preview').textContent,/I feel overwhelmed when several tasks/);
+ const verb=d.getElementById('weather-builder-need-verb');verb.value='value';verb.dispatchEvent(new w.Event('change'));assert.match(d.getElementById('weather-builder-preview').textContent,/because I value a manageable amount of work/);verb.value='need';verb.dispatchEvent(new w.Event('change'));
+ const ideas=d.getElementById('weather-builder-when-ideas'),words=d.getElementById('weather-builder-when');ideas.value='__custom__';ideas.dispatchEvent(new w.Event('change'));assert.equal(words.value,'several tasks are due at the same time');
+ words.value='I need to explain my own situation';words.dispatchEvent(new w.Event('input'));assert.equal(ideas.value,'__custom__');
+ d.getElementById('weather-builder-back').click();statement.click();assert.equal(words.value,'I need to explain my own situation');
+ d.getElementById('weather-change').value='Existing feedback.';d.getElementById('weather-builder-use').click();assert.match(d.getElementById('weather-change').value,/Existing feedback\.\n\nI feel overwhelmed when I need to explain my own situation/);assert.equal(calls.length,1);
 });

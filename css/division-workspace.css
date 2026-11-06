@@ -94,3 +94,35 @@ main.division-page { width: calc(100% - 32px); max-width: 2200px; }
 .robotics-workspace fieldset {border:1px solid #9fb5d6;border-radius:8px;margin:1rem 0;min-width:0;}
 .robotics-workspace input {max-width:100%;box-sizing:border-box;}
 .robotics-workspace [data-robotics-requests]>div {padding:.8rem 0;border-bottom:1px solid rgba(255,255,255,.2);}
+
+/* Division Command Center follows the NEST menu's charcoal and orange palette. */
+.division-workspace,.division-page-lock{--hq-surface:var(--card-bg,#2d2d2d);--hq-raised:#353535;--hq-field:#202020;--hq-text:var(--text-light,#f5f5f5);--hq-muted:#c7c7c7;--hq-border:#747474;color-scheme:dark;color:var(--hq-text)}
+.division-workspace{background:var(--hq-surface);border-color:var(--hq-border)}
+.division-page-intro,.division-hq-content,.division-team,.division-slideshow,.division-page-lock{background:var(--hq-surface);border-color:var(--hq-border);color:var(--hq-text)}
+.division-page-intro h1,.division-team h2,.division-slideshow h2{color:var(--primary-orange)}
+.division-eyebrow,.division-position-members,.division-page .division-window-positions small{color:var(--hq-muted)}
+.division-workspace button,.division-workspace .division-original,.division-page-actions .division-hq-back,.division-page-actions [data-hiring],.division-page-lock button{background:var(--hq-raised);color:var(--hq-text);border-color:var(--hq-border)}
+.division-workspace button:hover,.division-page-actions .division-hq-back:hover,.division-page-actions [data-hiring]:hover{background:#424242;color:var(--hq-text);border-color:var(--primary-orange)}
+.division-hq-tabs{background:#242424;border-color:var(--primary-orange)}
+.division-workspace .division-hq-tabs [role=tab]{background:transparent;color:var(--hq-text);border-right-color:var(--hq-border)}
+.division-workspace .division-hq-tabs [role=tab]:hover{background:var(--hq-raised);color:var(--hq-text)}
+.division-workspace .division-hq-tabs [aria-selected=true],.division-workspace .division-hq-tabs [aria-selected=true]:hover{background:var(--primary-orange);color:#171717}
+.division-window-controls,.division-window-stage iframe{border-color:var(--hq-border)}
+.division-page .division-window-positions button,.division-hq-content .job-card{background:var(--hq-raised);border-color:var(--hq-border);color:var(--hq-text)}
+.division-hq-content .job-card h2{color:var(--primary-orange)}
+.division-hq-content .job-card p,.division-hq-content .job-card strong{color:var(--hq-text)}
+.division-hq-content .leadership-page{background:var(--hq-surface);color:var(--hq-text)}
+.division-workspace :is(input,select,textarea){background:var(--hq-field);color:var(--hq-text);border-color:var(--hq-border);accent-color:var(--primary-orange)}
+.division-workspace :is(input,textarea)::placeholder{color:var(--hq-muted);opacity:1}
+.division-workspace :is(input,select,textarea):disabled{background:var(--hq-raised);color:var(--hq-muted)}
+.division-workspace select option{background:var(--hq-field);color:var(--hq-text)}
+.division-workspace .table-scroll,.robotics-workspace details,.robotics-workspace fieldset,.robotics-workspace [data-robotics-profile]{border-color:var(--hq-border)}
+.division-workspace .table-scroll table{background:var(--hq-surface);color:var(--hq-text)}
+.division-workspace .table-scroll th{background:var(--hq-raised);color:var(--hq-text)}
+.division-workspace .table-scroll td{color:var(--hq-text);border-color:var(--hq-border)}
+.division-workspace .robotics-new-members{background:var(--hq-surface);border-color:var(--hq-border)}
+.division-workspace .robotics-new-members.has-new-members{background:#392b1d;color:#ffe8be;border-color:var(--primary-orange)}
+.division-workspace .robotics-new-members.has-new-members :is(h3,p){color:#ffe8be}
+.division-workspace .robotics-onboarding-dialog{background:#252525;color:var(--hq-text);border-color:var(--hq-border)}
+.division-workspace .robotics-onboarding-dialog h3{color:var(--hq-text)}
+.division-workspace [data-robotics-profile] a,.division-employment-form a,.division-page-lock a{color:#ffbd7a}

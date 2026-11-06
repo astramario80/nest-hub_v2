@@ -10,7 +10,7 @@
   if(signature===presentedKey&&panel?.parentElement===host)return;presentedKey=signature;
   panel?.remove();panel=null;if(!events.length)return;const item=events[0];
   panel=document.createElement('section');panel.className='nest-weather-alert';panel.setAttribute('role','alert');panel.setAttribute('aria-label',item.test?'Test support alert':'Student support alert');
-  const heading=document.createElement('h2');heading.textContent=item.test?'TEST — Support alert':'A student may welcome support';
+  const heading=document.createElement('h2');heading.textContent=item.test?'TEST — Support alert':'A student requested your support';
   const content=document.createElement('p');content.className='nest-weather-alert-student';content.textContent='Student: '+item.student;
   const emotion=document.createElement('p');emotion.className='nest-weather-alert-emotion';emotion.textContent='Emotion: '+item.emotion;
   const division=document.createElement('p');division.textContent=item.period==='CTSO'?'CTSO':item.period==='Advisory'?'Advisory':'Division '+item.period;

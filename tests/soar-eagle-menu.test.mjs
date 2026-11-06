@@ -32,7 +32,7 @@ test('SOPs contains SOAR within its content area, while the embedded version sta
  try{embedded.window.eval(read('js/main.js'));assert.ok(embedded.window.document.body.classList.contains('soar-embedded'));assert.match(embedded.window.document.querySelector('#soar-text-display').textContent,/SAFETY/);assert.equal(embedded.window.document.querySelector('script[src="/js/eagle-menu.js"]'),null);}finally{embedded.window.close();}
 });
 test('eagle menu reuses all four gears and their destinations; hover, home click, outside click and Escape work',async()=>{
- for(const file of ['index.html','solidprofessor.html','sops.html']){
+ for(const file of ['index.html','solidprofessor.html','sops.html','weather.html']){
   const dom=page(file),w=dom.window;
   w.fetch=async()=>({ok:true,text:async()=>read('index.html')});
   try{
@@ -41,7 +41,7 @@ test('eagle menu reuses all four gears and their destinations; hover, home click
    assert.equal(menu.hidden,true);
    assert.deepEqual([...menu.querySelectorAll(':scope > div > details > summary')].map(node=>node.textContent),['⚙️ SOAR','⚙️ Tools','⚙️ Resources','⚙️ Command']);
    assert.ok(menu.querySelector('a[href="/solidprofessor"]'));assert.ok(menu.querySelector('a[href="/thingiverse"]'));
-   assert.equal(menu.querySelectorAll('a[data-resource-exit]').length,6);
+   const source=page('index.html');assert.equal(menu.querySelectorAll('a[data-resource-exit]').length,source.window.document.querySelectorAll('.gear-panel .gear-links a[data-resource-exit]').length);source.window.close();
    assert.equal(menu.querySelectorAll('[id]').length,0);
    const enter=new w.Event('pointerenter');Object.defineProperty(enter,'pointerType',{value:'mouse'});wrapper.dispatchEvent(enter);
    assert.equal(menu.hidden,false);assert.equal(button.getAttribute('aria-expanded'),'true');

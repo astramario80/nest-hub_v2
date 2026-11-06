@@ -1,3 +1,4 @@
+import {staffContext} from './helpers/staff-context.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +13,7 @@ function school(){
  const roster=[['Sample, Ada','100001@students.bethelsd.org'],['Example, Pat','123@students.bethelsd.org']],writes=[],sent=[],props=new Map([['robotics-website-storage-v1:ctso','ready']]);
  const store={getProperty:k=>props.get(k),setProperty:(k,v)=>props.set(k,v),deleteProperty:k=>props.delete(k),getProperties:()=>Object.fromEntries(props)};
  let roles=[],identity='100001@students.bethelsd.org';
- const c=vm.createContext({console,Date,Map,Set,JSON,PERIODS:{CTSO:'ctso'},OWNER_EMAILS:['mpenalver@bethelsd.org'],LEADERSHIP_DATABASE:'leaders',email_:v=>String(v||'').trim().toLowerCase(),memberEmail_:v=>v,rows_:()=>roster,hash_:hash,nestAccessValues_:()=>({values:roles}),authSession_:()=>({email:identity}),PropertiesService:{getScriptProperties:()=>store},Utilities:{getUuid:()=> '12345678-1234-1234-1234-123456789abc'},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)},Sheets:{Spreadsheets:{get:()=>({sheets:[]}),batchUpdate:(body,id)=>writes.push({body,id,schema:true}),Values:{get:(id,range)=>({values:values.get(id+'|'+range)||[]}),batchUpdate:(body,id)=>{writes.push({body,id});for(const d of body.data){
+ const c=staffContext({console,Date,Map,Set,JSON,PERIODS:{CTSO:'ctso'},OWNER_EMAILS:['mpenalver@bethelsd.org'],LEADERSHIP_DATABASE:'leaders',email_:v=>String(v||'').trim().toLowerCase(),memberEmail_:v=>v,rows_:()=>roster,hash_:hash,nestAccessValues_:()=>({values:roles}),authSession_:()=>({email:identity}),PropertiesService:{getScriptProperties:()=>store},Utilities:{getUuid:()=> '12345678-1234-1234-1234-123456789abc'},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:m=>sent.push(m)},Sheets:{Spreadsheets:{get:()=>({sheets:[]}),batchUpdate:(body,id)=>writes.push({body,id,schema:true}),Values:{get:(id,range)=>({values:values.get(id+'|'+range)||[]}),batchUpdate:(body,id)=>{writes.push({body,id});for(const d of body.data){
  if(d.range.startsWith("'Website Member Status'!A1:E"))values.set("ctso|'Website Member Status'!A2:E1000",d.values.slice(1));
  if(d.range.startsWith("'Website Member Status'!H1:L"))values.set("ctso|'Website Member Status'!H2:L1000",d.values.slice(1));
  if(d.range==="'Website Member Status'!M1")values.set("ctso|'Website Member Status'!M1",d.values);
@@ -90,4 +91,17 @@ test('Robotics UI previews recipients, sends only after confirmation, and clears
  q('[data-robotics-preview]').click();await new Promise(r=>setTimeout(r,0));assert.match(q('[data-robotics-preview-content]').textContent,/123@students.bethelsd.org/);assert.equal(calls.some(c=>c.operation==='send'),false);
  q('[data-robotics-send]').click();await new Promise(r=>setTimeout(r,0));assert.equal(calls.at(-1).ticket,'preview-ticket');assert.match(q('[data-robotics-status]').textContent,/1 sent/);
  w.document.dispatchEvent(new w.Event('nest-hq-access-revoked'));assert.equal(q('[data-robotics-content]').hidden,true);assert.equal(q('[data-robotics-members]').textContent,'');assert.equal(q('[data-robotics-preview-content]').textContent,'');
+});
+
+test('sync returns the current revision after refreshing the database roster',()=>{
+ const h=school();h.setIdentity('mpenalver@bethelsd.org');const before=h.c.roboticsState_();
+ h.c.roboticsSyncMembership_=()=>{h.roster[0][1]='100002@students.bethelsd.org';};
+ const result=h.c.roboticsDispatch_({operation:'sync',revision:before.revision});
+ assert.equal(result.status,200);assert.notEqual(result.revision,before.revision);assert.equal(result.revision,h.c.roboticsState_().revision);
+});
+test('membership change renders the saved snapshot immediately instead of overwriting it with a stale view',async()=>{
+ const dom=new JSDOM(renderDivisionPage('CTSO',{manager:{},leaders:[],canManageRobotics:true}),{runScripts:'outside-only',url:'https://gknest.org/divisions/CTSO#robotics'}),w=dom.window,calls=[];w.NestDivisionHQ={allowed:true,active:'robotics'};w.AbortSignal=AbortSignal;
+ const member={id:'b'.repeat(64),name:'Example, Pat',studentId:'123',active:true,inactive:false,joined:false,waiver:null,canChangeStatus:true},initial={revision:'a'.repeat(64),manager:true,ready:true,protocols:[],requests:[],members:[member],summary:{active:1,joined:0,waivers:0,needJoin:1,needWaiver:0},unmatched:[],importedAt:null},saved={...initial,revision:'c'.repeat(64),members:[{...member,active:false,inactive:true}],summary:{...initial.summary,active:0,needJoin:0}};
+ w.fetch=async(_url,options)=>{const b=options.body?JSON.parse(options.body):{operation:'view'};calls.push(b);return {ok:true,json:async()=>b.operation==='status'?saved:initial};};
+ try{w.eval(fs.readFileSync('js/robotics.js','utf8'));await new Promise(r=>setTimeout(r,0));const select=w.document.querySelector('[data-member-status]');select.value='inactive';select.dispatchEvent(new w.Event('change'));await new Promise(r=>setTimeout(r,0));assert.equal(w.document.querySelector('[data-robotics-members] [data-member-status]'),null);assert.equal(w.document.querySelector('[data-robotics-inactive] [data-member-status]').value,'inactive');assert.match(w.document.querySelector('[data-robotics-summary]').textContent,/0 active/);assert.equal(calls.filter(c=>c.operation==='view').length,1);assert.equal(calls.find(c=>c.operation==='status').revision,initial.revision);assert.equal(w.document.querySelector('[data-robotics-inactive] [data-member-status]').disabled,false);}finally{w.close();}
 });

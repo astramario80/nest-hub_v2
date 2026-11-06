@@ -2,16 +2,15 @@
 const HIRING_PERIODS = ['1','2','3','4','5','7','CTSO'];
 function hiringRows_() {return (typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];}
 function hiringPermissions_(email,period,rows) {
+  if(staffIdentity_(email)){const allowed=staffManager_(email,period);return {canReview:allowed,canManage:allowed};}
   if(OWNER_EMAILS.includes(email_(email)))return {canReview:true,canManage:true};
   rows=rows||hiringRows_();
-  const normalized=memberEmail_(email,period),ctsoEmail=memberEmail_(email,'CTSO');
+  const normalized=memberEmail_(email,period);
   const own=rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&
     /^(division manager|assistant manager|chief executive officer|executive vice-president)$/i.test(String(row[2]||'').trim())&&email_(row[4])===normalized);
-  const executive=rows.some(row=>String(row[0]||'').trim().toUpperCase()==='CTSO'&&
-    /^chief (executive|financial|operations) officers?$/i.test(String(row[2]||'').trim())&&email_(row[4])===ctsoEmail);
   const currentMember=own&&rows_(period).some(row=>email_(row[1])===normalized);
-  const currentExecutive=executive&&rows_('CTSO').some(row=>email_(row[1])===ctsoEmail);
-  return {canReview:currentMember||currentExecutive,canManage:currentMember};
+  const currentExecutive=nestExecutive_(email,rows);
+  return {canReview:currentMember||currentExecutive,canManage:currentMember||currentExecutive};
 }
 // Fixed school-owned sources also work when a division has no hires yet.
 const HIRING_WORKBOOKS = {

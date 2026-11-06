@@ -1,6 +1,12 @@
-// Shared with the daily leadership access job. Only this division's roster may
-// view a deck; position holders and division managers may edit. Owners remain.
+// Shared with the daily leadership access job. Division members and current
+// robotics executives may view; assigned leaders and managers may edit.
 const NEST_SLIDE_FOLDERS={'1':'1X7faoEUTi0dCNSOVi8EwFo4Z0fY6gEfG','2':'1SWRfcL8hT5C3CRu366rpoRCWXk6ObL7B','3':'16UJx1F6lStbayCUI41NOHGm5W0hKNFWX','4':'1t1KwHPPQ3L-wv6RLlv8t2yZLXX_Vccv0','5':'1diqsozFhlqdqgmu7rnfg3LzorBPzxBQh','7':'18zn5BYGBz8TyRnitb7arZFV7RIJDQ-VM','CTSO':'15l5SwyCQim0rYQTxMqgr7u3LvqSd8E7n'};
+function nestSlideExecutives_(leaders){
+ const current=nestSlideRoster_('CTSO');
+ return new Set(leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()==='CTSO'&&
+  /^chief (executive|financial|operations) officers?$/i.test(String(row[2]||'').trim())&&current.has(String(row[4]||'').trim().toLowerCase()))
+  .map(row=>String(row[4]||'').trim().toLowerCase()));
+}
 function nestSlideRole_(role){return String(role||'').trim().toLowerCase().replace(/^3d print specialist$/,'fabrication supervisor');}
 function nestSlideRoster_(period){
  const sheet=SpreadsheetApp.openById('12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE').getSheetByName(period==='CTSO'?'CTSO':'Period '+period);
@@ -51,11 +57,13 @@ function nestSyncDivisionSlideAccess(period){
  const roster=nestSlideRoster_(period);
  const imported=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported');
  const leaders=imported.getRange(2,2,Math.max(1,imported.getLastRow()-1),5).getValues();
+ const executives=nestSlideExecutives_(leaders);executives.forEach(email=>roster.add(email));
  const roleEmails={};leaders.forEach(row=>{
   const email=String(row[4]||'').trim().toLowerCase();if(String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()!==period||!roster.has(email))return;
   const role=nestSlideRole_(row[2]);if(!roleEmails[role])roleEmails[role]=new Set();roleEmails[role].add(email);
  });
- const management=new Set([...(roleEmails[period==='CTSO'?'chief executive officer':'division manager']||[]),...(roleEmails[period==='CTSO'?'executive vice-president':'assistant manager']||[])]);
+ const management=new Set([...executives,...(roleEmails[period==='CTSO'?'chief executive officer':'division manager']||[]),...(roleEmails[period==='CTSO'?'executive vice-president':'assistant manager']||[])]);
+ nestStaffDelegates_(period).forEach(grant=>{roster.add(grant.email);if(grant.role==='manager')management.add(grant.email);});
  const folder=DriveApp.getFolderById(NEST_SLIDE_FOLDERS[period]);nestSlideLimitFolder_(folder.getId());nestSlidePermissions_(folder.getId(),new Set(),roster);
  const files=folder.getFiles();let count=0;
  while(files.hasNext()){

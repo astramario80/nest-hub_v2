@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-const source=['Code.js','Auth.js','Tracker.js','DivisionSlides.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n');
+const source=['Code.js','DivisionSlides.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n');
 const token='a'.repeat(64),hash=value=>createHash('sha256').update(value).digest('hex');
 function service(manual=false){
  const email=manual?'manual:manager':'manager@students.bethelsd.org',account=['manager',email,'','',true,1,'','','1','','manager@students.bethelsd.org'];
@@ -49,4 +49,16 @@ test('service fault categories retain no raw exception contents',()=>{
  assert.equal(app.ctx.nestServiceFailure_('auth-group-email-access',new Error('Quota exceeded private account name')).code,'school-quota');
  assert.equal(app.ctx.nestServiceFailure_('auth-group-email',new Error('Permission denied private workbook')).code,'school-permission');
  assert.equal(app.ctx.nestServiceFailure_('auth-me',new Error('Unexpected private data')).code,'school-service');
+});
+
+test('service requests reuse the live account sheet across repeated linked-student checks and recheck revocation next time',()=>{
+ const app=service(true),request={action:'auth-service-manage',session:token};
+ const read=()=>app.ctx.withNestReadContext_(request,()=>{
+  const active=app.ctx.authSession_(token,app.ctx.PropertiesService.getScriptProperties(),Date.now());
+  if(!active)return null;
+  for(let i=0;i<150;i++)assert.equal(app.ctx.memberEmail_(active.email,'1'),'manager@students.bethelsd.org');
+  return active;
+ });
+ assert.ok(read());assert.equal(app.fallback.filter(r=>r.includes('StudentNESTAccess')).length,1);assert.equal(app.fallback.filter(r=>r.includes('Period 1')).length,1);
+ app.account[4]=false;assert.equal(read(),null);assert.equal(app.fallback.filter(r=>r.includes('StudentNESTAccess')).length,2);
 });

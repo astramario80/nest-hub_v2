@@ -14,7 +14,7 @@ async function api(options={}){
  const message={MessageID:id,Metadata:metadata,Tag:'nest-'+requestId,Recipients:[email],Subject:'Meeting',ReceivedAt:'2026-10-22T17:00:00Z',TrackOpens:true};
  const messages=[message,{...message,MessageID:second,Recipients:['other@students.bethelsd.org']}];
  globalThis.fetch=async(url,init)=>{
-  if(url==='https://school.invalid')return new Response(JSON.stringify(options.expired?{status:401}:{status:200,email:sender}));
+  if(url==='https://school.invalid')return new Response(JSON.stringify(options.expired?{status:401}:JSON.parse(init.body).action==='auth-email-archive'?(options.saved?{status:200,message:{sender,requestId,subject:'Saved rejection',sentAt:'2026-10-29T17:00:00Z',state:'rejected',selected:1,accepted:0,rejected:1,recipientDetails:[{email,name:'Student Example',state:'rejected',errorCode:406,errorMessage:'Recipient inactive'}],html:'<p>Archived original</p>'}}:{status:501}):{status:200,email:sender}));
   calls.push(String(url));const path=new URL(url).pathname;
   if(path==='/messages/outbound')return new Response(JSON.stringify({Messages:options.foreign?[{...message,Metadata:{...metadata,nestActor:'different-account'}}]:options.empty?[]:messages,TotalCount:options.empty?0:2}));
   if(path.endsWith('/details'))return new Response(JSON.stringify({...message,...(options.foreignDetail?{Metadata:{...metadata,nestActor:'different-account'}}:{}),HtmlBody:'<div><img src="https://tracking.invalid/pixel"><!-- NEST_MESSAGE_START --><h2>Original message</h2><script>bad()</script><!-- NEST_MESSAGE_END --><p>Footer</p></div>'}));
@@ -36,8 +36,8 @@ test('history returns only sender-scoped grouped messages and handles expiry, un
  assert.equal((await api({expired:true})).res.code,401);assert.equal((await api({empty:true})).res.code,404);assert.equal((await api({query:{requestId:'../someone'}})).res.code,400);
  const res=response();await handler({method:'GET',headers:{},query:{}},res);assert.equal(res.code,401);
 });
-function historyUI(fetcher){
- const dom=new JSDOM('<div data-hq-communications><section class="group-email-inline"><textarea>Draft stays here</textarea></section></div>',{url:'https://gknest.org/divisions/2',runScripts:'outside-only'}),w=dom.window;
+function historyUI(fetcher,search=""){
+ const dom=new JSDOM('<div data-hq-communications><section class="group-email-inline"><textarea>Draft stays here</textarea></section></div>',{url:'https://gknest.org/divisions/2'+search,runScripts:'outside-only'}),w=dom.window;
  w.NestAuth={identity:{signedIn:true}};w.NestDivisionHQ={allowed:true};w.AbortSignal=AbortSignal;w.fetch=fetcher;
  w.eval(fs.readFileSync('js/group-email-history.js','utf8'));w.document.dispatchEvent(new w.Event('DOMContentLoaded'));return w;
 }
@@ -61,3 +61,8 @@ test('status checks use only owned provider records and keep missing recipients 
  const partial=await api({selected:3,query:{action:'status'}});assert.equal(partial.res.data.state,'partial');assert.equal(partial.res.data.accepted,2);assert.equal(partial.res.data.rejected,0);assert.equal(partial.res.data.unconfirmed,1);
  assert.equal((await api({foreign:true,query:{action:'status'}})).res.code,503);assert.equal((await api({empty:true,query:{action:'status'}})).res.code,404);
 });
+
+test('Sent history deep link opens when Communications becomes active',async()=>{let reads=0;const w=historyUI(async()=>{reads++;return {ok:true,json:async()=>({messages:[],hasMore:false,nextOffset:0})};},'?email=sent#communications');try{w.document.dispatchEvent(new w.CustomEvent('nest-hq-tab-change',{detail:{tab:'communications'}}));await tick();assert.equal(w.document.getElementById('email-history-tab').getAttribute('aria-selected'),'true');assert.equal(w.document.getElementById('email-history-panel').hidden,false);assert.equal(reads,1);}finally{w.close();}});
+test('Sent history displays rejected students as linked names with persisted provider reasons',async()=>{const w=historyUI(async url=>({ok:true,json:async()=>url.includes('requestId=')?{subject:'Rejected send',sentAt:'2026-10-29T17:00:00Z',accepted:0,rejected:1,selected:1,recipients:[{email,name:'Student Example',state:'rejected',errorMessage:'Recipient inactive'}],html:'<p>Message</p>'}:{messages:[{requestId,subject:'Rejected send',sentAt:'2026-10-29T17:00:00Z',state:'rejected',rejected:1}],hasMore:false,nextOffset:20}}));try{w.document.getElementById('email-history-tab').click();await tick();assert.match(w.document.querySelector('.email-history-item').textContent,/1 rejected/);w.document.querySelector('.email-history-item').click();await tick();const recipients=w.document.querySelector('.email-history-recipients');assert.equal(recipients.querySelector('a').textContent,'Student Example');assert.match(recipients.querySelector('a').href,/^mailto:/);assert.match(recipients.textContent,/Rejected · Recipient inactive/);assert.doesNotMatch(recipients.textContent,/@|No open detected/);}finally{w.close();}});
+
+test('history API returns archived rejected recipients without requiring a provider-accepted message',async()=>{const {res,calls}=await api({saved:true});assert.equal(res.code,200);assert.equal(res.data.rejected,1);assert.equal(res.data.recipients[0].name,'Student Example');assert.equal(res.data.recipients[0].errorMessage,'Recipient inactive');assert.match(res.data.html,/Archived original/);assert.equal(calls.length,0);});

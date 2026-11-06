@@ -94,3 +94,52 @@ test('native report filters default to current year and trimester and refresh im
  w.NestWeather.view='admin';w.document.dispatchEvent(new w.CustomEvent('nest-weather-view',{detail:{view:'admin'}}));assert.equal(calls[3].period,'all');assert.equal(w.document.getElementById('weather-division').options[0].textContent,'All divisions');waiting[3](response('All divisions'));await new Promise(r=>setImmediate(r));
  w.document.getElementById('weather-year').value='2025-2026';w.document.getElementById('weather-year').dispatchEvent(new w.Event('change'));assert.equal(calls[4].year,'2025-2026');waiting[4](response('Previous year'));await new Promise(r=>setImmediate(r));
 });
+
+test('weather log shows Pacific dates and 12-hour times without changing stored timestamps or report text',async t=>{
+ const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;t.after(()=>w.close());
+ const timestamps=['2026-10-26T22:05:00.000Z','2026-01-15T08:00:00Z','2026-07-15T19:00:00Z','2026-10-26T01:30:00Z','2026-10-26T15:05:00-07:00','','not a timestamp','2026-10-26T15:05:00'];
+ const rows=timestamps.map(at=>[at,'2026-10-26T22:05:00.000Z']);
+ w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1']}:{division:'Period 1',summary:[],columns:['Timestamp','Report'],rows,hasMore:false}});
+ w.eval(fs.readFileSync('js/weather.js','utf8'));await new Promise(r=>setImmediate(r));choose(w,'1');await new Promise(r=>setImmediate(r));
+ assert.equal(w.document.querySelector('#weather-responses th').textContent,'Date & time (Pacific)');
+ const cells=[...w.document.querySelectorAll('#weather-responses tbody tr')].map(row=>row.querySelector('.weather-cell'));
+ assert.match(cells[0].textContent,/Oct 26, 2026, 3:05\s*PM PDT/);
+ assert.match(cells[1].textContent,/Jan 15, 2026, 12:00\s*AM PST/);
+ assert.match(cells[2].textContent,/Jul 15, 2026, 12:00\s*PM PDT/);
+ assert.match(cells[3].textContent,/Oct 25, 2026, 6:30\s*PM PDT/);
+ assert.equal(cells[4].textContent,cells[0].textContent);
+ assert.equal(cells[0].querySelector('time').dateTime,timestamps[0]);
+ for(let i=5;i<timestamps.length;i++)assert.equal(cells[i].textContent,timestamps[i]);
+ assert.equal(w.document.querySelectorAll('#weather-responses tbody tr')[0].querySelectorAll('.weather-cell')[1].textContent,rows[0][1]);
+ assert.equal(rows[0][0],timestamps[0]);
+});
+
+async function columnLogUI(saved){
+ const dom=new JSDOM(fs.readFileSync('weather.html','utf8'),{runScripts:'outside-only',url:'https://gknest.org/weather'}),w=dom.window;
+ const columns=['Timestamp','School year','Trimester','Name','Email','Period','Division','Emotion','Emotion family','Pacing','Grit','Safety','What is working','What can we change'];
+ const row=['2026-10-26T22:05:00Z','2026-2027','1','Sample Student','sample@example.org','1','Division 1','Happy','Happy',3,4,5,'Our team listens to each other.','More time for planning.'];
+ const key='nest-weather-layout:column-preview:1';if(saved)w.localStorage.setItem(key,JSON.stringify(saved));
+ w.NestAuth={identity:{signedIn:true,username:'column-preview'},ready:Promise.resolve()};
+ w.fetch=async url=>({ok:true,json:async()=>String(url).includes('period=mine')?{periods:['1','2']}:{division:'Division 1',summary:[],columns,rows:[row],hasMore:true}});
+ w.eval(fs.readFileSync('js/weather.js','utf8'));await new Promise(r=>setImmediate(r));choose(w,'1');await new Promise(r=>setImmediate(r));return {w,key,columns,row};
+}
+test('response log defaults to seven columns and gives written feedback the largest widths',async t=>{
+ const {w}=await columnLogUI();t.after(()=>w.close());const d=w.document,table=d.getElementById('weather-responses');
+ assert.deepEqual([...table.querySelectorAll('th')].map(x=>x.textContent),['Date & time (Pacific)','Name','Pace','Grit','Safety','What is working','What can we change']);
+ assert.equal(d.querySelectorAll('#weather-column-choices input').length,14);assert.equal(d.querySelectorAll('#weather-column-choices input:checked').length,7);
+ const widths=[...table.querySelectorAll('col')].map(x=>parseFloat(x.style.width));assert.equal(widths[5],widths[6]);assert.ok(widths.slice(0,5).every(x=>x<widths[5]));assert.doesNotMatch(table.textContent,/sample@example.org/);
+});
+test('column choices survive pagination and restore, resize the correct source column, and allow all columns to be hidden',async t=>{
+ const {w,key,columns}=await columnLogUI();t.after(()=>w.close());const d=w.document,table=d.getElementById('weather-responses');
+ const toggle=(name,checked)=>{const input=d.querySelector('#weather-column-choices input[data-column-index="'+columns.indexOf(name)+'"]');input.checked=checked;input.dispatchEvent(new w.Event('change'));};
+ toggle('Email',true);toggle('Pacing',false);assert.match(table.textContent,/sample@example.org/);assert.ok(![...table.querySelectorAll('th')].some(x=>x.textContent==='Pace'));
+ table.querySelector('[aria-label="Resize Grit column"]').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+ assert.equal(table.querySelector('col[data-column-index="10"]').style.width,'136px');assert.equal(JSON.parse(w.localStorage.getItem(key)).widths[10],136);
+ d.getElementById('weather-next').click();await new Promise(r=>setImmediate(r));assert.equal(table.querySelector('col[data-column-index="10"]').style.width,'136px');assert.match(table.textContent,/sample@example.org/);
+ const saved=JSON.parse(w.localStorage.getItem(key)),restored=await columnLogUI(saved);t.after(()=>restored.w.close());assert.match(restored.w.document.getElementById('weather-responses').textContent,/sample@example.org/);
+ choose(w,'2');await new Promise(r=>setImmediate(r));assert.doesNotMatch(table.textContent,/sample@example.org/);choose(w,'1');await new Promise(r=>setImmediate(r));assert.match(table.textContent,/sample@example.org/);
+ for(const name of columns)toggle(name,false);assert.equal(table.hidden,true);assert.equal(d.getElementById('weather-no-columns').hidden,false);
+ toggle('Name',true);assert.equal(table.hidden,false);assert.equal(table.querySelectorAll('th').length,1);
+ d.getElementById('weather-default-columns').click();assert.equal(table.querySelectorAll('th').length,7);assert.equal(d.querySelectorAll('#weather-column-choices input:checked').length,7);assert.doesNotMatch(table.textContent,/sample@example.org/);
+});

@@ -72,7 +72,7 @@ test('SolidProfessor and Thingiverse have internal pages with working NEST chrom
     w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));
     assert.equal(toggle.getAttribute('aria-expanded'),'false');
    }
-   assert.ok(w.document.querySelector('script[src="/js/nest-auth.js"]'));
+   assert.ok([...w.document.scripts].some(script=>new URL(script.src).pathname==='/js/nest-auth.js'));
   }finally{w.close();}
  }
  menu.window.close();

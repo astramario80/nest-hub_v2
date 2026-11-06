@@ -9,6 +9,7 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
   const cancelClose = () => clearTimeout(closeTimer);
   let pinned = false;
   let pointerDown = false;
+  const keyboardFocused = element => element.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
   const setOpen = open => {
     cancelClose();
     const changed = panel.classList.contains('is-open') !== open;
@@ -48,10 +49,24 @@ document.querySelectorAll('.disclosure').forEach((panel, index) => {
   });
   panel.addEventListener('pointerenter', event => {
     if (gear && panel !== gear) return;
-    if (event.pointerType === 'mouse') { cancelClose(); setOpen(true); }
+    if (event.pointerType === 'mouse') {
+      if (panel === gear) {
+        // Mouse navigation switches gears even when a previous click left focus behind.
+        document.querySelectorAll('.home-dashboard > .gear-panel.disclosure').forEach(sibling => {
+          if (sibling !== panel && !keyboardFocused(sibling)) sibling.dispatchEvent(new CustomEvent('disclosurecollapse'));
+        });
+      }
+      cancelClose(); setOpen(true);
+    }
   });
   panel.addEventListener('pointerleave', event => {
-    if (event.pointerType !== 'mouse' || pinned || panel.contains(document.activeElement)) return;
+    if (event.pointerType !== 'mouse') return;
+    if (panel === gear) {
+      if (keyboardFocused(panel)) return;
+      closeTimer = setTimeout(() => { if (!keyboardFocused(panel)) { pinned = false; setOpen(false); } }, 1100);
+      return;
+    }
+    if (pinned || panel.contains(document.activeElement)) return;
     // Keep expanded submenus stable while moving anywhere within their gear.
     if (gear && panel !== gear) return;
     if (gear) closeTimer = setTimeout(() => { if (!pinned && !panel.contains(document.activeElement)) setOpen(false); }, 1100);

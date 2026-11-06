@@ -46,3 +46,34 @@ body:has(.service-page) .bg-watermark{opacity:.24;z-index:0}body:has(.service-pa
 #service-copy-choices label{display:flex;gap:.6rem;align-items:center;margin:.6rem 0;font-weight:normal}#service-copy-choices input{width:auto;flex:0 0 auto}#service-copy-panel{margin:1rem 0}#service-email-history{overflow-wrap:anywhere}
 
 #service-unassigned-dialog{position:fixed;inset:110px 18px auto auto;margin:0;width:min(400px,calc(100vw - 36px));max-height:60vh;overflow:auto;z-index:30;padding:18px;background:rgba(245,246,240,.97);color:#25251f;border:1px solid #d1ac68;border-radius:14px;box-shadow:0 12px 36px #0005}#service-unassigned-list{display:grid;gap:8px;margin:12px 0}#service-unassigned-list button{text-align:left}
+
+.service-members{margin:1rem 0;padding:1rem;border:1px solid #c8b87b;border-radius:10px}#service-member-options{max-height:270px;overflow:auto}#service-member-options label{display:flex;align-items:center;gap:.6rem;font-weight:normal}#service-member-options input{width:auto;flex:0 0 auto}#service-member-options label[hidden]{display:none}#service-member-list p{margin:.35rem 0}#service-member-history p{white-space:pre-wrap}
+
+#service-client-auth{max-width:720px;margin:1rem 0}#service-client-auth[hidden],#service-code-request[hidden],#service-code-verify[hidden],#service-intake-form[hidden]{display:none}#service-client-auth input{max-width:520px}#service-code{max-width:220px;letter-spacing:.22em;font-size:1.3rem}#service-intake-fields{border:1px solid #b9b398;border-radius:12px;padding:1rem;margin:1rem 0}#service-intake-fields label{display:block;margin:.8rem 0 .35rem}#service-intake-fields textarea{width:100%;min-height:80px}#service-intake-email{overflow-wrap:anywhere}#service-intake-status{white-space:pre-wrap}
+
+.service-attachment-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:1rem;margin-top:1rem}.service-attachment-grid figure{margin:0;min-width:0;padding:.8rem;border:1px solid #c8b87b;border-radius:10px;background:#ffffff30}.service-attachment-grid img,.service-attachment-grid video{display:block;width:100%;max-height:300px;object-fit:contain;border-radius:6px}.service-attachment-grid figcaption{overflow-wrap:anywhere;margin-top:.6rem;font-size:.9rem}#service-selected-files p{margin:.4rem 0;overflow-wrap:anywhere}#intake-files{max-width:100%}
+.service-shopping{margin:24px 0;padding:22px;border:1px solid #53565a;border-radius:12px}.service-shopping-item{padding:16px 0;border-bottom:1px solid #53565a}.service-shopping-item h4{margin:8px 0}.service-shopping button,.service-shopping a{margin:8px 12px 8px 0}.service-shopping form{display:grid;gap:14px;margin:18px 0}.service-shopping label{display:grid;gap:7px}.service-shopping [hidden]{display:none!important}
+
+/* Compact shopping-item entry; keep the numeric fields beside the item name. */
+.service-shopping form { gap:10px; margin:12px 0; }
+.service-shopping-line { display:grid; grid-template-columns:minmax(0,1fr) 90px 160px; gap:12px; align-items:start; }
+.service-shopping-line label { min-width:0; }
+.service-shopping form input,.service-shopping form select,.service-shopping form textarea { min-width:0; width:100%; box-sizing:border-box; }
+.service-shopping form textarea { min-height:64px; height:64px; }
+.service-shopping-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.service-shopping-actions button { margin:0; }
+@media(max-width:600px){ .service-shopping-line { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .service-shopping-line label:first-child { grid-column:1 / -1; } }
+
+.service-ticket-actions{position:sticky;top:8px;z-index:8;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;background:#f6f3eb;border:1px solid #ccc2ae;border-radius:10px;box-shadow:0 3px 12px #0002}
+.service-ticket-actions button{margin:0}.service-ticket-actions label{display:flex;align-items:center;gap:7px;font-size:.85rem}.service-ticket-actions input{width:auto}
+#service-workspace-status{font-weight:700;min-height:1.5em;color:#73400b}.service-composer{display:grid;gap:8px;margin:16px 0}.service-composer label,#service-ticket-details form label,#service-extra-clients label{display:grid;gap:6px}
+#service-ticket-details,#service-extra-clients{padding:12px 0;border-bottom:1px solid #b6b1a6}#service-ticket-details summary,#service-extra-clients summary{font-weight:700;cursor:pointer;padding:10px 0}
+#service-ticket-details form,#service-extra-clients form{display:grid;gap:10px;margin:12px 0}.service-client-shopping{border:2px solid #c18d44;border-radius:12px;padding:18px;margin:20px 0}.service-client-shopping article{border-top:1px solid #ccc;padding:14px 0}.service-client-shopping .service-item-actions{display:flex;flex-wrap:wrap;gap:8px}.service-follow-up{font-weight:700;color:#8a3600}.service-log-media img,.service-log-media video{max-width:100%;max-height:300px}
+@media(max-width:700px){.service-ticket-actions{position:static}.service-ticket-grid{grid-template-columns:minmax(0,1fr)}.service-ticket-actions button{flex:1 1 45%}}
+@media print{.service-ticket-actions{display:none!important}}
+
+.service-activity-dials{display:grid;grid-template-columns:repeat(3,minmax(0,260px));gap:14px;max-width:808px}.service-activity-dials svg{display:block;width:100%;height:auto}.service-gauge-needle{transform-box:view-box;transform-origin:240px 205px}#service-activity{padding:14px 18px;margin:12px 0 18px}#service-activity h3{margin:0 0 8px;font-size:1rem}#service-activity>p{font-size:.75rem;line-height:1.4;margin:6px 0;color:inherit}#service-activity details{font-size:.8rem;margin-top:6px}#service-activity details p{line-height:1.5}#service-activity summary{cursor:pointer}@media(max-width:440px){.service-activity-dials{gap:8px;grid-template-columns:minmax(0,260px)}#service-activity{padding:10px}}
+
+#service-activity .service-metric-summary{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px}#service-activity .service-metric-summary>div{display:flex;align-items:baseline;gap:6px;padding:7px 10px;min-width:0;border-radius:7px;box-shadow:none}#service-activity .service-metric-summary strong{font-size:1.15rem;line-height:1.1}#service-activity .service-metric-summary span{font-size:.72rem}#service-activity table{font-size:.78rem}#service-activity th,#service-activity td{padding:6px 8px}.service-interactive-dial{border-radius:18px}.service-interactive-dial:focus-visible{outline:2px solid #9b5f16;outline-offset:3px}@media(max-width:650px){.service-activity-dials{grid-template-columns:repeat(2,minmax(0,260px))}}@media(max-width:440px){.service-activity-dials{grid-template-columns:minmax(0,260px)}}
+
+.service-ticket-activity-table{max-height:260px;overflow:auto}.service-ticket-activity-table th{position:sticky;top:0;background:#f4f1e8;z-index:1}

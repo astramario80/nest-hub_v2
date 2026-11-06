@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
-const source=['Code.js','Auth.js','Tracker.js','Hiring.js'].map(name=>fs.readFileSync('google-spinner/'+name,'utf8')).join('\n');
+const source=['Code.js'].map(name=>fs.readFileSync('google-spinner/'+name,'utf8')).join('\n');
 const utilities={DigestAlgorithm:{SHA_256:'sha'},computeDigest:(_algorithm,value)=>[...createHash('sha256').update(value).digest()]};
 function setup(current='Existing, Student') {
  const writes=[],team=[['Division Manager',current,'existing@students.bethelsd.org']],apps=[['2026-10-02','Applicant','Period 1','Division Manager','Experience','Qualifications','Contribution','Existing notes']];let saved=[];

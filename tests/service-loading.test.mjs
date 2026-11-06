@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {JSDOM} from 'jsdom';
 const settle=()=>new Promise(resolve=>setTimeout(resolve,15));
-function setup(){
- const dom=new JSDOM(fs.readFileSync('service.html','utf8'),{url:'https://gknest.org/service',runScripts:'outside-only'}),w=dom.window,pending=[];
- w.NestAuth={identity:{signedIn:true},ready:Promise.resolve()};w.confirm=()=>true;
+function setup(options={}){
+ const dom=new JSDOM(fs.readFileSync('service.html','utf8'),{url:'https://gknest.org/service'+(options.hash||''),runScripts:'outside-only'}),w=dom.window,pending=[];
+ w.NestAuth=options.auth||{identity:{signedIn:true},ready:Promise.resolve()};w.confirm=()=>true;
  w.fetch=(url,options)=>new Promise((resolve,reject)=>{
   const op=new URL(url,'https://gknest.org').searchParams.get('operation');
   if(op!=='manage'){resolve({ok:true,json:async()=>({email:'staff@bethelsd.org',requests:[]})});return;}
@@ -29,4 +29,28 @@ test('a stalled read or JSON body has a deadline, retry remains available and ba
  w.setTimeout=(fn,ms)=>{if(ms===50000){deadline=fn;return 12345;}return native(fn,ms);};
  w.document.dispatchEvent(new w.Event('nest-auth-change'));await settle();assert.equal(pending.length,2);deadline();await settle();assert.equal(pending[1].signal.aborted,true);assert.match(w.document.getElementById('service-gear-status').textContent,/took too long/);assert.equal(w.document.getElementById('view-manage').hidden,true);
  w.document.getElementById('service-gear').click();await settle();assert.equal(pending.length,3);pending[2].resolve(workspace);await settle();assert.equal(w.document.getElementById('view-manage').hidden,false);dom.window.close();
+});
+
+test('student workspace renders Barometer records separately from permitted tickets',async()=>{
+ const {dom,w,pending}=setup();w.eval(fs.readFileSync('js/service-charts.js','utf8'));await settle();
+ pending[0].resolve({...workspace,canReview:false,chartTickets:[{id:'stats-only',created:'2026-10-01T12:00:00Z',status:'In Progress',manager:'Student (Period 1)',clientKey:'opaque-client'}],metrics:[{manager:'Student (Period 1)',division:'Period 1'}],students:[],trimester:{number:1,start:'2026-09-01',end:'2026-12-01'}});await settle();
+ w.document.getElementById('service-gear').click();await settle();
+ assert.equal(w.document.getElementById('view-manage').hidden,false);
+ assert.match(w.document.getElementById('service-metric-status').textContent,/1 matching requests/);
+ assert.match(w.document.getElementById('manager-status').textContent,/0 requests available/);
+ assert.equal(w.document.querySelector('[data-tool=reviews]').hidden,true);
+ assert.equal(w.document.getElementById('service-detail').hidden,true);dom.window.close();
+});
+
+test('Client Relations deep link waits for an existing session and never opens a premature login',async()=>{
+ let resolve,opens=0;const auth={identity:null,ready:new Promise(r=>{resolve=r;}),open:()=>{opens++;}};
+ const {dom,w,pending}=setup({hash:'#client-relations',auth});try{await settle();assert.equal(opens,0);assert.equal(pending.length,0);assert.equal(w.document.getElementById('service-front').hidden,true);assert.match(w.document.getElementById('service-gear-status').textContent,/existing NEST session/);auth.identity={signedIn:true};w.document.dispatchEvent(new w.Event('nest-auth-change'));resolve();await settle();assert.equal(opens,0);assert.equal(pending.length,1);pending[0].resolve(workspace);await settle();assert.equal(w.document.getElementById('view-manage').hidden,false);assert.equal(w.document.getElementById('service-front').hidden,true);}finally{dom.window.close();}
+});
+test('deep links still request a real sign-in after an unsigned session is confirmed',async()=>{
+ let resolve,opens=0;const auth={identity:null,ready:new Promise(r=>{resolve=r;}),open:()=>{opens++;}};
+ const {dom,w,pending}=setup({hash:'#client-relations',auth});try{await settle();assert.equal(opens,0);resolve();await settle();assert.equal(opens,1);assert.equal(pending.length,0);assert.equal(w.document.getElementById('service-front').hidden,false);assert.equal(w.document.getElementById('view-manage').hidden,true);}finally{dom.window.close();}
+});
+test('returning to the front while session initialization is pending cancels automatic entry',async()=>{
+ let resolve,opens=0;const auth={identity:null,ready:new Promise(r=>{resolve=r;}),open:()=>{opens++;}};
+ const {dom,w,pending}=setup({hash:'#client-relations',auth});try{await settle();w.document.getElementById('service-gear').click();assert.equal(w.document.getElementById('service-front').hidden,false);auth.identity={signedIn:true};resolve();await settle();assert.equal(opens,0);assert.equal(pending.length,1);pending[0].resolve(workspace);await settle();assert.equal(w.document.getElementById('view-manage').hidden,true);}finally{dom.window.close();}
 });

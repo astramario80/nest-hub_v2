@@ -621,6 +621,11 @@
     // Start hidden: landing only
     hideAllPanels();
 
+    if(new URLSearchParams(location.search).get('popup')==='drones'){
+      document.body.classList.add('inventory-drone-popup');const style=document.createElement('link');style.rel='stylesheet';style.href='/css/inventory-popup.css';document.head.append(style);
+      document.title='Drone assignments · NEST™';$('.inventory-title h1').textContent='Drone assignments';showPanel('drones');
+    }
+
     // Initial load
     refreshAll().catch(err => {
       console.error(err);

@@ -15,7 +15,7 @@ function ui(manage=true,hash=''){
   w.eval(fs.readFileSync('js/division-hq.js','utf8'));w.eval(fs.readFileSync('js/division-workspace.js','utf8'));return {w,calls};
 }
 function choose(w,key){w.document.querySelector('[data-hq-tab='+key+']').click();}
-test('HQ has connected accessible tabs and loads slides and the application only on demand',async()=>{
+test('HQ has connected accessible tabs and loads slides on demand and links to the native application',async()=>{
   const {w,calls}=ui();await tick();
   assert.deepEqual([...w.document.querySelectorAll('[role=tab]')].map(tab=>tab.textContent),['Trip-o-meter','Team Lookup','Communications','Meetings','Employment','Hiring']);
   assert.equal(w.document.querySelector('[aria-selected=true]').id,'hq-tab-tripometer');
@@ -24,7 +24,7 @@ test('HQ has connected accessible tabs and loads slides and the application only
   assert.equal(w.document.querySelector('[data-hq-lookup]').dataset.hqLookup,'2');
   assert.ok(w.document.querySelector('script[src="/js/trip-o-meter.js?v=column-width-64"]'));assert.equal(w.document.querySelector('script[src="/js/leadership.js"]'),null);choose(w,'lookup');assert.ok(w.document.querySelector('script[src="/js/leadership.js"]'));assert.equal(w.document.querySelector('script[src="/js/hiring.js"]'),null);
   choose(w,'meetings');assert.match(w.document.querySelector('.division-window-stage iframe').src,/manager-deck/);assert.equal(w.location.hash,'#meetings');
-  choose(w,'employment');assert.match(w.document.querySelector('[data-application-src]').src,/viewform\?embedded=true/);
+  choose(w,'employment');assert.equal(w.document.querySelector('#hq-panel-employment a[href^="/employment"]').getAttribute('href'),'/employment?period=2');assert.equal(w.document.querySelector('[data-application-src]'),null);
   assert.equal(w.document.querySelectorAll('#hq-panel-employment .job-card').length,10);
   assert.equal(w.document.querySelector('.division-page-actions').textContent,'All divisions');
   choose(w,'hiring');assert.ok(w.document.querySelector('script[src="/js/hiring.js"]'));

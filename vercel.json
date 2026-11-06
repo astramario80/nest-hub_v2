@@ -4,6 +4,34 @@
   "trailingSlash": false,
   "rewrites": [
     {
+      "source": "/lib/bell-schedule-import.json",
+      "destination": "/api/bell-workspace"
+    },
+    {
+      "source": "/lib/bell-schedule-seed.mjs",
+      "destination": "/api/bell-workspace"
+    },
+    {
+      "source": "/service/management",
+      "destination": "/service-management"
+    },
+    {
+      "source": "/dj/:period",
+      "destination": "/api/dj?period=:period"
+    },
+    {
+      "source": "/lib/field-trips/:path*",
+      "destination": "/api/field-trips?blocked=1"
+    },
+    {
+      "source": "/lab-teacher",
+      "destination": "/api/lab-teacher"
+    },
+    {
+      "source": "/nestrequest",
+      "destination": "/lab-request"
+    },
+    {
       "source": "/favicon.ico",
       "destination": "/assets/nest_menu_icon.png"
     },
@@ -13,6 +41,9 @@
     }
   ],
   "functions": {
+    "api/purchasing.mjs": {
+      "maxDuration": 60
+    },
     "api/account.mjs": {
       "maxDuration": 60,
       "regions": [
@@ -31,7 +62,15 @@
     "api/leadership.mjs": {
       "maxDuration": 50
     },
-    "api/weather-native.mjs": {"maxDuration": 60},
+    "api/lab-storage.mjs": {
+      "maxDuration": 60
+    },
+    "api/lab-requests.mjs": {
+      "maxDuration": 60
+    },
+    "api/weather-native.mjs": {
+      "maxDuration": 60
+    },
     "api/weather.mjs": {
       "maxDuration": 30
     },
@@ -52,6 +91,9 @@
       "maxDuration": 60
     },
     "api/division-page.mjs": {
+      "maxDuration": 60
+    },
+    "api/service-workspace.mjs": {
       "maxDuration": 60
     },
     "api/service-requests.mjs": {
@@ -89,9 +131,73 @@
       "regions": [
         "sfo1"
       ]
+    },
+    "api/inventory.mjs": {
+      "maxDuration": 60
+    },
+    "api/lab-teacher.mjs": {
+      "maxDuration": 60
+    },
+    "api/service-upload.mjs": {
+      "maxDuration": 60
+    },
+    "api/service-attachments.mjs": {
+      "maxDuration": 300
+    },
+    "api/field-trips.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "{lib/field-trips/**,js/field-trips/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+    },
+    "api/dj.mjs": {
+      "maxDuration": 60
+    },
+    "api/robotics-signup.mjs": {
+      "maxDuration": 60
+    },
+    "api/employment-application.mjs": {
+      "maxDuration": 60
+    },
+    "api/marketing-film.mjs": {
+      "maxDuration": 60
+    },
+    "api/safety.mjs": {
+      "maxDuration": 60
+    },
+    "api/metar.mjs": {
+      "maxDuration": 20
+    },
+    "api/field-trip-roster-sync.mjs": {
+      "maxDuration": 180,
+      "includeFiles": "{lib/field-trips/**,js/field-trips/**,node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs}"
+    },
+    "api/bell-workspace.mjs": {
+      "maxDuration": 60,
+      "regions": [
+        "sfo1"
+      ]
     }
   },
   "redirects": [
+    {
+      "source": "/leadership-application.html",
+      "destination": "/employment",
+      "permanent": false
+    },
+    {
+      "source": "/leadership-application",
+      "destination": "/employment",
+      "permanent": false
+    },
+    {
+      "source": "/field-trips",
+      "destination": "/triphub",
+      "permanent": true
+    },
+    {
+      "source": "/field-trips.html",
+      "destination": "/triphub",
+      "permanent": true
+    },
     {
       "source": "/admin-diagnostics",
       "destination": "/profile#diagnostics",

@@ -1,5 +1,5 @@
 import {COOKIE,cookies,validToken,originAllowed,bridge} from '../lib/nest-auth.mjs';
-const operations=new Set(['view','status','refresh','import','preview','send','onboarding','profile','profile-save','checklist','protocol-save','activate-request']);
+const operations=new Set(['view','status','refresh','sync','import','preview','send','onboarding','profile','profile-save','checklist','protocol-save','activate-request']);
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');
  res.setHeader('X-Content-Type-Options','nosniff');
@@ -33,7 +33,7 @@ export default async function handler(req,res){
   if(!/^[a-f0-9]{64}$/.test(body.member||'')||typeof body.active!=='boolean')return res.status(400).json({error:'Choose a member and status.'});
   Object.assign(payload,{member:body.member,active:body.active});
  }
- if(['status','refresh','import'].includes(body.operation)){
+ if(['status','refresh','sync','import'].includes(body.operation)){
   if(!/^[a-f0-9]{64}$/.test(body.revision||''))return res.status(400).json({error:'Reload membership before saving.'});payload.revision=body.revision;
  }
  if(body.operation==='import'){

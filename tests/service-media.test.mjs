@@ -1,0 +1,84 @@
+import {staffContext} from './helpers/staff-context.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createHash} from 'node:crypto';import {Writable} from 'node:stream';import {JSDOM} from 'jsdom';
+import {mediaFields,mediaReceipt,readMediaReceipt,MAX_FILE_SIZE,MAX_TOTAL_SIZE} from '../lib/service-media.mjs';
+import {createUploadHandler} from '../api/service-upload.mjs';import {createAttachmentHandler} from '../api/service-attachments.mjs';
+const session='a'.repeat(64),other='b'.repeat(64),ticketId='11111111-1111-4111-8111-111111111111',fileId='22222222-2222-4222-8222-222222222222',metadata={ticketId,fileId,name:'Example photo.jpg',size:3,type:'image/jpeg'},meta=mediaFields(metadata),hash=value=>createHash('sha256').update(value).digest('hex');
+function response(){return {headers:{},setHeader(k,v){this.headers[k]=v;},status(code){this.code=code;return this;},json(data){this.data=data;return this;}};}
+const headers={origin:'https://gknest.org','content-type':'application/json',cookie:'__Host-nest-service='+session};
+test('upload receipts are short-lived, signed, session-bound, and constrain canonical media paths and sizes',()=>{
+ const prior=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';try{
+ const receipt=mediaReceipt(meta,session);assert.equal(readMediaReceipt(receipt,session).path,meta.path);assert.equal(readMediaReceipt(receipt,other),null);assert.equal(readMediaReceipt(receipt,session,Date.now()+1800001),null);assert.equal(readMediaReceipt(receipt.slice(0,-1)+'x',session),null);
+ for(const patch of [{type:'image/svg+xml'},{type:'text/html'},{size:0},{size:MAX_FILE_SIZE+1},{name:'bad\r\nname'},{fileId:'../../elsewhere'}])assert.equal(mediaFields({...metadata,...patch}),null);
+ assert.equal(mediaFields({...metadata,type:'video/quicktime',name:'Phone.mov'}).path.endsWith('.mov'),true);
+ }finally{if(prior===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=prior;}
+});
+test('direct upload tokens require verified preparation and enforce the exact path, type, size, and no overwrite',async()=>{
+ const prior=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';const calls=[],tokens=[],school=[];
+ const handler=createUploadHandler({head:async path=>({pathname:path,size:3,contentType:'image/jpeg'}),handleUpload:async options=>{tokens.push(await options.onBeforeGenerateToken(options.body.payload.pathname));return {type:'blob.generate-client-token',clientToken:'scoped-client-token'};}},async request=>{school.push(request);return {status:200};});
+ const run=async(body,h={})=>{const res=response();await handler({method:'POST',headers:{...headers,...h},body},res);calls.push(res);return res;};
+ try{
+ assert.equal((await run({operation:'prepare',file:metadata},{cookie:''})).code,401);assert.equal((await run({operation:'prepare',file:metadata},{origin:'https://evil.test'})).code,403);assert.equal((await run({operation:'prepare',file:{...metadata,size:MAX_FILE_SIZE+1}})).code,400);assert.equal(school.length,0);
+ const prepared=await run({operation:'prepare',file:metadata});assert.equal(prepared.code,200);assert.equal(school[0].session,session);
+ const body={type:'blob.generate-client-token',payload:{pathname:prepared.data.path,clientPayload:prepared.data.receipt,multipart:true}};
+ assert.equal((await run({...body,payload:{...body.payload,pathname:'lab-requests/archive-v1.json'}})).code,403);assert.equal((await run(body,{cookie:'__Host-nest-service='+other})).code,403);
+ assert.equal((await run(body)).data.clientToken,'scoped-client-token');assert.deepEqual(tokens[0].allowedContentTypes,['image/jpeg']);assert.equal(tokens[0].maximumSizeInBytes,3);assert.equal(tokens[0].allowOverwrite,false);assert.equal(tokens[0].addRandomSuffix,false);
+ assert.equal((await run({operation:'complete',receipt:prepared.data.receipt})).code,200);assert.equal(school.at(-1).action,'service-client-upload-complete');
+ }finally{if(prior===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=prior;}
+});
+test('upload completion verifies private storage metadata before marking a file attachable',async()=>{
+ const prior=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';let writes=0;
+ try{for(const blob of [{pathname:meta.path,size:5,contentType:meta.type},{pathname:'elsewhere',size:3,contentType:meta.type},{pathname:meta.path,size:3,contentType:'text/html'}]){
+ const handler=createUploadHandler({head:async()=>blob},async()=>{writes++;return {status:200};}),res=response();await handler({method:'POST',headers,body:{operation:'complete',receipt:mediaReceipt(meta,session)}},res);assert.equal(res.code,409);
+ }assert.equal(writes,0);
+ }finally{if(prior===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=prior;}
+});
+class StreamResponse extends Writable{constructor(){super();this.headers={};this.code=200;this.chunks=[];}setHeader(k,v){this.headers[k]=v;}status(code){this.code=code;return this;}json(data){this.end(JSON.stringify(data));return this;}_write(chunk,_encoding,callback){this.chunks.push(Buffer.from(chunk));callback();}}
+test('attachment reads authorize first, stream privately, support video byte ranges, and reject anonymous or unrelated users',async()=>{
+ const reads=[],authorizations=[];let allowed=false;
+ const handler=createAttachmentHandler({get:async(path,options)=>{reads.push({path,options});return {stream:new Response('abc').body,headers:new Headers({'content-range':'bytes 0-2/3','content-length':'3'})};}},async request=>{authorizations.push(request);return allowed?{status:200,file:meta}:{status:403};});
+ const run=async(h={})=>{const res=new StreamResponse();await handler({method:'GET',headers:{...headers,...h},query:{ticket:ticketId,file:fileId}},res);return res;};
+ assert.equal((await run({cookie:''})).code,401);assert.equal(authorizations.length,0);assert.equal((await run()).code,403);assert.equal(reads.length,0);
+ allowed=true;const res=await run({range:'bytes=0-2'});assert.equal(res.code,206);assert.equal(Buffer.concat(res.chunks).toString(),'abc');assert.equal(res.headers['Cache-Control'],'private, no-store');assert.equal(res.headers['Content-Range'],'bytes 0-2/3');assert.equal(reads[0].options.access,'private');assert.equal(reads[0].options.headers.Range,'bytes=0-2');assert.equal(authorizations.at(-1).clientSession,session);
+ assert.equal((await run({range:'bytes=999-'})).code,416);assert.equal(reads.length,1);
+});
+function schoolAccess(){
+ const properties=new Map(),roster=[{email:'pm@students.bethelsd.org',label:'PM (Period 1)',period:'1'},{email:'member@students.bethelsd.org',label:'Member (Period 1)',period:'1'}],leaders=[['Period 1','','Division Manager','Leader','leader@students.bethelsd.org']];let active=true;
+ const item={id:ticketId,email:'staff@bethelsd.org',manager:'PM (Period 1)',members:[{email:'member@students.bethelsd.org'}]},events=[['now',ticketId,'attachments','staff@bethelsd.org','','','','','',JSON.stringify([meta])]];
+ const store={getProperty:key=>properties.get(key),setProperty:(key,value)=>properties.set(key,value),deleteProperty:key=>properties.delete(key)};
+ const ctx=staffContext({console,Date,OWNER_EMAILS:['admin@bethelsd.org'],email_:v=>String(v||'').toLowerCase(),memberEmail_:v=>v,hash_:hash,authSession_:(raw)=>active&&['pm','member','leader','admin','other'].includes(raw)?{email:raw+(raw==='admin'?'@bethelsd.org':'@students.bethelsd.org')}:null,read_:(s,k)=>{const value=s.getProperty(k);if(!value)return null;const parsed=JSON.parse(value);return parsed.expires>Date.now()?parsed:null;}});
+ vm.runInContext(['ServiceRequests.js','ServiceMedia.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n'),ctx);
+ ctx.serviceRead_=()=>({requests:[item],events});ctx.serviceRoster_=()=>roster;ctx.serviceLeaders_=()=>leaders;
+ properties.set('service-session:'+hash(session),JSON.stringify({email:'staff@bethelsd.org',expires:Date.now()+60000}));
+ const read=(account,clientSession)=>ctx.serviceMediaDispatch_({action:'auth-service-attachment-read',session:account,clientSession,ticketId,fileId},store);
+ return {read,item,leaders,roster,ctx,disable:()=>active=false};
+}
+test('real school ticket rules govern every attachment read, including owner, assignment removal and role revocation',()=>{
+ const app=schoolAccess();for(const actor of ['pm','member','leader','admin'])assert.equal(app.read(actor).status,200);assert.equal(app.read('other').status,403);assert.equal(app.read(undefined,session).status,200);
+ app.item.manager='Other';assert.equal(app.read('pm').status,403);app.roster.splice(1);assert.equal(app.read('member').status,403);app.leaders[0][2]='Technician';assert.equal(app.read('leader').status,403);
+ app.item.email='new@bethelsd.org';assert.equal(app.read(undefined,session).status,403);app.disable();assert.equal(app.read('admin').status,401);
+ const visible=JSON.parse(JSON.stringify(app.ctx.serviceMediaRows_(app.item,[['',ticketId,'attachments','','','','','','',JSON.stringify([meta])]])));assert.equal(visible[0].name,meta.name);assert.equal(visible[0].path,undefined);
+});
+test('file selection is bounded and upload controls carry file names without putting bytes in the ticket JSON',async()=>{
+ const dom=new JSDOM(fs.readFileSync('service.html','utf8'),{url:'https://gknest.org/service',runScripts:'outside-only'}),w=dom.window;w.crypto.randomUUID=()=>ticketId;w.TextEncoder=TextEncoder;w.TextDecoder=TextDecoder;w.fetch=globalThis.fetch;w.Request=Request;w.Response=Response;w.Headers=Headers;w.ReadableStream=ReadableStream;
+ w.eval(fs.readFileSync('js/service-upload.js','utf8'));assert.throws(()=>w.NestServiceUpload.selection([{name:'bad.svg',type:'image/svg+xml',size:1}]),/supported/);assert.throws(()=>w.NestServiceUpload.selection(Array.from({length:6},()=>({name:'x.jpg',type:'image/jpeg',size:1}))),/five/);assert.throws(()=>w.NestServiceUpload.selection([{name:'x.mp4',type:'video/mp4',size:MAX_FILE_SIZE+1}]),/100 MB/);assert.throws(()=>w.NestServiceUpload.selection(Array.from({length:3},()=>({name:'x.mp4',type:'video/mp4',size:100*1048576}))),/250 MB/);
+ const selected=w.NestServiceUpload.selection([{name:'phone.heic',type:'',size:10}]);assert.equal(selected[0].type,'image/heic');
+ const calls=[],uploads=[];w.NestServiceUpload={selection:files=>[...files].map(file=>({file,fileId})),uploadFiles:async(files,id,progress)=>{uploads.push({files,id});progress('Uploading');return [fileId];}};w.fetch=async(_url,options)=>{calls.push(JSON.parse(options.body));return {ok:true,json:async()=>({id:ticketId})};};w.eval(fs.readFileSync('js/service-intake.js','utf8'));
+ const d=w.document;d.dispatchEvent(new w.CustomEvent('nest-service-client-state',{detail:{signedIn:true,email:'staff@bethelsd.org'}}));const file=new w.File(['abc'],'example.jpg',{type:'image/jpeg'});Object.defineProperty(d.querySelector('#intake-files'),'files',{value:[file]});d.querySelector('#intake-files').dispatchEvent(new w.Event('change'));assert.match(d.querySelector('#service-selected-files').textContent,/example.jpg/);
+ d.querySelector('#service-intake-form').dispatchEvent(new w.Event('submit',{cancelable:true}));await new Promise(resolve=>setTimeout(resolve,5));assert.equal(uploads[0].id,ticketId);assert.deepEqual(calls[0].attachmentIds,[fileId]);assert.equal(calls[0].fields.attachment,'');assert.equal(JSON.stringify(calls[0]).includes('abc'),false);dom.window.close();
+});
+
+test('an upload that finishes after sign-out cannot submit a ticket or expose the old file to the next account',async()=>{
+ const dom=new JSDOM(fs.readFileSync('service.html','utf8'),{url:'https://gknest.org/service',runScripts:'outside-only'}),w=dom.window;w.crypto.randomUUID=()=>ticketId;let finish;const calls=[];
+ w.NestServiceUpload={selection:files=>[...files].map(file=>({file,fileId})),uploadFiles:()=>new Promise(resolve=>finish=resolve)};w.fetch=async(_u,o)=>{calls.push(JSON.parse(o.body));return {ok:true,json:async()=>({id:ticketId})};};w.eval(fs.readFileSync('js/service-intake.js','utf8'));
+ const d=w.document;d.dispatchEvent(new w.CustomEvent('nest-service-client-state',{detail:{signedIn:true,email:'staff@bethelsd.org'}}));Object.defineProperty(d.querySelector('#intake-files'),'files',{value:[new w.File(['abc'],'old-private.jpg',{type:'image/jpeg'})]});d.querySelector('#intake-files').dispatchEvent(new w.Event('change'));d.querySelector('#service-intake-form').dispatchEvent(new w.Event('submit',{cancelable:true}));
+ d.dispatchEvent(new w.CustomEvent('nest-service-client-state',{detail:{signedIn:false,signedOut:true}}));finish([fileId]);await new Promise(resolve=>setTimeout(resolve,5));assert.equal(calls.length,0);assert.equal(d.querySelector('#service-selected-files').textContent,'');assert.equal(d.querySelector('#service-intake-form').hidden,true);dom.window.close();
+});
+
+test('the installed Blob SDK issues a signed path-scoped client token without exposing its storage credential',async()=>{
+ const {handleUpload,getPayloadFromClientToken}=await import('@vercel/blob/client');const oldSecret=process.env.SPINNER_BRIDGE_TOKEN,oldBlob=process.env.BLOB_READ_WRITE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';process.env.BLOB_READ_WRITE_TOKEN='vercel_blob_rw_teststore_fake-server-secret';
+ try{const handler=createUploadHandler({handleUpload},async()=>({status:200})),res=response(),receipt=mediaReceipt(meta,session);await handler({method:'POST',url:'/api/service-upload',headers,body:{type:'blob.generate-client-token',payload:{pathname:meta.path,clientPayload:receipt,multipart:true}}},res);assert.equal(res.code,200);assert.equal(res.data.clientToken.includes('fake-server-secret'),false);const policy=getPayloadFromClientToken(res.data.clientToken);assert.equal(policy.pathname,meta.path);assert.equal(policy.maximumSizeInBytes,3);assert.deepEqual(policy.allowedContentTypes,['image/jpeg']);assert.equal(policy.allowOverwrite,false);
+ }finally{for(const [name,value] of Object.entries({SPINNER_BRIDGE_TOKEN:oldSecret,BLOB_READ_WRITE_TOKEN:oldBlob})){if(value===undefined)delete process.env[name];else process.env[name]=value;}}
+});
+
+test('Drive upload preparation keeps OAuth server-side, rejects Blob token reuse and completes through school validation',async()=>{const old=process.env.SPINNER_BRIDGE_TOKEN;process.env.SPINNER_BRIDGE_TOKEN='test-secret';const drive=mediaFields({...metadata,context:'public',entryId:fileId,storage:'drive',driveId:'fakeDriveFile12345',driveUrl:'https://drive.google.com/file/d/fakeDriveFile12345/view'}),calls=[];const handler=createUploadHandler({handleUpload:async()=>{throw Error('Drive must not request Blob access');}},async r=>{calls.push(r);return {status:200,file:drive,uploadUrl:'https://www.googleapis.com/upload/drive/v3/files/fake?uploadType=resumable&upload_id=scoped'};});const run=async body=>{const res=response();await handler({method:'POST',headers:{...headers,cookie:'__Host-nest-auth='+session},body},res);return res;};try{const result=await run({operation:'prepare',file:{...metadata,context:'public',entryId:fileId}});assert.equal(result.code,200);assert.equal(calls[0].action,'auth-service-upload-prepare');assert.equal(calls[0].driveReady,true);assert.equal(result.data.storage,'drive');assert.equal(JSON.stringify(result.data).includes('OAuth'),false);assert.equal((await run({type:'blob.generate-client-token',payload:{pathname:drive.path,clientPayload:result.data.receipt}})).code,403);assert.equal((await run({operation:'complete',receipt:result.data.receipt})).code,200);assert.equal(calls.at(-1).action,'auth-service-upload-complete');}finally{if(old===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=old;}});
+test('Drive attachment proxy streams authorized ranges and never returns the server read token',async()=>{const token='server-only-token-not-for-browser',drive=mediaFields({...metadata,storage:'drive',driveId:'fakeDriveFile12345',driveUrl:'https://drive.google.com/file/d/fakeDriveFile12345/view'}),calls=[];const handler=createAttachmentHandler({fetch:async(url,options)=>{calls.push({url,options});return new Response('abc',{status:206,headers:{'content-range':'bytes 0-2/3','content-length':'3'}});}},async()=>({status:200,file:drive,readToken:token}));const res=new StreamResponse();await handler({method:'GET',headers:{...headers,range:'bytes=0-2'},query:{ticket:ticketId,file:fileId}},res);assert.equal(res.code,206);assert.equal(calls[0].options.headers.Authorization,'Bearer '+token);assert.equal(calls[0].options.headers.Range,'bytes=0-2');assert.equal(calls[0].options.redirect,'error');assert.equal(Buffer.concat(res.chunks).toString(),'abc');assert.equal(JSON.stringify(res.headers).includes(token),false);});

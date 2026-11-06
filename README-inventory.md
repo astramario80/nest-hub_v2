@@ -1,0 +1,35 @@
+# Equipment assignments
+
+`/inventory` retains the public lookup. Its Director View opens `/inventory-management`, where current Directors of Inventory and administrators can manage equipment directly. `/api/inventory` checks the NEST session and forwards a fixed workbook request to the school bridge. No browser request can select a spreadsheet, sheet ID, or identity.
+
+The existing Device Assignments workbook remains the backing store for this first migration. Directors use the website for assignments; the existing public CSV exports continue to work. This is immediate write-through to Sheets, not an independent database or a background two-way synchronization service.
+
+## Sheet structure
+
+`google-spinner/Inventory.js` recognizes EE Kits / EEkits, Drones, Laptops, USBs, and Radios tabs. It finds a device-number header in the first five rows, preserves the remaining column labels and order, and exposes validated list/range cells as dropdowns. Notes, drone Equipment, and laptop Guest entries accept free text. Formula cells and other unvalidated assignment cells are read-only. Equipment identifiers and serials are edited through Edit equipment details. Missing validation on a laptop period cell uses that column’s existing period rule. Laptop period columns use the same per-cell validation as the sheet. Unsupported layouts fail closed rather than guessing where to write. Missing categories show an explanatory empty state.
+
+Every save rechecks current session and leadership, reloads the item and validation choices, compares its revision, and writes only changed editable cells. Duplicate equipment numbers are not editable. Blank selections clear assignments. String writes cannot become formulas. A hidden `InventoryWebLog` records time, actor, category, number, prior values, and changes in the same Sheets batch as the assignment. Website saves share a script lock. Direct sheet edits are external to that lock.
+
+After saving, the website synchronizes that category to the existing public mirror using the same first-name/period scrubbing as the bound `Public_Push` script. Source edits and the audit record commit atomically in the source workbook; the mirror is a separate transaction. A mirror failure returns `saved: true, mirrorSync: pending`, and the website provides a separate Sync public lookup action that never resubmits or discards assignment edits. Public CSV reads can still lag because Google caches published data. The saved source snapshot avoids SpreadsheetApp read-cache staleness during mirror updates. Existing slide/color scripts remain separate from this assignment flow.
+
+## Deployment and verification
+
+Deploy `Inventory.js` with the other files in the existing `google-spinner` Apps Script project and the updated `Code.js` dispatcher before deploying the website. No new environment secret is needed. The Vercel route uses the existing `SPINNER_BRIDGE_URL` and `SPINNER_BRIDGE_TOKEN`; the route needs a 60-second function duration.
+
+Before publishing, inspect the live workbook tab/header names and dropdown ranges, test against a designated test item with a current director account, confirm its round-trip save and clear behavior, and check the audit record and public export. Check laptop period assignments as well as one regular equipment category. Do not modify real student assignments for testing.
+
+The live source workbook and bound Apps Script were inspected on October 22, 2026. All five category layouts were checked through the website reader against a read-only export: 24 kits, 15 drones, 33 laptop stations, 140 USBs, and 6 radios. Standard tabs use ID on row 2; laptops use Computer Station. Status choices are Operational, Stand-By, Damaged, and Decommissioned. Whole-column roster/status dropdowns are bounded to populated rows and cached per read. Period 3 currently has no student choices in its source range. The existing public push is a separate bound-script action; the website explicitly performs mirror sync after saves. No real assignment was changed, and no website or school script deployment was performed. An authenticated integration save against a designated test item remains to be completed after deployment.
+
+Run `node --test tests/inventory.test.mjs` for role checks, dropdown mapping, read-only cells, revision conflicts, clearing assignments, audit writes, request validation, draft handling, and logout privacy. Run `npm test` for repository checks.
+
+## Equipment register and serial numbers
+
+The Director View includes Add equipment, Edit equipment details, and Remove equipment. Equipment mutations check current leadership, duplicate identifiers/serials and record/catalog revisions. Removal requires clear student assignments, preserves a before-image in the hidden audit log, and clears the source row instead of deleting it or shifting other rows. Generated equipment-number formulas are materialized to their current displayed identifiers before identity mutations so a change cannot cascade through subsequent devices. New rows copy validation only, never another student’s assignments. A Serial Number column is added to ordinary equipment tabs only when a serial is first entered.
+
+Computer serials and 3D printers use the existing Equipment Inventory workbook `1dRyHDG8UbdjaOyQVXaGWS6UoqiEJr5uOg2LUQPM_rEY`. Computers read LaptopInventory: station in B, the actual barcode/serial in C, and paired lookup text in E. Timestamp and submitter email columns are never returned to the website. Computer station/serial edits update E with the paired value consumed by Computer Look-up; its independently sorted station and barcode import columns do not establish station/serial pairs. Printers preserve Make and support BSD/manufacturer serials. Computer station removal or renaming also checks active laptop assignments.
+
+## October 22 testing release
+
+Deployed the additive school bridge as version 77, preserving the other live script files. Promoted Vercel deployment `dpl_8bZhZjBzxCQg4LAtAangGvJseR9G` to gknest.org. Live `/inventory` Director View now links to `/inventory-management`. Anonymous access to `/api/inventory` correctly requires sign-in. The focused inventory and computer lookup suite now has 30 passing tests. The broader repository suite retains three failures in untouched resource/menu tests. Authenticated browser verification confirmed real kit and computer/printer registers. A temporary NEST-WEB-TEST-20261022 printer record was added, its BSD serial edited, and then removed from active inventory; existing assignments were unchanged. The page uses the shared NEST profile session without a second sign-in button, and the standard charcoal/orange site palette.
+
+The follow-up palette/profile update is deployed as `https://project-vqtkt-fidl232nq-mario-penalvers-projects.vercel.app`, aliased to gknest.org. Live radio public-lookup synchronization completed successfully. Authenticated source reads and the complete temporary equipment add → serial edit → removal flow were verified through the live website.

@@ -1,4 +1,5 @@
-import {COOKIE,cookies,validToken,accountEmail} from '../lib/nest-auth.mjs';
+import {senderArchiveHistory} from '../lib/email-delivery-history.mjs';
+import {COOKIE,cookies,validToken,accountEmail,bridge} from '../lib/nest-auth.mjs';
 import {emailIdentity} from '../lib/email-identity.mjs';
 import {withDiagnostics} from '../lib/diagnostics.mjs';
 import {emailSenderKey,emailContent,postmarkRead} from '../lib/postmark-email.mjs';
@@ -16,10 +17,11 @@ async function handler(req,res){
  const session=cookies(req)[COOKIE];if(!validToken(session))return res.status(401).json({error:'Sign in to see your sent email.'});
  const requestId=req.query?.requestId,offset=Number(req.query?.offset||0);
  if(requestId!==undefined&&!validToken(requestId)||!Number.isInteger(offset)||offset<0||offset>9500)return res.status(400).json({error:'Choose a valid history page.'});
- if(!process.env.POSTMARK_SERVER_TOKEN)return res.status(503).json({error:'Email history is not configured.'});
  try{
   const identity=await emailIdentity(req,res,session);if(identity.status!==200||!accountEmail(identity.email))return res.status(401).json({error:'Your NEST sign-in expired.'});
   const actor=emailSenderKey(identity.email),stream=process.env.POSTMARK_MESSAGE_STREAM||'broadcast';
+  const saved=await senderArchiveHistory({session,identity:identity.email,actor,requestId,offset,statusOnly:req.query?.action==='status',bridge,postmarkRead});if(saved)return res.status(200).json(saved);
+  if(!process.env.POSTMARK_SERVER_TOKEN)return res.status(503).json({error:'Email history is not configured.'});
   const query={count:'500',offset:String(requestId?0:offset),messagestream:stream,metadata_nestActor:actor,...(requestId?{tag:'nest-'+requestId}:{})};
   const result=await postmarkRead('/messages/outbound',query),messages=ownMessages(result,actor,requestId);
   if(requestId){

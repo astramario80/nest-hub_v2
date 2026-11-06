@@ -83,6 +83,6 @@ test('an unconfirmed permanent archive prevents the provider send',async()=>{con
 
 test('documented batch rejection without To preserves successful recipients and assigns ordered outcomes',async()=>{
  const old=globalThis.fetch;globalThis.fetch=async()=>new Response(JSON.stringify([{To:recipient,ErrorCode:0,MessageID:'id'},{ErrorCode:406,Message:'Inactive recipient'}]));
- try{const result=await submitPostmark([{To:recipient},{To:replyTo}]);assert.equal(result.state,'partial');assert.equal(result.accepted,1);assert.equal(result.rejected,1);assert.deepEqual(result.outcomes,[{email:recipient,messageId:'id',errorCode:0},{email:replyTo,messageId:null,errorCode:406}]);}finally{globalThis.fetch=old;}
+ try{const result=await submitPostmark([{To:recipient},{To:replyTo}]);assert.equal(result.state,'partial');assert.equal(result.accepted,1);assert.equal(result.rejected,1);assert.deepEqual(result.outcomes,[{email:recipient,messageId:'id',errorCode:0,errorMessage:''},{email:replyTo,messageId:null,errorCode:406,errorMessage:'Inactive recipient'}]);}finally{globalThis.fetch=old;}
  const rejected=await api({provider:[{ErrorCode:406,Message:'Inactive recipient'}]});assert.equal(rejected.res.data.state,'rejected');assert.equal(rejected.res.data.rejected,1);
 });

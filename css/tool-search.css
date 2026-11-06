@@ -1,0 +1,29 @@
+.home-dashboard .tool-search {
+    flex: 0 0 100%;
+    min-width: 0;
+    margin: 0 auto;
+    color: #f5f5f5;
+}
+.tool-search-form, .tool-search-results { max-width: 760px; margin-left: auto; margin-right: auto; }
+.tool-search-form label { display: block; margin-bottom: 10px; color: #ffbc7d; font-size: 1rem; font-weight: 700; }
+.tool-search-field { display: flex; align-items: center; gap: 12px; padding: 0 16px; border: 1px solid #a56a3e; border-radius: 14px; background: #202226; box-shadow: 0 5px 20px #0003; }
+.tool-search-field:focus-within { outline: 3px solid #ffbc7d; outline-offset: 3px; }
+.tool-search-field svg { flex: 0 0 22px; width: 22px; height: 22px; fill: none; stroke: #ffbc7d; stroke-width: 2; }
+.tool-search-field input { flex: 1; min-width: 0; width: 100%; padding: 17px 0; border: 0; border-radius: 0; outline: none; background: transparent; color: #fff; font: inherit; font-size: 1rem; }
+.tool-search-field input::placeholder { color: #bebfc4; opacity: 1; }
+.tool-search-field input::-webkit-search-cancel-button { display: none; }
+.tool-search-field button { min-height: 44px; padding: 8px; border: 0; border-radius: 6px; background: transparent; color: #ffbc7d; font: inherit; font-size: .85rem; cursor: pointer; }
+#tool-search-hint { margin: 10px 0 0; color: #c4c4c4; font-size: .8rem; line-height: 1.5; }
+.tool-search-results { margin-top: 16px; padding: 16px; border: 1px solid #ffffff26; border-radius: 14px; background: #202226; }
+.tool-search-status { color: #c4c4c4; font-size: .85rem; line-height: 1.5; }
+.tool-search-results ul { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.tool-search-results a { display: flex; flex-direction: column; gap: 5px; height: 100%; padding: 14px; border-radius: 8px; background: #ffffff08; color: #fff; text-decoration: none; overflow-wrap: anywhere; }
+.tool-search-results a:hover { background: #ffffff14; color: #ffbc7d; }
+.tool-search-results a:focus-visible { outline: 3px solid #ffbc7d; outline-offset: 1px; }
+.tool-search-results strong { font-size: .9rem; line-height: 1.4; }
+.tool-search-results small { color: #c4c4c4; font-size: .75rem; line-height: 1.4; }
+@media (max-width: 600px) {
+    .tool-search-results ul { grid-template-columns: minmax(0, 1fr); }
+    .tool-search-field { gap: 8px; padding: 0 12px; }
+    .tool-search-field input { font-size: 16px; }
+}

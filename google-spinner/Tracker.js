@@ -25,7 +25,9 @@ function trackerSave_(data) {
 }
 const LEADERSHIP_DATABASE = '1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I';
 function manager_(email,period) {
+  if(staffIdentity_(email))return staffManager_(email,period);
   const rows=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
+  if(nestExecutive_(email,rows))return true;
   return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period && ['division manager','assistant manager'].includes(String(row[2]||'').trim().toLowerCase()) && email_(row[4])===memberEmail_(email,period));
 }
 function grantRecord_(store,key,now) {
@@ -48,6 +50,7 @@ function editorGrant_(email,period,seen) {
   return parent&&grant.expires<=parent.expires?grant:null;
 }
 function trackerRole_(email,period) {
+  if(staffIdentity_(email)){const role=staffRole_(email,period);return role==='viewer'?'student':role==='administrator'?'administrator':role==='manager'?'manager':'student';}
   if(period==='CTSO')return roboticsAccess_(email)?(OWNER_EMAILS.includes(email_(email))?'administrator':'manager'):'student';
   if(globalAccess_(email))return 'administrator';
   if(manager_(email,period))return 'manager';
@@ -59,6 +62,7 @@ function grantEditor_(r,s,store,now) {
   if(!authority&&!parent)return {status:403};
   const email=email_((r.change||{}).email);
   if(email.length>254 || !/^[a-z0-9._%+-]+@(students\.)?bethelsd\.org$/.test(email)||email===email_(s.email))return {status:400};
+  if(r.change.type==='grant'&&staffIdentity_(email))return {status:403};
   const key='grant:'+r.period+':'+hash_(email);
   const existing=grantRecord_(store,key,now);
   if(!authority&&existing&&email_(existing.issuer)!==email_(s.email))return {status:403};

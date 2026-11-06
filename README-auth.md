@@ -21,3 +21,47 @@ The administrator page is `/admin-accounts`. Only active sessions for `mario@mem
 ## Operational note
 
 Apps Script Script Properties are suitable for the present school deployment, but they have finite storage. Monitor account count and session volume as NEST grows. A dedicated session store is recommended before much larger scale.
+
+## Recovery transport repair — October 2026
+
+Recovery request, verification, and reset calls allow 55 seconds within the existing 60-second account function budget. The school service records recovery delivery state so repeating the same challenge/code cannot send a second email; uncertain delivery remains marked and is not resent. Verification tickets bind the original challenge and code digest so an identical interrupted verification can return the same permitted usernames without consuming the challenge twice. Replay rechecks active account and recovery-email association; expiry and one-use password reset remain enforced. Only recovery request and verification may restart after transport errors; password-reset submissions are never automatically repeated. Account diagnostics record sanitized transport stage/error codes.
+
+32 focused account/auth tests passed; the full suite passed 506/509, with the three navigation/menu checks already failing before this repair. No real account recovery emails or password resets were used as tests.
+
+Published school service version 99 and website deployment `dpl_8iNGzPQZ6wzqqouQ2eqASvB6GY9o`. The staged production source matched all 241 original source files except `api/account.mjs` and `lib/nest-auth.mjs`. A generated non-account canary completed recovery request in 3.91 seconds; an invalid-code verification returned 401 in 3.49 seconds. No email was sent or account password changed.
+
+A public-domain probe caught a Google signed-result download timeout after the initial staged probe passed. Recovery now caps restartable school submissions at 18 seconds and individual signed-result downloads at 8 seconds, preserving the 55-second overall budget so safe recovery replay can obtain a fresh result URL. Other actions retain their existing result-download budgets. The revised staged build `dpl_BazD7ka4KWqS4oZtpxXM7FXWtbAY` passed its request probe in 8.20 seconds; 85 shared-bridge regression tests also passed.
+
+The revised public `gknest.org` recovery probe returned HTTP 200 with a challenge cookie in 17.26 seconds after promotion. This probe used a generated address with no account, so it sent no email and changed no credentials. The affected student’s current username remains needed to reconcile his profile with the older stored entry; the recovery transport repair does not reclassify accounts.
+
+### Recovery guidance for students who have not registered
+
+The recovery page now offers a Create account button that opens the existing verified-email registration flow. Successful recovery-request replies also explain that students who have never registered need to create their NEST username and password, and direct existing users to check their recovery address or ask their teacher if no email arrives. Known and unknown addresses continue to receive the same response. Transport failures remain service errors; no account records or credentials changed.
+
+Released as `dpl_4Ev2nWx2vbKkvkikDTz3PDeJuc9D`. All 17 focused account/UI/navigation checks passed, along with a DOM check that the button opens `register-request`. The public profile and script returned HTTP 200 and contained the updated guidance/button handler. The protected staged page check returned Vercel's preview shell rather than the application; public-domain verification confirmed the released content. The affected student's roster email has no matching current account; identifiable account-support details are omitted from this public source repository.
+
+### NEST Communications sender for account mail
+
+Recovery and new-account verification now send through the existing NEST Communications Postmark server (21154259), from `NEST Communications <communications@gknest.org>`, using the `outbound` transactional stream. Announcement subscriptions do not control these requested account messages. Account messages disable open/link tracking and are not written to the group-email archive or student sent history. No Google MailApp fallback is used for these two actions.
+
+The shared Vercel bridge attaches the existing server-only Postmark credential only to `auth-register-request` and `auth-recover-request`, and only when production mail is enabled with the expected sender. The authenticated school runtime uses it for the provider call without storing it in Sheets, challenge state, diagnostics or responses. The school service still controls eligible accounts, recipient addresses, rate limits, code expiry and recovery replay safety. Provider rejection, malformed replies and transport uncertainty fail closed; uncertain recovery attempts do not send again on replay.
+
+Released school version 100 and website `dpl_4PJLLpyg12apxce115gUhZ57WYvL`. The staged website source differs from the previous release only in `lib/nest-auth.mjs` and `email-privacy.html`; only account-mail code changed in the pulled school monolith. All 121 focused account/auth, group-email, weather and division regression checks passed. Postmark accepted a technical sender canary to its blackhole test address using the actual mail helper payload. The public unknown-account recovery probe returned HTTP 200 in 3.85 seconds and created the expected challenge cookie; it sent no email. No real student recovery message or password reset was used for testing. The public email privacy page documents account messages. No account error/warning logs appeared in the post-release scan.
+
+### Administrator account directory and signup assistance (2026-11-02)
+
+`/profile#accounts` now lists all active registered student and staff accounts, including district registrations and manual accounts. Owner authorization is checked by both `/api/account` and the school service. Search matches name, email, username, and recovery address; type filters and last-name/first-name sorting help locate records. Names come from current rosters, leadership records, and staff mail links; missing source names are marked unavailable. The owner can expand stored password hash/salt details. No readable passwords are available. Created timestamps use `YYYY-MM-DD-HH:mm:ss` in America/Los_Angeles.
+
+Administrator Notes are stored as literal RAW text in column L of StudentNESTAccess (1,000 characters maximum). Notes are keyed to the stable account identity, remain attached through username edits and sheet sorts, and never change Session Version. Registration housekeeping sorts A:L to preserve notes. Notes are not included in student/staff profile responses.
+
+The same tab has **Reset signup attempts** for a recognized email, including people who have not yet registered. It clears only that email’s signup email limit/cooldown and resets attempts on its unexpired signup challenges. A logged, ten-minute email-specific exception allows signup past a saturated school/shared-IP limit; the normal email quota, one-minute cooldown, code verification, five-code-attempt limit, roster eligibility, and existing-account checks remain. Other emails, sign-in limits, recovery limits, credentials, and sessions are unaffected. The reset does not send email. Registered addresses are directed to sign-in/recovery.
+
+### Staff delegation — November 2026
+
+The owner profile’s Accounts tab includes Staff access & division delegation. Students continue to register as basic roster members; existing student leadership assignments apply. Any verified @bethelsd.org staff address may register without being listed in the old staff mail-link directory. Directory membership no longer grants broad website access. New staff have no delegated divisions until the owner assigns access.
+
+The owner may save permissions before registration: Basic clears delegation; Division assigns Viewer or Manager separately to periods 1–5, 7, and Robotics; Website admin grants access across all divisions and teaching workspaces. Viewers use ordinary student visibility and cannot inherit a staff leadership/editor grant to bypass their assignment. Managers receive the division’s tracker, hiring, meetings/slides, weather, safety and assigned service-ticket permissions. Global inventory/purchasing administration remains an admin capability. Account credentials, account management, diagnostics, and staff delegation remain owner-only. Staff cannot promote themselves or other staff through student tracker editing grants.
+
+Grants are owner-issued Script Properties records keyed to the staff email, separate from account credentials and rosters. Every protected access checks the current active account and live grant. Permission changes increment Session Version to revoke existing sessions. The school service forwards a validated delegation snapshot to Control Center; its existing division worker reconciles native Google slide readers/editors, including removals. Google sharing is asynchronous; the save result reports a queue failure and asks the owner to save again to retry. No invitation email is sent.
+
+Release requires deploying the Control Center’s NestDivisionWeb/DivisionSlideAccess changes, the school runtime, and then the website. Preserve all other live files and existing deployment identities. No real staff grants or student accounts should be created for QA.

@@ -6,15 +6,19 @@
     <title>NEST™ Menu</title>
     <script src="/js/doughnut-menu.js?v=background-2" async></script>
     <link rel="stylesheet" href="css/styles.css?v=qr-click-1">
-    <link rel="stylesheet" href="css/revision.css">
+    <link rel="stylesheet" href="css/revision.css?v=stable-gears-20261102">
+    <link rel="stylesheet" href="/css/tool-search.css?v=1">
     <link rel="stylesheet" href="css/doughnut-barometer.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/resource-viewer.css">
   <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1">
   <link rel="stylesheet" href="/css/division-workspace.css">
 <meta name="google-site-verification" content="c_v8HZ8YBy4nh7IkqO8wrXx_DxF9eIRU9U0AwFt49DA" />
+    <link rel="stylesheet" href="/css/marketing-film.css?v=1">
 </head>
 <body>
+    <div class="home-film" hidden aria-hidden="true"><div class="home-film-track"></div></div>
+    <button class="home-film-toggle" type="button" hidden aria-pressed="false">Ⅱ Pause NEST moments</button>
     <div class="bg-watermark"></div>
         <header>
         <div class="logo-container">
@@ -45,6 +49,21 @@
     </header>
 
     <main class="dashboard home-dashboard" style="margin-bottom: 60px;">
+        <section class="tool-search" aria-label="Find a tool" hidden>
+            <form class="tool-search-form" role="search">
+                <label for="tool-search-input">Find a tool</label>
+                <div class="tool-search-field">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
+                    <input id="tool-search-input" type="search" placeholder="Search tools, resources, and more…" autocomplete="off" aria-describedby="tool-search-hint" aria-controls="tool-search-results">
+                    <button type="reset" hidden>Clear</button>
+                </div>
+                <p id="tool-search-hint">Try “printer,” “bell schedule,” or “lab pass.”</p>
+            </form>
+            <div class="tool-search-results" id="tool-search-results" hidden>
+                <p class="tool-search-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                <ul aria-label="Matching tools"></ul>
+            </div>
+        </section>
         <div class="doughnut-menu-row">
         <a id="doughnut-menu-link" class="doughnut-menu-link" href="/doughnut-barometer" hidden aria-label="Open Doughnut Barometer">
             <span class="doughnut-menu-icon" aria-hidden="true">🍩</span>
@@ -85,6 +104,8 @@
                 <div class="gear-group disclosure">
                     <button class="gear-group-trigger" aria-expanded="false">🤝 Leadership <span class="caret">▶</span></button>
                     <div class="gear-group-links">
+                        <a href="/safety">🛡️ Safety</a>
+                        <a href="/purchasing">📦 Inventory &amp; Purchasing</a>
                         <a href="/billboards">🎬 Billboard Tool</a>
                         <a href="/finished-list">✅ Finished List</a>
                         <a href="/parking-lot">🚦 Parking Lot</a>
@@ -95,7 +116,7 @@
                     <button class="gear-group-trigger" aria-expanded="false">⚙️ Equipment & Services <span class="caret">▶</span></button>
                     <div class="gear-group-links">
                         <a href="/inventory">📦 Inventory Lookup</a>
-                        <a href="https://script.google.com/macros/s/AKfycbwyuQy5O6Flzf2yGH7wCmj3JYPVMysvDKCqEJhttXuBRSpyGIGHAKNNlEJiVlswduNfcw/exec" target="_blank">📝 NEST Request</a>
+                        <a href="/nestrequest"><img class="menu-ico" src="/assets/nest-request-icon.svg" alt=""> NEST™ Request</a>
                         <a href="/print-queue">🛠️ Fabrication</a>
                         <a href="/service">🛠️ Service Request</a>
                     </div>
@@ -146,6 +167,7 @@
             <span class="gear-hint">Explore <span aria-hidden="true">＋</span></span></button>
             <div class="gear-links" id="gear-3">
                 <a href="/divisions">🏢 Division HQ</a>
+                <a href="/triphub">🚌 <span style="color:#E87722">NEST™</span> <span style="color:#fff">TripHub</span><span style="color:#E87722">.</span></a>
 
                 <div class="gear-group disclosure">
                     <button class="gear-group-trigger" aria-expanded="false">🤝 Leadership & Management <span class="caret">▶</span></button>
@@ -159,6 +181,7 @@
                 <div class="gear-group disclosure">
                     <button class="gear-group-trigger" aria-expanded="false">🤖 NEST™ Robotics <span class="caret">▶</span></button>
                     <div class="gear-group-links">
+                        <a href="/join-robotics">🤖 Join the Robotics Team</a>
                         <a href="https://docs.google.com/forms/d/e/1FAIpQLScsUtR2Gg-dq8xUl-7urF65T4ffiTefeGQlevGGyW8gNOjBXg/viewform" target="_blank">📋 POW Form</a>
                         <a href="https://my.firstinspires.org/Dashboard/" target="_blank" rel="noopener noreferrer" data-resource-exit="My FRC Dashboard">🏎️ FRC Dashboard</a>
                         <a href="https://auth.band.us/login_page?next_url=https%3A%2F%2Fwww.band.us%2Fhome%3Freferrer%3Dhttps%253A%252F%252Fwww.band.us%252F" target="_blank">💬 NEST Robotics Band</a>
@@ -190,7 +213,7 @@
 
         <footer class="site-footer">
         <div class="footer-content">
-            <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+            <span class="copyright">Copyright © <span id="current-year"></span> by Mario Peñalver, MA MAE</span>
             <div class="footer-links">
                 <!-- Help & Support Dropdown -->
                 <div class="footer-dropdown">
@@ -209,7 +232,8 @@
                         <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
                         <a href="tel:2538006221">253.800.6221</a>
                         <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
-                        <a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+                        <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
                     </div>
                 </div>
             </div>
@@ -219,8 +243,11 @@
     <script src="js/nest-auth.js"></script>
   <script src="js/main.js"></script>
     <script src="js/doughnut-announcement.js"></script>
-    <script src="js/disclosures.js"></script>
+    <script src="js/disclosures.js?v=gear-hover-20261103"></script>
+    <script src="/js/sop-tools.js?v=1"></script>
+    <script src="/js/tool-search.js?v=2"></script>
     <script src="js/bell.js"></script>
   <script src="/js/resource-viewer.js?v=frc-exit-1"></script>
+    <script src="/js/marketing-film.js?v=session-expiry-20261104"></script>
 </body>
 </html>

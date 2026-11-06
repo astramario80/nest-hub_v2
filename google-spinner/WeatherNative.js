@@ -4,21 +4,22 @@ const WEATHER_STUDENT_DIRECTORY='12XogWM3af3PLIvEyrFR39hzkI0kEmfiCZkr66y3eDcU';
 const WEATHER_COUNSELOR_PAGE='https://gkhs.bethelsd.org/counseling-career-centers/counseling-centers';
 const WEATHER_NATIVE_PERIODS=['Advisory','1','2','3','4','5','7','CTSO'];
 const WEATHER_NATIVE_HEADERS=['Report ID','Timestamp','School year','Trimester','Name','Email','Period','Division','Emotion','Emotion family','Pacing','Grit','Safety','What is working','What can we change'];
-function weatherOwner_(identity){return OWNER_EMAILS.includes(email_(identity));}
+function weatherOwner_(identity){return websiteAdmin_(identity);}
 function weatherPeriod_(value){return String(value||'').replace(/^(period|division)\s*/i,'').trim().replace(/^advisory$/i,'Advisory').replace(/^ctso$/i,'CTSO');}
 function weatherLeaders_(){return (typeof nestAccessValues_==='function'?nestAccessValues_:Sheets.Spreadsheets.Values.get)(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];}
 function weatherLeadership_(identity,period,leaders,alerts){
  if(weatherOwner_(identity))return true;
+ if(staffIdentity_(identity))return staffManager_(identity,period);
  const address=memberEmail_(identity,period);
  return leaders.some(row=>weatherPeriod_(row[0])===period&&email_(row[4])===address&&
-  (alerts?/^(division manager|partner liaison|parnter liaison)$/i:/^(division manager|assistant manager|partner liaison|parnter liaison)$/i).test(String(row[2]||'').trim()));
+  /^(division manager|assistant manager|partner liaison|parnter liaison)$/i.test(String(row[2]||'').trim()));
 }
 function weatherStore_(create){
  const props=PropertiesService.getScriptProperties();let id=props.getProperty('weather-native-store');if(id)return id;if(!create)throw new Error('Weather storage has not been initialized');
  const lock=LockService.getScriptLock();if(!lock.tryLock(15000))throw new Error('Weather storage is busy');
  try{ id=props.getProperty('weather-native-store');if(id)return id;
   const book=Sheets.Spreadsheets.create({properties:{title:'NEST Private Weather Reports',timeZone:'America/Los_Angeles'},sheets:[{properties:{title:'Reports',gridProperties:{frozenRowCount:1}}},{properties:{title:'Alerts',gridProperties:{frozenRowCount:1}}},{properties:{title:'Confirmations',gridProperties:{frozenRowCount:1}}}]});id=book.spreadsheetId;
-  Sheets.Spreadsheets.Values.batchUpdate({valueInputOption:'RAW',data:[{range:"'Reports'!A1:O1",values:[WEATHER_NATIVE_HEADERS]},{range:"'Alerts'!A1:J1",values:[['ID','Timestamp','Period','Student','Emotion','Family','Actor','Test','Sequence','Student surname']]},{range:"'Confirmations'!A1:F1",values:[['ID','Timestamp','Actor','Draft','Emotion','Alerted']]}]},id);
+  Sheets.Spreadsheets.Values.batchUpdate({valueInputOption:'RAW',data:[{range:"'Reports'!A1:O1",values:[WEATHER_NATIVE_HEADERS]},{range:"'Alerts'!A1:K1",values:[['ID','Timestamp','Period','Student','Emotion','Family','Actor','Test','Sequence','Student surname','Requested recipients']]},{range:"'Confirmations'!A1:G1",values:[['ID','Timestamp','Actor','Draft','Emotion','Alerted','Period']]}]},id);
   props.setProperty('weather-native-store',id);return id;
  }finally{lock.releaseLock();}
 }
@@ -27,8 +28,13 @@ function weatherStudent_(identity,period){
  const address=memberEmail_(identity,period);if(!districtEmail_(address))return null;
  const rows=WEATHER_DIRECTORY_ROWS||(WEATHER_DIRECTORY_ROWS=Sheets.Spreadsheets.Values.get(WEATHER_STUDENT_DIRECTORY,"'CombinedStudentList'!A2:E1000").values||[]);
  const matches=rows.filter(row=>email_(row[2])===address&&weatherPeriod_(row[3])===period);
- if(matches.length!==1)return null;const row=matches[0];
- return {name:String(row[0]||'').trim(),email:address,period,division:String(row[4]||period).trim(),lastName:String(row[0]||'').split(',')[0].trim()};
+ // A student can have multiple courses in the same period. Course labels do
+ // not make a second identity; conflicting names or student IDs still do.
+ const distinct=new Map(matches.map(row=>[JSON.stringify([String(row[0]||'').trim(),String(row[1]||'').trim()]),row]));
+ if(distinct.size!==1)return null;const row=distinct.values().next().value;
+ const labels=new Set(matches.map(row=>String(row[4]||period).trim()));
+ const division=labels.size===1?labels.values().next().value:period==='CTSO'?'NEST Robotics':period==='Advisory'?'Advisory':'Division '+period;
+ return {name:String(row[0]||'').trim(),email:address,period,division,lastName:String(row[0]||'').split(',')[0].trim()};
 }
 const WEATHER_PREVIEW_SURNAMES=['Anderson','Clíné','Garcia','Johnson','Miller','Penalver','Williams'];
 function weatherPreviewStudent_(identity,period,previewSurname){
@@ -73,36 +79,54 @@ function weatherCounselor_(student){
 }
 function weatherSetup_(){
  const id=weatherStore_(true),props=PropertiesService.getScriptProperties();
- if(props.getProperty('weather-schema')!=='3'){Sheets.Spreadsheets.Values.update({values:[['Grit']]},id,"'Reports'!L1",{valueInputOption:'RAW'});Sheets.Spreadsheets.Values.update({values:[['Student surname']]},id,"'Alerts'!J1",{valueInputOption:'RAW'});props.setProperty('weather-schema','3');}
+ if(props.getProperty('weather-schema')!=='4'){Sheets.Spreadsheets.Values.update({values:[['Grit']]},id,"'Reports'!L1",{valueInputOption:'RAW'});Sheets.Spreadsheets.Values.update({values:[['Student surname','Requested recipients']]},id,"'Alerts'!J1",{valueInputOption:'RAW'});Sheets.Spreadsheets.Values.update({values:[['Requested recipients']]},id,"'Alerts'!K1",{valueInputOption:'RAW'});Sheets.Spreadsheets.Values.update({values:[['Period']]},id,"'Confirmations'!G1",{valueInputOption:'RAW'});props.setProperty('weather-schema','4');}
  if(!ScriptApp.getProjectTriggers().some(t=>t.getHandlerFunction()==='weatherRefreshCounselors_'))ScriptApp.newTrigger('weatherRefreshCounselors_').timeBased().everyDays(1).atHour(5).create();
  const saved=PropertiesService.getScriptProperties().getProperty('weather-counselors');if(!saved||Date.now()-Date.parse(JSON.parse(saved).checkedAt)>86400000)weatherRefreshCounselors_();
 }
 function weatherConfirmation_(identity,draft){
- const id=hash_(identity+':'+draft),rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Confirmations'!A2:F20000").values||[];
+ const id=hash_(identity+':'+draft),rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Confirmations'!A2:G20000").values||[];
  if(rows.length>=19999)throw new Error('Confirmation storage requires pagination upgrade');
- const row=rows.find(x=>x[0]===id);return row?{emotion:String(row[4]),alerted:row[5]===true||String(row[5]).toLowerCase()==='true'}:null;
+ const row=rows.find(x=>x[0]===id);return row?{emotion:String(row[4]),period:String(row[6]||''),alerted:false}:null;
 }
-function weatherAlert_(identity,student,emotion,draft,test){
- const store=PropertiesService.getScriptProperties(),lock=LockService.getScriptLock();
+function weatherConfirm_(identity,student,emotion,draft){
+ const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};
+ try{
+  const prior=weatherConfirmation_(identity,draft);
+  if(prior)return {status:200,confirmed:prior.emotion===emotion.id&&prior.period===student.period,alerted:false};
+  Sheets.Spreadsheets.Values.append({values:[[hash_(identity+':'+draft),new Date().toISOString(),identity,draft,emotion.id,false,student.period]]},weatherStore_(false),"'Confirmations'!A:G",{valueInputOption:'RAW'});
+  return {status:200,confirmed:true,alerted:false};
+ }finally{lock.releaseLock();}
+}
+function weatherAlert_(identity,student,emotion,draft,test,audience){
+ if(!Array.isArray(audience)||!audience.length||audience.length>4||audience.some(x=>!['owner','manager','assistant','liaison'].includes(x)))return {status:400};
+ const selected=[...new Set(audience)].sort(),store=PropertiesService.getScriptProperties(),lock=LockService.getScriptLock();
  if(!lock.tryLock(15000))return {status:503};
  try{
-  const prior=weatherConfirmation_(identity,draft);if(prior)return {status:200,confirmed:prior.emotion===emotion.id,conflict:prior.emotion!==emotion.id,alerted:prior.alerted};
+  const prior=weatherConfirmation_(identity,draft);if(!prior||prior.emotion!==emotion.id||prior.period!==student.period)return {status:409};
   const id=hash_(identity+':'+draft),now=new Date().toISOString();
-  if(emotion.charged){
-   const rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Alerts'!A2:J20000").values||[];
-   if(rows.length>=19999)throw new Error('Alert storage requires pagination upgrade');
-   const existing=rows.find(row=>row[0]===id);
-   if(existing&&existing[4]!==emotion.answer)return {status:409};
-   if(!existing){
-    const latest=rows.filter(row=>row[6]===identity).at(-1);if(latest&&Date.now()-Date.parse(latest[1])<10000)return {status:429};
-    const sequence=Math.max(Number(store.getProperty('weather-alert-latest')||0),...rows.map(row=>Number(row[8])||0))+1;
-    Sheets.Spreadsheets.Values.append({values:[[id,now,student.period,student.name,emotion.answer,emotion.family,identity,test===true,sequence,student.lastName||'']]},weatherStore_(false),"'Alerts'!A:J",{valueInputOption:'RAW'});
-    store.setProperty('weather-alert-latest',String(sequence));
-   }else store.setProperty('weather-alert-latest',String(Math.max(Number(store.getProperty('weather-alert-latest')||0),Number(existing[8])||0)));
+  const rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Alerts'!A2:K20000").values||[];
+  if(rows.length>=19999)throw new Error('Alert storage requires pagination upgrade');
+  const existing=rows.find(row=>row[0]===id);
+  if(existing){
+   if(existing[4]!==emotion.answer||existing[10]!==JSON.stringify(selected))return {status:409,error:'Support was already requested for this check-in. Start a new check-in to make a different request.'};
+   store.setProperty('weather-alert-latest',String(Math.max(Number(store.getProperty('weather-alert-latest')||0),Number(existing[8])||0)));
+   return {status:200,notified:true,audience:selected};
   }
-  Sheets.Spreadsheets.Values.append({values:[[id,now,identity,draft,emotion.id,emotion.charged]]},weatherStore_(false),"'Confirmations'!A:F",{valueInputOption:'RAW'});
-  return {status:200,confirmed:true,alerted:emotion.charged};
+  const latest=rows.filter(row=>row[6]===identity).at(-1);if(latest&&Date.now()-Date.parse(latest[1])<10000)return {status:429};
+  const sequence=Math.max(Number(store.getProperty('weather-alert-latest')||0),...rows.map(row=>Number(row[8])||0))+1;
+  Sheets.Spreadsheets.Values.append({values:[[id,now,student.period,student.name,emotion.answer,emotion.family,identity,test===true,sequence,student.lastName||'',JSON.stringify(selected)]]},weatherStore_(false),"'Alerts'!A:K",{valueInputOption:'RAW'});
+  store.setProperty('weather-alert-latest',String(sequence));
+  return {status:200,notified:true,audience:selected};
  }finally{lock.releaseLock();}
+}
+function weatherAlertVisible_(identity,row,leaders){
+ let audience;try{audience=JSON.parse(row[10]);}catch(_){return false;}
+ if(!Array.isArray(audience)||!audience.length||audience.some(x=>!['owner','manager','assistant','liaison'].includes(x)))return false;
+ if(['true','TRUE'].includes(String(row[7])))return weatherOwner_(identity)&&email_(row[6])===identity;
+ if(weatherOwner_(identity))return audience.includes('owner');
+ const period=String(row[2]),address=memberEmail_(identity,period);
+ return leaders.some(leader=>weatherPeriod_(leader[0])===period&&email_(leader[4])===address&&
+  (audience.includes('assistant')&&/^assistant manager$/i.test(String(leader[2]).trim())||audience.includes('manager')&&/^division manager$/i.test(String(leader[2]).trim())||audience.includes('liaison')&&/^(partner liaison|parnter liaison)$/i.test(String(leader[2]).trim())));
 }
 function weatherNativeRows_(){
  const id=weatherStore_(false),values=Sheets.Spreadsheets.Values.get(id,"'Reports'!A2:O20000",{valueRenderOption:'UNFORMATTED_VALUE'}).values||[];
@@ -202,15 +226,17 @@ function weatherNativeDispatch_(session,r){
   if(!owner)return {status:403};const dates=r.dates;if(!/^20\d\d-20\d\d$/.test(r.year||'')||!Array.isArray(dates)||dates.length!==4||dates.some((d,i)=>!/^20\d\d-\d\d-\d\d$/.test(d)||!Number.isFinite(Date.parse(d))||new Date(d+'T12:00:00Z').toISOString().slice(0,10)!==d||i>0&&d<=dates[i-1]))return {status:400};
   if(Number(r.year.slice(5))!==Number(r.year.slice(0,4))+1||weatherYear_(dates[0])!==r.year||weatherYear_(dates[3])!==r.year)return {status:400};const calendars=weatherCalendars_();calendars[r.year]=dates;store.setProperty('weather-calendars',JSON.stringify(calendars));return {status:200};
  }
- if(operation==='confirm'||operation==='test'){
+ if(operation==='confirm'||operation==='notify'||operation==='test'){
   if(!/^[a-f0-9-]{36}$/.test(r.draft||''))return {status:400};const emotion=WEATHER_EMOTIONS.find(x=>x.id===r.emotion);if(!emotion)return {status:400};
   let student;if(operation==='test'){if(!owner)return {status:403};student={period:WEATHER_NATIVE_PERIODS.includes(r.period)?r.period:'1',name:'TEST — Administrator preview'};}else{student=weatherStudent_(identity,r.period)||weatherPreviewStudent_(identity,r.period,r.previewSurname);if(!student)return {status:403};}
-  const result=weatherAlert_(identity,student,emotion,r.draft,operation==='test'||student.test===true);result.test=operation==='test'||student.test===true;if(result.confirmed)result.counselor=weatherCounselor_(student);return result;
+  const test=operation==='test'||student.test===true;
+  let result;if(operation==='notify')result=weatherAlert_(identity,student,emotion,r.draft,test,r.audience);else {result=weatherConfirm_(identity,student,emotion,r.draft);if(operation==='test'&&result.confirmed)result=weatherAlert_(identity,student,emotion,r.draft,true,['owner']);}
+  result.test=test;if(result.confirmed)result.counselor=weatherCounselor_(student);return result;
  }
  if(operation==='submit'){
   const student=weatherStudent_(identity,r.period)||weatherPreviewStudent_(identity,r.period,r.previewSurname),emotion=WEATHER_EMOTIONS.find(x=>x.id===r.emotion);if(!student)return {status:403};
   if(!emotion||!/^[a-f0-9-]{36}$/.test(r.draft||'')||![r.pacing,r.challenge,r.safety].every(n=>Number.isInteger(n)&&n>=1&&n<=5)||![r.working,r.change].every(x=>typeof x==='string'&&x.length<=5000))return {status:400};
-  const confirmation=weatherConfirmation_(identity,r.draft);if(!confirmation||confirmation.emotion!==emotion.id)return {status:409,error:'Confirm your emotion before submitting.'};
+  const confirmation=weatherConfirmation_(identity,r.draft);if(!confirmation||confirmation.emotion!==emotion.id||confirmation.period!==student.period)return {status:409,error:'Confirm your emotion before submitting.'};
   if(student.test)return {status:200,saved:true,test:true};
   const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};try{
    const id=hash_(identity+':'+r.draft),rows=weatherNativeRows_();if(rows.some(row=>row[0]===id))return {status:200,saved:true};
@@ -221,8 +247,8 @@ function weatherNativeDispatch_(session,r){
  if(operation==='alerts'){
   const leaders=weatherLeaders_(),allowed=WEATHER_NATIVE_PERIODS.filter(p=>weatherLeadership_(identity,p,leaders,true));if(!allowed.length)return {status:200,events:[],eligible:false};
   const latest=Number(store.getProperty('weather-alert-latest')||0),since=Math.max(0,Number(r.since)||0);if(!latest||latest<=since)return {status:200,events:[],eligible:true,cursor:String(since)};
-  const rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Alerts'!A2:J20000").values||[];
-  const events=rows.filter(row=>Number(row[8])>since&&(since>0||Date.parse(row[1])>Date.now()-86400000)&&allowed.includes(String(row[2]))&&(!['true','TRUE'].includes(String(row[7]))||owner&&email_(row[6])===identity)).map(row=>({id:String(row[0]),at:String(row[1]),period:String(row[2]),student:String(row[3]),emotion:String(row[4]),counselor:weatherCounselor_({lastName:String(row[9]||(String(row[3]).includes(',')?String(row[3]).split(',')[0]:''))}),test:['true','TRUE'].includes(String(row[7]))}));
+  const rows=Sheets.Spreadsheets.Values.get(weatherStore_(false),"'Alerts'!A2:K20000").values||[];
+  const events=rows.filter(row=>Number(row[8])>since&&(since>0||Date.parse(row[1])>Date.now()-86400000)&&allowed.includes(String(row[2]))&&weatherAlertVisible_(identity,row,leaders)).map(row=>({id:String(row[0]),at:String(row[1]),period:String(row[2]),student:String(row[3]),emotion:String(row[4]),counselor:weatherCounselor_({lastName:String(row[9]||(String(row[3]).includes(',')?String(row[3]).split(',')[0]:''))}),test:['true','TRUE'].includes(String(row[7]))}));
   return {status:200,eligible:true,events,cursor:String(latest)};
  }
  if(operation==='reports'||operation==='export'){

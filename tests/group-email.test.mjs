@@ -1,3 +1,4 @@
+import {staffContext} from './helpers/staff-context.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -12,7 +13,7 @@ const response=()=>({code:200,setHeader(){},status(c){this.code=c;return this;},
 async function server(access,period="2",audience='division',rosters={}){
  const oldFetch=globalThis.fetch,oldURL=process.env.SPINNER_BRIDGE_URL,oldToken=process.env.SPINNER_BRIDGE_TOKEN,calls=[];
  process.env.SPINNER_BRIDGE_URL='https://bridge.example.test';process.env.SPINNER_BRIDGE_TOKEN='test';
- const school=vm.createContext({PERIODS:Object.fromEntries(['1','2','3','4','5','7','CTSO'].map(p=>[p,p])),divisionSlidesDispatch_:r=>typeof access==='function'?access(r.period):access,districtEmail_:v=>/^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(v||'')?v:'',rows_:p=>(rosters[p]||records.members).map(m=>[m.name,m.email]),memberLeadershipDirectory_:()=>({status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]})});
+ const school=staffContext({PERIODS:Object.fromEntries(['1','2','3','4','5','7','CTSO'].map(p=>[p,p])),divisionSlidesDispatch_:r=>typeof access==='function'?access(r.period):access,districtEmail_:v=>/^[^\s@,;<>]+@(students\.bethelsd\.org|bethelsd\.org)$/.test(v||'')?v:'',rows_:p=>(rosters[p]||records.members).map(m=>[m.name,m.email]),memberLeadershipDirectory_:()=>({status:200,leaders:[{division:'Period 2',position:'Safety Officer',firstName:'Sample',lastName:'Leader',email:records.leaders[0].email},{division:'Period 3',position:'Safety Officer',firstName:'Other',lastName:'Division',email:'other@students.bethelsd.org'}]})});
  vm.runInContext(fs.readFileSync('google-spinner/GroupEmail.js','utf8'),school);
  globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body.action);assert.equal(body.action,'auth-group-email-access');return new Response(JSON.stringify(school.groupEmailAccess_(body)));};
  try{const res=response();await handler({method:'GET',headers:{cookie:'__Host-nest-auth='+'a'.repeat(64)},query:{period,audience}},res);return {res,calls};}
@@ -227,3 +228,12 @@ test('sending without a subject shows an inline requirement, focuses Subject and
   }finally{w.close();}
  }
 });
+
+test('partial-send history link opens the real Sent history tab without resending or losing the message',async()=>{
+ const {w}=ui(false,true);let sends=0;
+ try{await tick();w.fetch=async(url)=>url==='/api/group-email-send'?(sends++,{ok:true,status:200,json:async()=>({state:'partial',accepted:2,rejected:1})}):url.startsWith('/api/group-email-history?')?{ok:true,json:async()=>({messages:[],hasMore:false,nextOffset:0})}:{ok:true,json:async()=>nestRecords};
+ w.eval(fs.readFileSync('js/group-email-history.js','utf8'));const q=s=>w.document.querySelector(s);q('[data-email-group]').value='leadership';q('[data-email-group]').dispatchEvent(new w.Event('change'));q('[data-email-subject]').value='Sample update';q('.group-email-message').textContent='Keep this message';q('[data-email-send]').click();await tick();
+ const link=q('[data-email-status] a');assert.ok(link,q('[data-email-status]').textContent+' / sends='+sends+' / disabled='+q('[data-email-send]').disabled);assert.equal(link.textContent,'View Sent history');assert.equal(link.getAttribute('href'),'/divisions/2?email=sent#communications');assert.match(q('[data-email-status]').textContent,/1 recipient was rejected/);link.click();await tick();assert.equal(q('#email-history-panel').hidden,false);assert.equal(q('#email-history-tab').getAttribute('aria-selected'),'true');assert.equal(w.document.activeElement,q('#email-history-tab'));assert.equal(q('.group-email-message').textContent,'Keep this message');assert.equal(sends,1);
+ }finally{w.close();}
+});
+test('accepted sends also provide a real history link',async()=>{const {w}=await nestMailApp();try{w.document.querySelector('[data-email-send]').click();await tick();assert.equal(w.document.querySelector('[data-email-status] a').textContent,'View Sent history');}finally{w.close();}});

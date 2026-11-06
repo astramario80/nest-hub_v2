@@ -1,0 +1,1 @@
+(()=>{const management=location.pathname==='/service/management';document.documentElement.dataset.serviceArea=management?'management':'client';if(!management&&/^#(?:ticket=|client-relations)/.test(location.hash))location.replace('/service/management'+location.hash);})();

@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Bell Schedule Studio · NEST™</title><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css"><link rel="stylesheet" href="/css/bell-workspace.css"></head><body class="bell-workspace"><header>
+        <div class="logo-container">
+            <a href="/">
+                <img src="/assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
+            </a>
+        </div>
+        <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+            
+            <!-- Quick Links Dropdown -->
+            <div class="header-dropdown">
+                <button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button>
+                <div class="dropdown-content">
+                    <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+                    <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+                    <a href="/hiring">🚀 Join Us</a>
+                    <a href="/weather">🌤️ Weather Report</a>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false">
+                <img src="/assets/qr-code.png" alt="QR Code">
+            </button>
+        </div>
+    </header><main class="bw-wrap"><div class="bw-titlebar"><div><p class="bw-eyebrow">NEST™ / Schedule management</p><h1>Bell Schedule Studio</h1><p>One school day. Every teacher’s timeline.</p></div><div class="bw-actions"><a class="bw-button" href="/bell-schedule">View live schedule ↗</a><button id="bw-download" hidden>Download draft</button><button id="bw-reload" hidden>Reload saved</button><button id="bw-save" class="bw-primary" hidden>Save draft</button></div></div><div class="bw-banner"><span class="bw-badge">DRAFT WORKSPACE</span><span>Build and save schedules here. The live website, Signals, calendars, and slides continue using the current system.</span></div><p id="bw-status" class="bw-status" role="status" aria-live="polite">Opening your schedule workspace…</p><section id="bw-gate" class="bw-gate"><h2>Your schedule workspace</h2><p id="bw-gate-message">Checking owner access…</p><button id="bw-signin" hidden>Sign in to NEST</button><button id="bw-retry" hidden>Try again</button></section><div id="bw-shell" class="bw-shell" hidden><aside class="bw-nav" aria-label="Schedule library"><h2>SCHEDULE LIBRARY <span id="bw-template-count"></span></h2><label><span class="sr-only">Search schedules</span><input id="bw-search" type="search" placeholder="Find a schedule…"></label><div id="bw-library"></div><button id="bw-new-template" class="bw-add">+ New schedule</button></aside><section class="bw-editor"><div class="bw-tabs" role="tablist" aria-label="Schedule management"><button role="tab" aria-selected="true" id="bw-tab-template" aria-controls="bw-panel" data-tab="template">Schedule</button><button role="tab" aria-selected="false" id="bw-tab-dates" aria-controls="bw-panel" data-tab="dates">Dates</button><button role="tab" aria-selected="false" id="bw-tab-teachers" aria-controls="bw-panel" data-tab="teachers">Teachers</button><button role="tab" aria-selected="false" id="bw-tab-history" aria-controls="bw-panel" data-tab="history">History</button></div><div id="bw-panel" class="bw-panel" role="tabpanel" aria-labelledby="bw-tab-template"></div></section><aside class="bw-preview" aria-label="Schedule preview"><div class="bw-preview-header"><p class="bw-eyebrow">BEFORE YOU CONNECT IT</p><h2>Teacher preview</h2><p>See how lunch and assembly assignments shape the day.</p><div class="bw-preview-controls"><label>Date<input id="bw-preview-date" type="date"></label><label>Teacher<select id="bw-preview-teacher"></select></label><label>Lunch<select id="bw-preview-lunch"></select></label><label>Assembly<select id="bw-preview-group"></select></label><label class="bw-check bw-wide"><input id="bw-preview-selected" type="checkbox" checked> Preview selected schedule</label></div></div><div id="bw-preview-body" class="bw-preview-body"></div></aside></div></main><footer class="site-footer">
+        <div class="footer-content">
+            <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+            <div class="footer-links">
+                <!-- Help & Support Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="/computer-lookup">💻 Computer Look-up</a>
+                        <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank">🎫 Tech Ticket</a>
+                        <a href="/weather">🌤️ Weather Report</a>
+                    </div>
+                </div>
+
+                <!-- About Me Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+                        <a href="tel:2538006221">253.800.6221</a>
+                        <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+                        <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer><script src="/js/nest-auth.js"></script><script src="/js/main.js"></script><script type="module" src="/js/bell-workspace.mjs"></script></body></html>

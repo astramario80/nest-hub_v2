@@ -77,3 +77,24 @@ test('sign-in timeout releases the button and shows a retry message',async()=>{
   assert.match(w.document.querySelector('[data-message]').textContent,/took too long.*try again/i);
  }finally{w.close();}
 });
+
+test('secured-page login finishes its UI before notifying tools and ignores a stale initial identity response', async () => {
+ for(const initial of ['me','hiring','failure']){
+  const dom=new JSDOM('<body><div class="header-dropdown"><div class="dropdown-content"></div></div>'+(initial==='hiring'?'<script id="nest-auth-workspace" type="application/json">{"type":"hiring"}</script>':''),{runScripts:'outside-only',url:'https://gknest.org/hiring?period=1'}),w=dom.window;
+  let resolveInitial;const pending=new Promise(resolve=>{resolveInitial=resolve;});
+  const signed={signedIn:true,username:'fixture.student',email:'fixture@students.bethelsd.org',expires:Date.now()+60000};
+  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+  w.fetch=async(url,options)=>options?.method==='POST'?{ok:true,json:async()=>signed}:String(url).startsWith('/api/signals')?{ok:false}:pending;
+  try{
+   w.eval(fs.readFileSync('js/nest-auth.js','utf8'));await Promise.resolve();
+   w.NestAuth.open();let notices=0;
+   w.document.addEventListener('nest-auth-change',()=>{
+    notices++;assert.equal(w.document.querySelector('dialog').open,false);assert.equal(w.document.querySelector('[data-form=login]').hidden,true);assert.match(w.document.querySelector('.dropdown-content').textContent,/fixture.student/);
+   });
+   const form=w.document.querySelector('[data-form=login]');form.elements.username.value='fixture.student';form.elements.password.value='fictional-password';form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(resolve=>setImmediate(resolve));
+   resolveInitial(initial==='failure'?{ok:false}:{ok:initial!=='hiring',status:initial==='hiring'?401:200,json:async()=>({signedIn:false,error:'Sign in.'})});
+   await w.NestAuth.ready;
+   assert.equal(w.NestAuth.identity.username,'fixture.student');assert.equal(notices,1);assert.equal(form.elements.password.value,'');
+  }finally{w.close();}
+ }
+});

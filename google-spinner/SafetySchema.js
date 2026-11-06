@@ -1,0 +1,337 @@
+const SAFETY_FIELDS = [
+  {
+    "column": 5,
+    "label": "Drone firmware up to date?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 6,
+    "label": "Transmitter firmware up to date?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 7,
+    "label": "Is the vehicle free of visible defects?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 8,
+    "label": "Batteries fully charged?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 9,
+    "label": "Remote fully charged?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 10,
+    "label": "Propellers properly tightened?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 11,
+    "label": "Camera responding properly?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 12,
+    "label": "Micro SD card in camera?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 13,
+    "label": "Micro SD card is clear?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 14,
+    "label": "Antennae secured?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 15,
+    "label": "Compass calibrated?",
+    "group": "Mechanical",
+    "options": [
+      "Go",
+      "No-Go",
+      "N/A"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 16,
+    "label": "There are no NOTAMS that would impede my ability to fly safely and uninhibited in my desired flight path.",
+    "group": "Weather & airspace",
+    "options": [
+      "Go",
+      "No-Go"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 17,
+    "label": "Is the current METAR condition providing us with a safe space to carry out our mission?",
+    "group": "Weather & airspace",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 18,
+    "label": "Today's Radio Frequency",
+    "group": "Flight plan",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 19,
+    "label": "Today's Ceiling",
+    "group": "Flight plan",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 20,
+    "label": "Zone take-off location",
+    "group": "Flight plan",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 21,
+    "label": "Zone landing location",
+    "group": "Flight plan",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 22,
+    "label": "Describe your maneuvers before you fly.",
+    "group": "Flight plan",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 23,
+    "label": "List any potential hazards.",
+    "group": "Flight plan",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 24,
+    "label": "I= ILLNESS. Are you sick or feeling under the weather?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 25,
+    "label": "M= MEDICATIONS. Are you on any medication that causes impairment and could interfere with the flight?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 26,
+    "label": "S= STRESS. Are you under any stress or experiencing anxiety that could negatively impact your ability to fly?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 27,
+    "label": "A= ALCOHOL. Have you consumed alcohol in the past 8 hours? Are you hungover?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 28,
+    "label": "F= FATIGUE. Are you too tired to fly?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 29,
+    "label": "E = EMOTION. Are you feeling angry or upset?",
+    "group": "IMSAFE",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "pre"
+  },
+  {
+    "column": 30,
+    "label": "Clearance Code is:",
+    "group": "Clearance",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 36,
+    "label": "Visit the NOTAMS website for alerts or possible flight paths in your area. Paste the most current NOTAM for our area, here.",
+    "group": "Weather & airspace",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 37,
+    "label": "Use the NEST METAR LookUp Tool for weather alerts. Please identify the METAR for our region at this point in time. As a reminder, our nearest Aviation Weather Station is located at Thun Field (KPLU).",
+    "group": "Weather & airspace",
+    "options": null,
+    "mode": "pre"
+  },
+  {
+    "column": 32,
+    "label": "What number is your aircraft?",
+    "group": "Aircraft",
+    "options": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12",
+      "13",
+      "14",
+      "15",
+      "16",
+      "17",
+      "18",
+      "19",
+      "20"
+    ],
+    "mode": "both"
+  },
+  {
+    "column": 3,
+    "label": "Is there anything about the aircraft that needs to be reported for the purpose of maintenance?",
+    "group": "Post-flight",
+    "options": [
+      "Yes",
+      "No"
+    ],
+    "mode": "post"
+  },
+  {
+    "column": 31,
+    "label": "Please describe the issue or concern about your aircraft.",
+    "group": "Post-flight",
+    "options": null,
+    "mode": "post"
+  },
+  {
+    "column": 34,
+    "label": "Describe what may have caused this damage during your mission.",
+    "group": "Post-flight",
+    "options": null,
+    "mode": "post"
+  },
+  {
+    "column": 35,
+    "label": "What would you do differently next time, in order to avoid damage to your vehicle?",
+    "group": "Post-flight",
+    "options": null,
+    "mode": "post"
+  }
+];

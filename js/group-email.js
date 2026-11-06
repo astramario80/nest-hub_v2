@@ -201,18 +201,24 @@
       if(statusTimer||statusChecks>=4)return;
       statusTimer=window.setTimeout(()=>{statusTimer=null;checkSendStatus();},[2000,5000,10000,20000][statusChecks++]);
     }
+    function statusWithHistory(before,after=''){
+      const accessPeriod=['1','2','3','4','5','7','CTSO'].includes(data?.accessPeriod)?data.accessPeriod:'1';
+      const link=document.createElement('a');link.textContent='View Sent history';link.href='/divisions/'+accessPeriod+'?email=sent#communications';link.dataset.emailHistoryLink='true';link.style.color='inherit';link.style.textDecoration='underline';
+      link.addEventListener('click',event=>{const tab=document.getElementById('email-history-tab');if(tab&&identity()){event.preventDefault();tab.click();tab.focus();document.getElementById('email-history-panel')?.scrollIntoView?.({block:'start',behavior:'smooth'});}});
+      status.replaceChildren(document.createTextNode(before),link,document.createTextNode(after));
+    }
     function showSendResult(result,testing){
       mail.delivery=result.state;mail.testing=testing;clearFailure();
       if(result.state==='accepted'){
         stopStatusChecks();document.dispatchEvent(new Event('nest-email-sent'));
-        status.dataset.state='success';status.textContent=testing?'Test email sent to your linked email address.':'Email sent to '+result.accepted+' recipient'+(result.accepted===1?'':'s')+'. Accepted for delivery at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. View it in Sent history.';
+        status.dataset.state='success';if(testing)status.textContent='Test email sent to your linked email address.';else statusWithHistory('Email sent to '+result.accepted+' recipient'+(result.accepted===1?'':'s')+'. Accepted for delivery at '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+'. ','.');
         if(testing){mail.delivery='draft';mail.requestId=newRequestId();}
       }else if(result.state==='partial'){
         document.dispatchEvent(new Event('nest-email-sent'));failure('send',200,'delivery-partial');status.dataset.state='error';
-        status.textContent='Email sent to '+result.accepted+' recipients. '+(result.unconfirmed?result.unconfirmed+' remaining recipient'+(result.unconfirmed===1?' is':'s are')+' unconfirmed.':result.rejected+' recipient'+(result.rejected===1?' was':'s were')+' rejected and did not receive this send.')+' View Sent history. NEST will not resend automatically.';
+        statusWithHistory('Email sent to '+result.accepted+' recipients. '+(result.unconfirmed?result.unconfirmed+' remaining recipient'+(result.unconfirmed===1?' is':'s are')+' unconfirmed.':result.rejected+' recipient'+(result.rejected===1?' was':'s were')+' rejected and did not receive this send.')+' ','. NEST will not resend automatically.');
         if(result.unconfirmed)scheduleStatusCheck();else stopStatusChecks();
       }else if(result.state==='rejected'){
-        stopStatusChecks();failure('send',200,'provider-rejected');status.dataset.state='error';status.textContent='Postmark rejected the message. No recipients were accepted. Your draft is still here; contact a NEST administrator.';
+        stopStatusChecks();document.dispatchEvent(new Event('nest-email-sent'));failure('send',200,'provider-rejected');status.dataset.state='error';statusWithHistory('Postmark rejected the message. No recipients were accepted. ','. Your draft is still here; contact a NEST administrator.');
       }else{
         failure('send',200,'delivery-'+result.state);status.dataset.state='error';status.textContent='Checking send confirmation. Some recipients may already have received this email. NEST will not resend automatically.';scheduleStatusCheck();
       }
@@ -230,7 +236,7 @@
         if(own===generation&&requestId===mail.requestId&&identity()){
           q('[data-email-check]').disabled=false;
           if(['unknown','pending'].includes(mail.delivery)||!q('[data-email-check]').hidden){
-            if(statusChecks>=4&&['unknown','pending'].includes(mail.delivery))status.textContent='Send confirmation is still unavailable. Use Check send status or view Sent history. NEST will not resend automatically.';
+            if(statusChecks>=4&&['unknown','pending'].includes(mail.delivery))statusWithHistory('Send confirmation is still unavailable. Use Check send status or ','. NEST will not resend automatically.');
             scheduleStatusCheck();
           }
         }

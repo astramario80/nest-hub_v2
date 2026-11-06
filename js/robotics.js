@@ -1,11 +1,12 @@
 (() => {
  const root=document.querySelector('.robotics-workspace');if(!root)return;
  const q=selector=>root.querySelector(selector),status=q('[data-robotics-status]'),content=q('[data-robotics-content]');
+ const onboardingDialog=q('[data-robotics-onboarding-dialog]'),onboardingButton=q('[data-robotics-open-onboarding]');
  let data=null,busy=false,generation=0,preview=null,profile=null,selection=null;
  const element=(tag,text)=>{const el=document.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
  function invalidatePreview(){preview=null;q('[data-robotics-preview-content]').replaceChildren();q('[data-robotics-send]').hidden=true;}
  function controls(){root.querySelectorAll('button,select,textarea,input').forEach(el=>el.disabled=busy||(el.hasAttribute('data-manager-only')&&data?.manager===false));root.querySelectorAll('[data-member-status]').forEach(el=>el.disabled=busy||el.dataset.editable!=='true');}
- function clear(){generation++;data=null;busy=false;invalidatePreview();content.hidden=true;q('[data-robotics-members]').replaceChildren();q('[data-robotics-roster]').value='';['profile','inactive','requests','protocols','self'].forEach(key=>q('[data-robotics-'+key+']')?.replaceChildren());profile=null;selection=null;status.textContent='';}
+ function clear(){if(onboardingDialog?.open)onboardingDialog.close();q('[data-robotics-manager-actions]')?.setAttribute('hidden','');q('[data-robotics-new-members]')?.classList.remove('has-new-members');if(q('[data-robotics-new-count]'))q('[data-robotics-new-count]').textContent='0';generation++;data=null;busy=false;invalidatePreview();content.hidden=true;q('[data-robotics-members]').replaceChildren();q('[data-robotics-roster]').value='';['profile','inactive','requests','onboarding-requests','protocols','self'].forEach(key=>q('[data-robotics-'+key+']')?.replaceChildren());profile=null;selection=null;status.textContent='';}
  async function request(operation,extra={}){
   const response=await fetch('/api/robotics',{method:operation==='view'?'GET':'POST',credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(55000),...(operation==='view'?{}:{headers:{'Content-Type':'application/json'},body:JSON.stringify({operation,...extra})})});
   const result=await response.json();if(!response.ok){const error=new Error(result.error||'Robotics is unavailable.');error.status=response.status;throw error;}return result;
@@ -19,15 +20,15 @@
    select.addEventListener('change',()=>run('status',{member:member.id,active:select.value==='active',revision:data.revision}));cell.append(select);row.append(cell,element('td',member.joined?'Joined':'Needs to join'),element('td',!member.joined?'Awaiting FIRST verification':member.waiver===true?'Signed':member.waiver===false?'Needed':'Unknown — import updated roster'),element('td',member.warning||'—'));(member.inactive&&inactive?inactive:tbody).append(row);
   });
  }
- function render(result){data=result;content.hidden=false;invalidatePreview();renderOnboarding();if(data.manager===false){q('[data-robotics-members]').replaceChildren();q('[data-robotics-inactive]')?.replaceChildren();return;}renderMembers();const s=data.summary;
+ function render(result){data=result;content.hidden=false;invalidatePreview();renderOnboarding();if(data.manager===false){q('[data-robotics-members]').replaceChildren();q('[data-robotics-inactive]')?.replaceChildren();return;}renderMembers();const sync=q('[data-robotics-sync]');if(sync)sync.textContent=data.sync?.status==='synced'?`Forms and Program of Work synced · ${data.sync.active} active members · ${new Date(data.sync.at).toLocaleString()}`:'Forms and Program of Work sync pending. Use Sync forms and spreadsheet to retry.';const s=data.summary;
   q('[data-robotics-summary]').textContent=`${s.active} active · ${s.joined} joined FIRST · ${s.waivers} waivers signed · ${s.needJoin} need to join · ${s.needWaiver} need waiver review`;
   q('[data-robotics-imported]').textContent=data.importedAt?'FIRST roster last imported '+new Date(data.importedAt).toLocaleString():'Existing saved FIRST roster. Import date unknown; paste the latest roster before sending reminders.';
   q('[data-robotics-unmatched]').textContent=data.unmatched.length?'FIRST names needing review: '+data.unmatched.join('; '):'';
  }
  async function run(operation,extra={}){
   if(busy)return;busy=true;controls();const own=generation;status.textContent=operation==='view'?'Loading Robotics membership…':operation==='send'?'Sending reminders…':'Saving…';
-  try{let result=await request(operation,extra);if(['status','refresh','import','activate-request','protocol-save'].includes(operation))result=await request('view');if(own!==generation)return;
-   if(['view','status','refresh','import','activate-request','protocol-save'].includes(operation)){render(result);if(operation==='import')q('[data-robotics-roster]').value='';status.textContent=operation==='view'?'':'Saved.';}
+  try{let result=await request(operation,extra);if(operation==='sync'||operation==='status'&&Array.isArray(result.members)&&typeof result.revision==='string')result={...data,...result};else if(['status','refresh','import','activate-request','protocol-save'].includes(operation))result=await request('view');if(own!==generation)return;
+   if(['view','status','refresh','sync','import','activate-request','protocol-save'].includes(operation)){render(result);if(operation==='import')q('[data-robotics-roster]').value='';status.textContent=operation==='view'?'':'Saved.';}
    if(['profile','profile-save','checklist'].includes(operation)){selection=operation==='profile'?extra:selection;renderProfile(result.profile);status.textContent=operation==='profile'?'':'Saved.';}
    if(operation==='preview'){
     preview=result;const panel=q('[data-robotics-preview-content]');panel.replaceChildren();panel.append(element('p',result.recipients.length+' emails ready for review.'));
@@ -46,9 +47,18 @@
 
  function renderOnboarding(){
   const manager=q('[data-robotics-manager]');if(manager)manager.hidden=data.manager===false;
+  const actions=q('[data-robotics-manager-actions]');if(actions)actions.hidden=data.manager===false;
+  if(data.manager===false&&onboardingDialog?.open)onboardingDialog.close();
   const setup=q('[data-robotics-setup]');if(setup)setup.textContent=data.ready===false?'Signup processing is waiting for the school owner to run onboarding setup.':'';
   const self=q('[data-robotics-self]');if(self){self.replaceChildren();if(data.ownMember){const b=element('button','My Profile');b.type='button';b.addEventListener('click',()=>run('profile',{member:data.ownMember.id}));self.append(b);}}
-  const requests=q('[data-robotics-requests]');if(requests){requests.replaceChildren();(data.requests||[]).forEach(r=>{const box=element('div'),b=element('button',r.name);b.type='button';b.addEventListener('click',()=>run('profile',{request:r.id}));box.append(b,element('p',`${!r.memberId?(r.notification==='Historical import'?'Historical signup awaiting activation · ':'New signup awaiting activation · '):'Onboarding · '}${r.progress}/${r.total} steps · ${r.notification} · ${new Date(r.submitted).toLocaleDateString()}`));requests.append(box);});if(!data.requests?.length)requests.append(element('p','No membership submissions to review.'));}
+  const all=data.requests||[],pending=all.filter(r=>!r.memberId&&r.notification!=='Historical import'),following=all.filter(r=>!pending.includes(r));
+  const priority=q('[data-robotics-new-members]');priority?.classList.toggle('has-new-members',pending.length>0);
+  const count=q('[data-robotics-new-count]');if(count)count.textContent=String(pending.length);
+  function requests(target,items,isNew){if(!target)return;target.replaceChildren();items.forEach(r=>{const box=element('article'),b=element('button',r.name);box.className='robotics-request-card';b.type='button';b.addEventListener('click',()=>run('profile',{request:r.id}));if(isNew){const flag=element('span','New applicant');flag.className='robotics-new-badge';box.append(flag);}box.append(b,element('p',`${!r.memberId?(r.notification==='Historical import'?'Historical signup awaiting activation · ':'New signup awaiting activation · '):'Onboarding · '}${r.progress}/${r.total} steps · ${r.notification} · ${new Date(r.submitted).toLocaleDateString()}`));target.append(box);});}
+  requests(q('[data-robotics-requests]'),[...pending].sort((a,b)=>Date.parse(b.submitted)-Date.parse(a.submitted)),true);
+  if(!pending.length)q('[data-robotics-requests]')?.append(element('p','No new applicants awaiting activation.'));
+  requests(q('[data-robotics-onboarding-requests]'),following,false);
+  const followingPanel=q('[data-robotics-onboarding-members]');if(followingPanel)followingPanel.hidden=!following.length;
   const steps=q('[data-robotics-protocols]');if(steps){steps.replaceChildren();(data.protocols||[]).forEach(addProtocol);}
  }
  function addProtocol(p={id:null,label:'',url:'',detail:'',active:true}){
@@ -64,14 +74,18 @@
   if(data.manager!==false){
    const req=(data.requests||[]).find(r=>r.id===selection?.request);
    if(req&&!req.memberId){const choose=element('select');choose.setAttribute('aria-label','Verified member identity');choose.append(element('option','Choose the matching member'));
-    const candidates=[...(data.members||[]).filter(m=>m.identityVerified&&m.canChangeStatus),...(req.candidate?[req.candidate]:[])];candidates.forEach(m=>{const o=element('option',m.name);o.value=m.id;choose.append(o);});choose.options[0].value='';panel.append(choose);
+    const candidates=[...(data.members||[]).filter(m=>m.identityVerified&&m.canChangeStatus),...(req.candidate?[req.candidate]:[])];candidates.forEach(m=>{const o=element('option',m.name+(m.guest?' (verified guest applicant)':''));o.value=m.id;choose.append(o);});choose.options[0].value='';panel.append(choose);
     const activate=element('button','Activate this member');activate.type='button';activate.addEventListener('click',()=>{if(choose.value)run('activate-request',{request:req.id,member:choose.value,memberRevision:data.revision,revision:profile.revision});});panel.append(activate);
    }
   }
   panel.append(element('h4','Onboarding checklist'));(value.protocols||[]).forEach(p=>{const label=element('label'),check=element('input');check.type='checkbox';check.checked=!!value.checks?.[p.id]?.done;check.disabled=data.manager===false;check.dataset.managerOnly='';check.addEventListener('change',()=>run('checklist',{...selection,revision:profile.revision,step:p.id,done:check.checked}));label.append(check,document.createTextNode(' '+p.label+' '));if(p.url){const a=element('a','Instructions');a.href=p.url;a.target='_blank';a.rel='noopener noreferrer';label.append(a);}panel.append(label);if(p.detail)panel.append(element('p',p.detail));});
  }
+ onboardingButton?.addEventListener('click',()=>{if(!data||data.manager===false)return;onboardingDialog.showModal();onboardingButton.setAttribute('aria-expanded','true');});
+ q('[data-robotics-close-onboarding]')?.addEventListener('click',()=>onboardingDialog.close());
+ onboardingDialog?.addEventListener('close',()=>{onboardingButton?.setAttribute('aria-expanded','false');onboardingButton?.focus();});
  q('[data-robotics-add-step]')?.addEventListener('click',()=>addProtocol());
  q('[data-robotics-save-steps]')?.addEventListener('click',()=>{const protocols=[...q('[data-robotics-protocols]').children].map(row=>{const p={id:row.dataset.stepId||null};row.querySelectorAll('[data-protocol-field]').forEach(input=>p[input.dataset.protocolField]=input.type==='checkbox'?input.checked:input.value);return p;});run('protocol-save',{protocols,revision:data.protocolRevision});});
+ q('[data-robotics-sync-now]')?.addEventListener('click',()=>{if(data)run('sync',{revision:data.revision});});
  q('[data-robotics-load]').addEventListener('click',()=>run('view'));
  q('[data-robotics-search]').addEventListener('input',()=>{if(data)renderMembers();});
  q('[data-robotics-import]').addEventListener('click',()=>{if(data&&q('[data-robotics-roster]').value.trim())run('import',{revision:data.revision,text:q('[data-robotics-roster]').value});});

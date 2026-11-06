@@ -9,7 +9,7 @@
     scripts.set(src,promise);return promise;
   }
   function startTool(key){
-    const src={tripometer:'/js/trip-o-meter.js?v=column-width-64',robotics:'/js/robotics.js',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
+    const src={tripometer:'/js/trip-o-meter.js?v=column-width-64',robotics:'/js/robotics.js?v=member-layout-20261106',lookup:'/js/leadership.js',hiring:'/js/hiring.js'}[key];if(!src)return;
     const target=panel(key);target.querySelector('[data-tool-retry]')?.remove();
     loadScript(src).catch(()=>{
       const retry=document.createElement('button');retry.type='button';retry.dataset.toolRetry='';retry.textContent='Could not load this section. Try again';retry.addEventListener('click',()=>startTool(key),{once:true});target.append(retry);
@@ -23,7 +23,7 @@
     tabs.forEach(tab=>{const selected=tab.dataset.hqTab===key&&!tab.hidden;tab.setAttribute('aria-selected',String(selected));tab.tabIndex=selected?0:-1;});
     page.querySelectorAll('[role=tabpanel]').forEach(section=>section.hidden=section!==panel(key));
     if(updateURL)history.replaceState(null,'','#'+key);
-    if(key==='employment'){const frame=panel(key).querySelector('[data-application-src]');if(!frame.getAttribute('src'))frame.src=frame.dataset.applicationSrc;}
+    if(key==='employment'){const frame=panel(key).querySelector('[data-application-src]');if(frame&&!frame.getAttribute('src'))frame.src=frame.dataset.applicationSrc;}
     startTool(key);
     document.dispatchEvent(new CustomEvent('nest-hq-tab-change',{detail:{tab:key}}));
   }
@@ -34,7 +34,7 @@
     if(!canOpen){
       page.querySelectorAll('[role=tabpanel]').forEach(section=>section.hidden=true);
       tabs.forEach(tab=>{tab.setAttribute('aria-selected','false');tab.tabIndex=-1;});
-      panel('employment').querySelector('iframe').removeAttribute('src');
+      panel('employment').querySelector('iframe')?.removeAttribute('src');
       document.dispatchEvent(new Event('nest-hq-access-revoked'));return;
     }
     if(!initialized){active=location.hash.slice(1)||'tripometer';if(active==='manager-hiring')active='hiring';initialized=true;}
