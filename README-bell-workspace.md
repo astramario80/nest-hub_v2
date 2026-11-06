@@ -27,3 +27,9 @@ Operations: GET returns the workspace; POST `save`, `restore`, or `preview`. Sav
 ## Next phase
 
 Add a reviewed publication model and explicit activation, connect public schedule/flight-clock consumers, then Signals with activity-aware quiet/cleanup policies, followed by Slides and calendar adapters. Preserve existing absence, enrollment, Fly Day, robotics, and planning behavior. Resolve the website published-feed owner and replace calendar delete/recreate with stable managed event updates before switching those outputs. Keep old outputs running until each adapter has been compared and verified.
+
+## November 6 release
+
+Production deployment: `dpl_6whVjBuFwHaHPDUWbLbT7etPTexA` at `https://gknest.org/bell-workspace`. Source verification preserved 350 existing production files byte-for-byte; only `bell-schedule.html` (owner navigation link) and `vercel.json` changed, alongside nine new files. All 1,078 repository tests passed. Browser checks exercised edit/save/history on the isolated local fixture. Anonymous deployed API access was denied. The existing live bell renderer and flight-clock scripts matched their previous source after promotion. Authenticated production save/reload remains a separate owner-browser check.
+
+Git source backup: `b31adb0` on `codex/nest-postmark-communications` contains accumulated website updates and phase 1. `ddd65c1` on `backup/nest-live-2026-11-06` additionally preserves the verified deployed application source where it differs from the working branch. Local captures, release bundles, environment files, and runtime draft records are excluded.
