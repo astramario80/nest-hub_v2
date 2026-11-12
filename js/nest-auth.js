@@ -30,7 +30,7 @@
 })();
 
 (() => {
-  let identity = null,hiringView=null;
+  let identity = null,hiringView=null,authGeneration=0;
   const usernameRule = 'Username must start with a letter and be 3–32 characters. Use letters, numbers, periods, underscores, or hyphens.';
   const usernameIdeas = email => {
     const parts = String(email || '').split('@')[0].toLowerCase().match(/[a-z]{3,}/g) || [];
@@ -107,7 +107,11 @@
       const data = await api(action, values);
       if (action === 'register-request') { mode('register-verify'); message.textContent = data.message; }
       else if (action === 'register-verify') { dialog.querySelector('[data-verified-email]').textContent = `Verified: ${data.email}`; suggestUsernames(data.email); mode('register'); }
-      else { identity = data; changed(); refreshLinks(); dialog.close(); form.reset(); }
+      else {
+        authGeneration++;hiringView=null;identity=data;
+        // Finish the sign-in UI before secured pages react or navigate.
+        mode('account');dialog.close();form.reset();refreshLinks();changed();
+      }
     } catch (error) { message.textContent = error.message; }
     finally { button.disabled = false; }
   }));
@@ -172,19 +176,23 @@
   async function logout() {
     hiringView=null;
     try { await api('logout'); } catch (error) { alert(error.message); return; }
-    identity = null; refreshLinks(); changed();
+    authGeneration++;identity = null; refreshLinks(); changed();
   }
   async function refresh(preserveWorkspace=false) {
+    const generation=++authGeneration;
     if(preserveWorkspace!==true)hiringView=null;
     const response = await authFetch('/api/auth?action=me', { credentials: 'same-origin', cache: 'no-store' });
+    if(generation!==authGeneration)return identity;
     if (!response.ok) throw new Error('NEST sign-in is temporarily unavailable.');
     const data = await response.json();
+    if(generation!==authGeneration)return identity;
     identity = data.signedIn ? data : null;
     refreshLinks(); changed();
     return identity;
   }
   function usableIdentity(value){return value?.signedIn===true&&typeof value.username==='string'&&typeof value.email==='string'&&Number.isFinite(value.expires)&&value.expires>Date.now();}
   async function initialize(){
+    const generation=authGeneration;
     const bootstrap=document.getElementById('nest-auth-bootstrap');
     if(bootstrap){
       let value;try{value=JSON.parse(bootstrap.textContent);}catch{}bootstrap.remove();
@@ -197,16 +205,18 @@
       try{
         const response=await fetch('/api/hiring?period='+encodeURIComponent(period)+'&page=0',{credentials:'same-origin',cache:'no-store',signal:AbortSignal.timeout(60000)});
         const data=await response.json();
+        if(generation!==authGeneration)return identity;
         if(response.ok&&usableIdentity(data.identity)){
           hiringView={period,data};identity=data.identity;refreshLinks();changed();return identity;
         }
         if(response.status===401){identity=null;refreshLinks();changed();return null;}
         if(!response.ok)hiringView={period,error:data.error||'Hiring is temporarily unavailable. Please try again.'};
-      }catch{hiringView={period,error:'Hiring took too long to load. Please try again.'};}
+      }catch{if(generation!==authGeneration)return identity;hiringView={period,error:'Hiring took too long to load. Please try again.'};}
     }
+    if(generation!==authGeneration)return identity;
     return refresh(Boolean(hiringView?.error));
   }
   function takeHiringView(period){const value=hiringView;hiringView=null;if(value?.period!==period)return null;if(value.error)throw new Error(value.error);return value.data;}
-  const ready = Promise.resolve().then(initialize).catch(() => { identity = null;hiringView=null; refreshLinks(); changed(); return null; });
+  const ready = Promise.resolve().then(initialize).catch(() => { if(identity?.signedIn)return identity;identity=null;hiringView=null;refreshLinks();changed();return null; });
   window.NestAuth = { ready, refresh, open, logout, takeHiringView, get identity() { return identity; } };
 })();

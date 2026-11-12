@@ -1,5 +1,6 @@
 // Display original resources without copying private data or changing sharing.
 (() => {
+  if(window.NestResourceViewer)return;window.NestResourceViewer={ready:true};
   const techTicketForm='/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform';
   function resource(raw) {
     const original=new URL(raw,location.href);if(original.protocol!=='https:'||original.origin===location.origin)return null;

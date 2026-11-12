@@ -23,9 +23,10 @@ export function parseInventory(csv) {
   const rows = csvRows(csv);
   if (rows[0]?.[0] !== 'Station #' || rows[0]?.[2] !== 'Laptop BSD Serial #') throw new Error('Unexpected inventory format');
   const computers = rows.slice(1).map(row => {
-    const listedStation = (row[0] || '').trim();
     const match = /^Station: (.+); BSD Serial Number: (\d+)$/.exec((row[2] || '').trim());
-    return match && (!listedStation || match[1] === listedStation) ? { station: match[1], serial: match[2] } : null;
+    // Columns A/B are independently sorted imports. The paired station+serial
+    // field in C follows the equipment register through edits and removals.
+    return match ? { station: match[1], serial: match[2] } : null;
   }).filter(Boolean);
   if (!computers.length) throw new Error('Inventory is empty');
   return computers;

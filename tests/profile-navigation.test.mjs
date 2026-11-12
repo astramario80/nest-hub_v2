@@ -62,12 +62,12 @@ test('administrator account list loads inside the profile tab',async()=>{
   w.NestAuth={identity,ready:Promise.resolve(identity),refresh:async()=>identity};
   w.fetch=async (_url,options)=>{
     const body=JSON.parse(options.body);
-    return {ok:true,json:async()=>body.action==='admin-list'?{accounts:[{username:'student1',studentName:'Sample Student',period:'1',studentEmail:'student@students.bethelsd.org'}]}:{username:'mario',manual:false,recoveryEmail:identity.email}};
+    return {ok:true,json:async()=>body.action==='admin-directory'?{accounts:[{accountKey:'manual:student1',username:'student1',name:'Sample Student',firstName:'Sample',lastName:'Student',type:'student',manual:true,period:'1',email:'student@students.bethelsd.org',active:true}]}:{username:'mario',manual:false,recoveryEmail:identity.email}};
   };
   w.eval(read('js/profile.js'));w.eval(read('js/admin-accounts.js'));await tick();await tick();
   assert.equal(q('#profile-admin-panel').hidden,false);
   assert.equal(q('#admin-tools').hidden,false);
-  assert.match(q('#admin-accounts-list').textContent,/Sample Student/);
+  assert.match(q('#admin-accounts-list').textContent,/Student, Sample/);
   assert.equal(q('#admin-accounts-list .account-entry input[name="password"]').value,'');
   dom.window.close();
 });

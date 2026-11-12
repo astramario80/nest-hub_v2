@@ -6,7 +6,7 @@ import weatherHandler from '../api/weather.mjs';
 import hiringHandler from '../api/hiring-access.mjs';
 import hiringViewHandler from '../api/hiring.mjs';
 
-const code=fs.readFileSync('google-spinner/Code.js','utf8')+fs.readFileSync('google-spinner/Tracker.js','utf8')+fs.readFileSync('google-spinner/Weather.js','utf8')+fs.readFileSync('google-spinner/Hiring.js','utf8');
+const code=fs.readFileSync('google-spinner/Code.js','utf8');
 const serial=date=>Date.parse(date+'T00:00:00Z')/86400000+25569;
 function context(role='Partner Liaison',options={}) {
   const calls=[];
@@ -39,8 +39,8 @@ test('weather division list exposes only authorized periods',()=>{
  const typo=context('Parnter Liaison');
  assert.deepEqual(Array.from(typo.ctx.weatherForMember_('liaison@students.bethelsd.org','mine').periods),['2']);
  const executive=ctx.weatherForMember_('exec@students.bethelsd.org','mine');
- assert.deepEqual(Array.from(executive.periods),['1','2','3','4','5','Advisory','CTSO']);
- assert.equal(ctx.weatherForMember_('exec@students.bethelsd.org','2',0).status,200);
+ assert.deepEqual(Array.from(executive.periods),[]);
+ assert.equal(ctx.weatherForMember_('exec@students.bethelsd.org','2',0).status,403);
  assert.equal(ctx.weatherForMember_('former@students.bethelsd.org','2',0).status,403);
  assert.equal(ctx.weatherForMember_('astramario@gmail.com','2',0).status,200);
  assert.equal(ctx.weatherForMember_('mpenalver@bethelsd.org','2',0).status,200);
@@ -81,5 +81,5 @@ test('hiring workbook is resolved only from the matching period and managers can
  assert.equal(ctx.hiringPermissions_('liaison@students.bethelsd.org','2',rows).canReview,false);
  rows.push(['CTSO','https://docs.google.com/spreadsheets/d/ctso/edit','Chief Executive Officer','','exec@students.bethelsd.org']);
  assert.equal(ctx.hiringPermissions_('exec@students.bethelsd.org','2',rows).canReview,true);
- assert.equal(ctx.hiringPermissions_('exec@students.bethelsd.org','2',rows).canManage,false);
+ assert.equal(ctx.hiringPermissions_('exec@students.bethelsd.org','2',rows).canManage,true);
 });

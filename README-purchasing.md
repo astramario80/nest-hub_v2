@@ -1,0 +1,117 @@
+# Inventory & Purchasing
+
+`/purchasing` is the Tools → Leadership workspace. The Inventory Lookup director gear also opens it. Equipment assignments reuse `/inventory-management?embed=1` and the existing authenticated inventory API.
+
+Current roster members can start discussions and comment within their divisions. Current Inventory Directors can review across divisions, estimate quantity/unit cost/shipping, and move discussions into requisitions. Only the existing NEST owner accounts can approve/decline, submit purchase records, access receipts/attendance, or continue ASB signature actions. Browser requests cannot supply an actor, recipient, spreadsheet, or script URL. Both bridge services enforce roles. Private responses use no-store; logout clears forms, loaded records, previews and the equipment iframe.
+
+## Existing budget processor
+
+`integrations/purchasing/BudgetWeb.js` is an additive file in the existing NEST™PurchaseLog Apps Script project. `UnifiedBudgetSystem` is preserved byte-for-byte against the October 30 live source and the supplied attachment. Existing form and installed triggers remain usable.
+
+The website validates a draft against the live form choices and confirmed annual budget, stores a private receipt, previews its routing, then appends a literal 45-column BudgetLogs row and invokes the existing `processFormResponse` with that row's event shape. The budget script lock serializes website commits with the existing form/maintenance trigger. The original functions still own receipt naming, PDFs, recipient lookup, district budget discovery and writes, zero-impact food entries, returns, ASB request generation, mirrors, and form refresh. A missing legacy `wasOriginalPurchaseFood_` helper is supplied additively using the exact `(FOOD)` marker created by `syncPreviousPurchasesToForm`.
+
+The school bridge forwards its already authenticated request token to the fixed budget web app URL. No new browser secret or Vercel environment variable is needed. Deploy the budget adapter first, then `Purchasing` plus the additive school Code dispatcher, then the website. Preserve all other live Apps Script files when updating content; the live school Code file contains bundled authentication and other functionality beyond the local dispatcher source.
+
+## Attendance and food-document preview
+
+Food purchases automatically load the selected Pacific calendar date from the existing NEST™ Sign-In System form, matching the exact chosen location. The user-confirmed default is **Attendance_Food Sign-In**. **Attendance** and **Attendance_NEST Robotics** remain selectable; sign-outs and other locations are excluded. Returning students use `Select your name`; guests use first/last name. Names are deduplicated. The administrator reviews the resulting list and confirms the students actually fed. The date, source group and confirmed list are retained in the private draft.
+
+The optional food-document preview calls the unchanged `createFoodPurchasePdf_` renderer with the uploaded receipt and student list. It creates a private preview PDF, without submitting a transaction or sending email. The final commit uses the original processing path. A PDF thumbnail may still be unavailable under the original renderer's Drive thumbnail behavior; the preview lets the administrator inspect that result before submitting. Receipts support PDF/JPEG/PNG up to 2 MB. Receipt folders and files receive no sharing changes.
+
+## State and duplicate handling
+
+The Budget Manager receives hidden `PurchaseBoardWeb`, `PurchaseRunsWeb`, and `PurchaseAsbActionsWeb` tabs as records are first written. JSON records preserve identities and history; public discussion responses omit emails, receipt URLs and administrator processing details. Discussions have optimistic revisions; source changes require refresh. Requisitions follow discussion → requisition → approved → ordered → received, with administrator decline. Recording a new purchase marks linked requests ordered; requests cannot be marked received before ordering. Estimates are explicitly before tax; district spreadsheet formulas determine actual tax and remaining balance.
+
+Purchase previews expire after 15 minutes and are invalidated if the verified district balance or linked requisitions change. A commit persists `processing` before any legacy processing. Repeating a commit ID never reprocesses it. An exception after processing begins leaves `review-required`, including the source BudgetLogs row, and disables automatic retry. Identical receipt content with the same transaction type/date/vendor/amount is also blocked if another website record already began processing. A maintenance failure after successful processing does not make the purchase retryable. After a timeout, refresh saved history before using any other form.
+
+ASB actions read the existing Requests sheet and its validation choices. Preview shows the current recipients; commit invokes the existing `onEdit_Requests` handler for approval/signature initiation or ASB clerk handoff, or records completion. Clerk handoff requires the administrator to verify final signatures. Durable action records prevent automatic resending after an uncertain result. The existing email signature polling/chain remains in charge of signed documents and subsequent recipients.
+
+## Verification
+
+`node --test tests/purchasing.test.mjs tests/inventory.test.mjs` checks roles, division visibility, literal input handling, fixed legacy columns, dated attendance, logout privacy, revisions, durable commits, uncertain-delivery holds, ASB actions, and the original-renderer preview. Browser QA uses fictional data locally; live verification should read the signed-in admin workspace, current balance, form choices, attendance default and equipment register without modifying student assignments or submitting transactions. Receipt/purchase emails must not be sent merely to test this release.
+
+Release sources and byte-for-byte live backups are under `tmp/purchasing-2026-10-30/`. The website deployment is built from the then-current production source references, replacing only the ten files needed for this workspace; unrelated local changes are excluded.
+
+## October 30, 2026 release
+
+Published to gknest.org as `dpl_7kaKw4qMxVbVNfPMS93SnosfksBx`, with school bridge v122 and budget adapter v7. Authenticated live readback confirmed administrator tabs, the $2,484.55 current CTE balance, current form choices, historical ASB requests, the live 24-kit equipment register, and the Food Sign-In default (zero entries on October 30). Anonymous `/api/purchasing` returns 401. The 53 focused purchasing/inventory/menu/search tests pass. The broader run had one untouched resource-viewer assertion expecting an unversioned nest-auth script URL. No purchase or notification was submitted to test the release; real transaction delivery remains for the first administrator-submitted record.
+
+## All-divisions discussions
+
+The requesting-division selector includes **All divisions**, and Inventory Directors can change an existing request's scope in its detail form. All-divisions discussions include the requester, administrator, current division managers and assistant managers, rostered Robotics chief officers and executive vice-president, and inventory directors. The school bridge resolves this team from the live Imported leadership assignments and current division rosters on every request. Duplicate people are shown once with all their roles. Stale leadership assignments and other student roles do not gain cross-division discussion access. Reassignment takes effect on refresh and is enforced again when posting a comment.
+
+The detail panel shows the current discussion team by name, division and role; it exposes no email addresses. These additional discussion participants do not receive equipment, requisition editing, budget or purchase submission permissions. Specific-division requests retain their existing visibility, and the requester retains access when scope changes. Existing records listing every division also receive all-divisions behavior. Scope changes are recorded with the request's revision and history. This release grants discussion participation; it does not send invitation email.
+
+The combined discussion update passes 65 focused purchasing/inventory/menu/search tests. It updates purchasing.html, js/purchasing.js, api/purchasing.mjs and css/purchasing.css in the website release, plus the purchasing adapters (budget v10 / school v124). The original budget processor remains byte-for-byte unchanged.
+
+### Request prices, item links, and preparation feedback
+
+The request form now accepts an optional unit price and shows quantity × unit price before tax/shipping. Blank prices remain unknown, and directors can change an unpriced discussion's scope without inventing a price. Requisitions still require a verified estimate.
+
+Requested-item links open the exact saved https URL in a separate tab, bypassing the general embedded-resource viewer. The full saved URL is visible, and the requester or an Inventory Director can correct it. Link changes check revisions and retain a private before/after audit. A saved NEST home URL is explicitly identified instead of implying it leads to a product.
+
+Prepare selected requests is disabled until eligible requisitions are selected and the administrator form is loaded. It shows the selection count and estimated total beside the button, explains empty or mixed-fund selections inline, and scrolls/focuses the populated purchase form on success. A discussion must first move to Requisition with a price before it can be selected.
+
+These updates pass 65 focused tests. Budget adapter v10 and school bridge v124 preserve the original fiscal processor. Website changes are limited to the purchasing page, API, JavaScript, and CSS.
+
+Published the combined discussion, prices, links and preparation update as `dpl_BE4HcULrNAQEjaDGdYfRbwbDDgEL` on gknest.org. The full suite passes 769 of 770 tests; the sole failure remains the untouched resource-viewer test expecting an unversioned nest-auth script URL. No purchases, assignment changes, invitation messages or purchase notifications were submitted for this verification.
+
+## Requested-items and collaborative workspace release
+
+The default tab is **Requested items**, including direct intake, inline editing, Move to purchase list, Table, Archive, stock classification and administrator tracking of purchases recorded elsewhere. Unknown prices can move onto the purchase list, but only priced items can be selected for receipt preparation. The discussion board is optional for this workflow.
+
+A successful New Purchase automatically marks linked requests purchased, records the purchase/report timestamps and purchase run, and archives them. ASB request generation alone does not mark items purchased. The stock flag survives archiving; Request again creates a separate idempotent request with the saved details and source-stock ID. Manual purchased tracking is administrator-only and does not write the fiscal ledger or send email.
+
+**Collaborative lists** support division leadership teams, all leadership, managers/assistant managers, inventory directors, and Robotics executives. Current role membership controls collaboration. Managers/assistant managers and the administrator supervise lists; other members edit/remove only their own items. List creators can rename their lists and edit their purpose; deleting a list containing another author's active items requires manager/administrator rights. Item removal and list removal are soft deletions with restore controls. Current-role checks and revisions are repeated on each write.
+
+The additive `integrations/purchasing/PurchaseWorkspace.js` file owns lifecycle and collaboration. `PurchaseListsWeb`, `PurchaseListItemsWeb` and `PurchaseListEventsWeb` hold separate metadata, item and append-only event records. One Sheets v4 batch commits the list revision, item write and audit event together. JSON is written as literal strings. Histories do not share a growing single list cell, are not truncated on removal, and expose actor names/times plus before/after details without email addresses. The History tab combines permitted request and list events; each list also has its own history. Request lifecycle histories preserve their changes and timestamps. Source financial processing remains unchanged.
+
+School v126 and budget adapter v12 are deployed; the Sheets advanced service was verified live using the read-only `Tool_InspectPurchaseWorkspace` check. The website release is `dpl_GrYiF1BzVXSJEdETtyDSoyeCbG7r`. All 75 focused checks pass. The full suite passes 779/780, with the same untouched resource-viewer test failing on an unversioned script URL. Browser QA created and edited fictional lists only in an isolated local preview; no fiscal transactions or emails were submitted for testing.
+
+## Grouped navigation, annual archive and signature demonstration
+
+The workspace uses four primary page tabs: Purchasing, Leadership lists, Equipment, and History. Purchasing contains Requested items, Purchase list, Record purchase (administrator only), Stock items, and Archive. Leadership lists contains Active lists and Removed lists. Each workspace remembers its last section; arrow keys, Home and End navigate visible tabs. Discussions open from individual items rather than taking a top-level navigation position.
+
+Archive contains administrator purchase records by school year and archived requested items. The default purchase year is the current school year, following the fiscal processor's August rollover. The additive backend resolves and verifies each annual district budget, reads its entries and receipt links, and clearly identifies fallback form-response records if that annual sheet cannot be verified. Website submissions and ASB request panels also default to the current school year. Administrator affidavit checkboxes have been removed; explicit preview and submit actions remain.
+
+The ASB-only administrator form includes an interactive executive-signature mockup: pending banner, email preview, frozen-background dialog, finger/pointer canvas, signed-in account and sample timestamp. This is a demonstration, not an enabled native signing system. Drawings stay in browser memory and clear on ending the demo or signing out; it sends no email, saves no signature and changes no real approval. Actual approvals continue through the existing PDF/email signature chain. Native assigned-executive signatures, real banner delivery and signature-request emails require a subsequent implementation.
+
+Budget adapter v13, school bridge v127, and website deployment `dpl_ACJ9mUWhU3wuKjPB2UumAAaukmue` are published. Original fiscal source verified unchanged; 82 focused tests pass. Live static files match the seven isolated source updates and anonymous purchasing API access returns 401. No financial submissions or email notifications were sent for QA.
+
+Item-link clarity correction: requested-item cards, discussion details and collaborative-list items now share the same link renderer. A saved NEST homepage URL (including www/index variants) is flagged as needing correction, with no product-navigation link; editable request cards offer Edit item link. Valid product links preserve their full destination, open externally, and display the saved URL. The existing test request's saved NEST URL was not replaced with an invented product destination. All 49 purchasing tests pass; only the two purchasing JavaScript files changed in this release.
+
+Requested-item placement controls now use one labeled drop-down per item in Requested items, Purchase list, Stock items and Archive. The available actions follow current status and triage permissions, and include stock designation/reordering when applicable. Choosing an action applies the existing revision-checked operation and refreshes the workspace; menus reset and disable while saving. Discussion, price/link editing and fiscal recording retain their existing controls. No backend or fiscal workflow changes. All 50 purchasing tests pass, including dropdown advance, permission gating, archived restoration and processing locks.
+
+## Purchasing, Item Management, native Equipment and ticket shopping lists
+
+Purchasing now defaults to the administrator's Record purchase form. Its Requested items tab is the ready-to-purchase queue, and Purchase archive retains the current-school-year default and prior-year selector. Item Management holds Purchase requests, Item lists, List archive (closed lists), Stock items, and Archived requests. Closing/reopening lists preserves item records and audit history. The History parent remains. Direct hashes include #purchasing, #items, #equipment, #service, and #history; non-administrators default to Purchase requests and do not receive the owner form.
+
+Equipment is the native assignment editor inside purchasing.html, using the existing inventory API and authoritative inventory spreadsheet. No iframe is present. Director View on Inventory Lookup links to /purchasing#equipment; the legacy /inventory-management URL redirects there. The editor loads on opening the tab, retains its own save/draft/pagination controls, and clears private fields on sign-out. Purchase refreshes cannot unlock equipment controls.
+
+Service tickets include an internal shopping list with item name, quantity, optional unit price and product URL, purpose, and CTE/ASB funding. Current ticket-edit permission controls changes; completed/closed tickets are read-only. A current assigned project manager determines the requesting division before sending. Draft items can be edited or removed; sent/pending lines are frozen and further quantities require new lines. Shopping histories use immutable private ServiceWebLog snapshots and are excluded from the client view and client email logs. No purchase or email is sent by a list transfer.
+
+The new additive school ServiceShopping.js file journals a pending payload before calling the budget adapter's private service-import operation. Stable item UUIDs make partial/uncertain transfer retries idempotent. The public purchasing API cannot invoke service-import or provide its source fields. Imported records retain sourceService.ticketId, requesting division and normal purchase-request lifecycle; repeating a transfer never overwrites a progressed item. Service Requests in the inventory hub shows submitted/pending shopping lists and linked purchase status, with direct ticket links. Its projection contains item details, category, manager and status, excluding client contacts and internal ticket notes. Regular members see only their editable tickets; inventory directors and the administrator can see incoming shopping lists.
+
+Release: budget adapter v14; school service v129; website dpl_DM3u3iu8AaxfJJjEeQHXudognCy6. All 164 focused tests pass. Full suite: 796/797; the existing unrelated SolidProfessor/Thingiverse test still expects an unversioned nest-auth script. Local browser QA used fictional data with the actual list transfer/import functions. No real ticket edits, equipment assignments, fiscal transactions or email notifications were made for testing. The original fiscal processor and unrelated deployed school files were verified unchanged; only 14 website source files were replaced or added against the prior production snapshot.
+
+Live verification confirmed the default purchase form, Inventory Lookup Director View → /purchasing#equipment, a loaded native equipment register with zero iframes, the closed-list archive, and the service-shopping-list empty state. Read-only diagnostics were removed from editor HEAD after use. School v129 adds content-free fault categorization for purchasing failures; no environment values were changed. An API diagnostic preview deployment was not promoted; production website remains dpl_DM3u3iu8AaxfJJjEeQHXudognCy6.
+
+## Practice purchase email (November 2, 2026)
+
+The native Inventory → Purchasing form includes **Practice Purchase — email preview only**. Preview uses the existing private receipt upload; confirming emails the shared production message and attachments only to mpenalver@bethelsd.org, with intended recipients and subject displayed in the email. The durable practice record is separate from fiscal processing: it never appends BudgetLogs, changes balances, renames source receipts, creates purchase folders, archives linked requests, or starts approval chains. Repeating a completed or uncertain practice run cannot resend it. The uploaded receipt and private practice history remain; food preview source documents are trashed after conversion. The entered form values remain available to switch to New Purchase afterward.
+
+Purchase form access and fiscal/practice endpoints are restricted to the exact district account mpenalver@bethelsd.org at both Apps Script bridges. Existing student/leadership request and item-management permissions remain role scoped.
+
+Published native practice purchase support to gknest.org as dpl_CrfZhaMerMdmTS7RBn2MuSRTZ3eC, budget adapter v16 and school bridge v130. Eighty focused purchasing/inventory checks pass; production HTML/JavaScript match the reviewed source, anonymous API requests return 401, and district-authenticated form visibility was read back. Only purchasing.html and js/purchasing.js changed in the website release. Existing production source references preserve unrelated website files.
+
+## Practice history and vendor routing (November 2, 2026)
+
+Practice website runs are shown separately under a collapsed **Practice test emails** section. The API retains up to 30 real runs and 30 practice runs independently, so practice traffic cannot displace real purchases from recent history. Practice response types and practice-only status rows are excluded from the annual archive's BudgetLog fallback; audit records remain intact.
+
+The native form begins with **Is this a food purchase?**. Its vendor select uses the existing food classification in saved form choices: food vendors appear for Yes, and other vendors appear for No. Display labels omit the food marker while canonical submitted values retain it. Switching categories clears the old vendor and invalidates stale attendance responses. Other vendor supports new suppliers; saved corrections resolve the matching vendor choice or expose its custom name. Fiscal and email processing remain authoritative in the original processor.
+
+## Compact fields and receipt filename amount (November 2, 2026)
+
+The first row places Food purchase and Transaction side by side; the second row places Vendor and Purchase date side by side. Food choices are present in the HTML from the start, use explicit option colors, and the administrator form stays disabled while saved choices load. Loading failures leave a retry message rather than an empty editable food selector.
+
+Selecting a receipt fills Actual amount when the filename identifies one clear total: district-style Penalver_YYYY.MM_amount, a dollar amount, a labelled total/amount, or a single two-decimal amount after date portions are excluded. Conflicting amounts, date-only filenames, and malformed amounts preserve the existing entry and request manual confirmation. The detected amount remains editable. Filename parsing happens locally when the file is selected; purchase submission still requires the review confirmation.

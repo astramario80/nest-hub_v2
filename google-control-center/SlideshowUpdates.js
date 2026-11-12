@@ -112,16 +112,22 @@ function NEST_updateMyManagerSlides() {
 }
 
 
-/**
- * If you want a separate action that ONLY reconciles perms (without rebuilding slides),
- * you’d refactor updateManagerSlides into (buildSlides + syncPerms).
- * For now this can just run the same function or call a future sync-only function.
- */
+/** Reconcile access without touching presentation content. */
 function NEST_syncMySlidePermissions() {
-  // Placeholder: right now updateManagerSlides does both content + sharing.
-  NEST_updateMyManagerSlides();
+ const ui=SpreadsheetApp.getUi(),email=Session.getActiveUser().getEmail().toLowerCase();
+ const divisions=NEST_getAllowedDivisionsForUser_(email);
+ if(!divisions.length){ui.alert('Not eligible to sync slide access');return;}
+ divisions.forEach(division=>nestSyncDivisionSlideAccess(division==='CTSO'?'CTSO':division.split(' ')[1]));
+ ui.alert('Slide access updated. Presentation content was not changed.');
 }
-
+// Private owner-only snapshots protect meeting-deck edits before a rebuild.
+function nestBackupManagerSlides_(file) {
+ const store=PropertiesService.getScriptProperties();let folderId=store.getProperty('nest-manager-slide-backups');
+ if(!folderId){const folder=DriveApp.createFolder('NEST Manager Slide Backups');folderId=folder.getId();store.setProperty('nest-manager-slide-backups',folderId);}
+ const copy=file.makeCopy(file.getName()+' — before update '+new Date().toISOString(),DriveApp.getFolderById(folderId));
+ store.setProperty('nest-manager-slide-backup:'+file.getId(),JSON.stringify({id:copy.getId(),time:new Date().toISOString()}));
+ return copy.getId();
+}
 /**
  * Updates the Division Manager slideshow for a given division.
  * - Rebuilds the manager deck by appending slides from position-specific leader decks
@@ -227,12 +233,8 @@ function nestUpdateManagerSlides_(divisionName) {
     Logger.log(`  • ${pos}: ${positionEmailMap[pos].join(", ")}`)
   );
 
-  // === CLEAR EXISTING SLIDES (except title slide) ===
-  const mgrSlides = managerPresentation.getSlides();
-  for (let i = mgrSlides.length - 1; i > 0; i--) {
-    mgrSlides[i].remove();
-  }
-
+  // Resolve every source before changing the meeting deck.
+  const sourceSlidesToCopy=[];
   // === INSERT SLIDES FOR EACH POSITION (SKIP DM & CTSO CEO) ===
   positionOrder.forEach(position => {
     const key = nestSlideRole_(position);
@@ -264,21 +266,29 @@ function nestUpdateManagerSlides_(divisionName) {
     }
 
     if (!leaderSlideFile) {
-      Logger.log(`⚠️ No slide file found for position: ${position}`);
+      Logger.log('No template or existing source for position: '+position);
       return;
     }
 
-    // === APPEND SLIDES INTO MANAGER DECK ===
-    try {
-      const sourceSlides = SlidesApp.openById(leaderSlideFile.getId()).getSlides();
-      sourceSlides.forEach(slide => managerPresentation.appendSlide(slide));
-      Logger.log(`📄 Inserted slides for ${position}`);
-    } catch (err) {
-      Logger.log(`❌ Failed to insert slides from ${leaderSlideFile.getName()}: ${err}`);
-      return;
-    }
-
+    const sourceSlides=SlidesApp.openById(leaderSlideFile.getId()).getSlides();
+    if(!sourceSlides.length)throw new Error('Source deck is empty: '+position);
+    sourceSlidesToCopy.push(...sourceSlides);
   });
+  if(!sourceSlidesToCopy.length)throw new Error('No leadership slides available; meeting deck unchanged');
+  const originalSlides=managerPresentation.getSlides();
+  if(!originalSlides.length)throw new Error('The manager title slide is missing');
+  nestBackupManagerSlides_(managerDeckFile);
+  const inserted=[];
+  try{
+    sourceSlidesToCopy.forEach(slide=>inserted.push(managerPresentation.appendSlide(slide)));
+  }catch(error){
+    // Original slides are still present if a source cannot be copied.
+    inserted.slice().reverse().forEach(slide=>slide.remove());
+    throw error;
+  }
+  // Replace old compiled slides only after all new slides were copied successfully.
+  for(let i=originalSlides.length-1;i>0;i--)originalSlides[i].remove();
+  managerPresentation.saveAndClose();
 
   // Apply the same role-specific sharing used by the daily access job.
   nestSyncDivisionSlideAccess(divisionName === 'CTSO' ? 'CTSO' : divisionName.split(' ')[1]);

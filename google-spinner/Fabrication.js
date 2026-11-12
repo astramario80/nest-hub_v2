@@ -4,7 +4,7 @@ const FAB_LOG='FabricationWebLog';
 const FAB_STATUSES=['Queued','In progress','On hold','Errored','Ready for pickup','Done','Cancelled'];
 function fabRole_(value){return String(value||'').trim().toLowerCase().replace(/\s+/g,' ');}
 function fabAllowed_(email,leaders){
-  if(OWNER_EMAILS.includes(email_(email)))return true;
+  if(websiteAdmin_(email))return true;
   return leaders.some(row=>{
     const period=String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase();
     const role=fabRole_(row[2]);

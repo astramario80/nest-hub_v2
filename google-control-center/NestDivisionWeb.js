@@ -6,10 +6,12 @@ function nestWebJson_(value){return ContentService.createTextOutput(JSON.stringi
 function nestWebAllowed_(email,period){
  email=String(email||'').trim().toLowerCase();
  if(!email)return false;
- if(['mpenalver@bethelsd.org','mario@memberhq.net'].includes(email))return true;
- if(!nestSlideRoster_(period).has(email))return false;
+ if(['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com'].includes(email))return true;
+ if(nestStaffDelegates_(period).some(g=>g.email===email&&g.role==='manager'))return true;
  const imported=SpreadsheetApp.openById('1RRyYSYV2jDMPebFH8WuGyI9mLH904IXBwewXdMbPn-I').getSheetByName('Imported');
  const rows=imported.getRange(2,2,Math.max(1,imported.getLastRow()-1),5).getValues();
+ if(nestSlideExecutives_(rows).has(email))return true;
+ if(!nestSlideRoster_(period).has(email))return false;
  return rows.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&String(row[4]||'').trim().toLowerCase()===email&&
  (period==='CTSO'?/^(chief executive officer|executive vice-president)$/i:/^(division manager|assistant manager)$/i).test(String(row[2]||'').trim()));
 }
@@ -27,6 +29,12 @@ function doPost(e){
   const r=JSON.parse(e.postData.contents);
   const digest=typeof r.token==='string'?Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,r.token).map(b=>('0'+(b&255).toString(16)).slice(-2)).join(''):'';
   if(digest!==NEST_WEB_DIGEST)return nestWebJson_({status:401});
+  if(r.operation==='tech-graphic-export')return nestWebJson_(nestTechGraphicExport_(r));
+  if(r.operation==='sync-staff-access'){
+   if(!r.delegates||typeof r.delegates!=='object'||Array.isArray(r.delegates)||Object.keys(r.delegates).length!==NEST_WEB_PERIODS.length||NEST_WEB_PERIODS.some(p=>!Array.isArray(r.delegates[p])||r.delegates[p].length>500||r.delegates[p].some(g=>!g||!/^\S+@bethelsd\.org$/.test(g.email)||!['viewer','manager'].includes(g.role))))return nestWebJson_({status:400});
+   const store=PropertiesService.getScriptProperties();NEST_WEB_PERIODS.forEach(period=>{store.setProperty('nest-staff-delegates:'+period,JSON.stringify(r.delegates[period]));store.setProperty('nest-hiring-access:'+period,Utilities.getUuid());});
+   return nestWebJson_({status:200});
+  }
   if(r.operation==='sync-access'){
    if(!NEST_WEB_PERIODS.includes(r.period))return nestWebJson_({status:400});
    PropertiesService.getScriptProperties().setProperty('nest-hiring-access:'+r.period,Utilities.getUuid());
@@ -57,10 +65,17 @@ function doPost(e){
  }catch(error){console.error('NEST slide queue request failed');return nestWebJson_({status:503});}
 }
 function nestWebResult_(job){return {status:200,job:job.job,state:job.state,updatedAt:job.updatedAt};}
+// Reconcile the new executive policy once on the existing minute worker.
+function nestQueueExecutiveSlideAccess_(store){
+ if(store.getProperty('nest-executive-slide-policy')==='v1')return;
+ NEST_WEB_PERIODS.forEach(period=>store.setProperty('nest-hiring-access:'+period,Utilities.getUuid()));
+ store.setProperty('nest-executive-slide-policy','v1');
+}
 function nestDivisionSlidesWorker(){
  const store=PropertiesService.getScriptProperties(),lock=LockService.getScriptLock();
  if(!lock.tryLock(1000))return;
  try{
+  nestQueueExecutiveSlideAccess_(store);
   const jobs=Object.entries(store.getProperties()).filter(([key])=>key.startsWith('nest-slide-job:')).map(([key,raw])=>({key,...JSON.parse(raw)}));
   const now=Date.now();
   // A terminated execution must not leave the division locked indefinitely.
@@ -82,3 +97,5 @@ function nestDivisionSlidesWorker(){
   job.updatedAt=Date.now();store.setProperty(job.key,JSON.stringify(job));
  }finally{lock.releaseLock();}
 }
+
+function nestStaffDelegates_(period){const raw=PropertiesService.getScriptProperties().getProperty('nest-staff-delegates:'+period);return raw?JSON.parse(raw):[];}

@@ -91,3 +91,7 @@ test('lookup page keeps NEST quick access, footer menus, and current year', () =
   assert.equal(footer[1].nextElementSibling.classList.contains('show'), false);
   window.close();
 });
+
+test('paired station and serial field remains authoritative when independently sorted station imports move',()=>{
+ assert.deepEqual(parseInventory('"Station #","Barcodes","Laptop BSD Serial #"\n"30","wrong barcode","Station: 01; BSD Serial Number: 44219719"\n'),[{station:'01',serial:'44219719'}]);
+});

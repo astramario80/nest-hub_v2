@@ -35,13 +35,14 @@ function roboticsManagementAccess_(identity,leaders){
  return (leaders||nestAccessValues_(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[]).some(r=>String(r[0]).replace(/period/ig,'').trim().toUpperCase()==='CTSO'&&email_(r[4])===address&&/^executive vice[- ]president$/i.test(String(r[2]).trim()));
 }
 function roboticsCanView_(identity){return roboticsManagementAccess_(identity)||roboticsOwnMember_(identity,roboticsState_()).length===1;}
+function roboticsSignupCandidate_(entry,roster){const email=email_(entry.record.respondent),matches=roster.filter(row=>email_(row[1])===email);let name=matches.length===1?String(matches[0][0]):'';const guest=!name&&entry.record.source==='nest-website'&&entry.record.verifiedAccount===true&&/^\d{3,12}@students\.bethelsd\.org$/.test(email);if(guest)name=String(entry.record.name||'').trim();if(!name||matches.length>1)return null;return {id:hash_(email.split('@')[0]+'|'+roboticsName_(name)),name,guest};}
 function roboticsOnboardingView_(state,identity){
  const manager=roboticsManagementAccess_(identity),own=roboticsOwnMember_(identity,state),protocols=roboticsProtocols_();
  if(!manager&&own.length!==1)return {status:403};
  const entries=manager?roboticsPrivateRows_():roboticsPrivateRows_().filter(e=>e.record.memberId===own[0].id);
  let candidateRoster;
  const requests=entries.filter(e=>e.record.kind==='signup').map(e=>({id:e.key,name:e.record.name,submitted:e.record.submitted,memberId:e.record.memberId||null,
-  candidate:state.members.some(m=>m.email===e.record.respondent)?null:(candidateRoster||(candidateRoster=roboticsRoster_())).filter(row=>email_(row[1])===e.record.respondent).map(row=>({id:hash_(String(row[1]).split('@')[0]+'|'+roboticsName_(row[0])),name:String(row[0])}))[0]||null,
+  candidate:state.members.some(m=>m.email===e.record.respondent)?null:roboticsSignupCandidate_(e,candidateRoster||(candidateRoster=roboticsRoster_())),
   progress:protocols.filter(p=>p.active).filter(p=>e.record.checks?.[p.id]?.done).length,total:protocols.filter(p=>p.active).length,
   notification:e.record.historical?'Historical import':!e.record.mailPlan?'Pending':e.record.mailPlan.some(m=>e.record.mail?.[hash_(m.email)]?.state!=='sent')?'Needs review':'Sent'}));
  return {...(manager?roboticsView_(state):{}),status:200,manager,ready:!!roboticsPrivateId_(),requests:manager?requests:[],protocols:manager?protocols:[],protocolRevision:manager?hash_(JSON.stringify(protocols)):null,
@@ -99,9 +100,9 @@ function roboticsOnboardingDispatch_(r,state,session){
   const other=roboticsPrivateRows_().filter(e=>e.key!==entry.key&&e.record.memberId===r.member);
   if(other.some(e=>e.record.kind!=='profile')||other.length>1)return {status:409};
   if(!target){
-   const matches=roboticsRoster_().filter(row=>email_(row[1])===entry.record.respondent&&hash_(String(row[1]).split('@')[0]+'|'+roboticsName_(row[0]))===r.member);
-   if(matches.length!==1||!/^\d+@students\.bethelsd\.org$/.test(entry.record.respondent))return {status:400};
-   const source=matches[0],row=state.members.length?Math.max(...state.members.map(m=>m.row))+1:2;if(row>1000)return {status:400};
+   const candidate=roboticsSignupCandidate_(entry,roboticsRoster_());
+   if(!candidate||candidate.id!==r.member||!/^\d+@students\.bethelsd\.org$/.test(entry.record.respondent))return {status:400};
+   const source=[candidate.name,entry.record.respondent],row=state.members.length?Math.max(...state.members.map(m=>m.row))+1:2;if(row>1000)return {status:400};
    target={id:r.member,row,name:String(source[0]),studentId:entry.record.respondent.split('@')[0],email:entry.record.respondent,identityVerified:true,canChangeStatus:true};
    roboticsWrite_(PERIODS.CTSO,[{range:"'"+ROBOTICS_STORAGE+"'!A"+row+':E'+row,values:[[false,true,target.name,target.studentId,target.email]]}]);
   }
@@ -110,7 +111,7 @@ function roboticsOnboardingDispatch_(r,state,session){
   // A human explicitly links the request to a verified roster identity; form answers never grant access.
   entry.record.memberId=target.id;entry.record.activated=new Date().toISOString();roboticsPrivateSave_(entry);
   roboticsWrite_(PERIODS.CTSO,[{range:"'"+ROBOTICS_STORAGE+"'!A"+target.row+':B'+target.row,values:[[true,false]]}]);
-  return roboticsOnboardingView_(roboticsState_(),session.email);
+  const fresh=roboticsState_();if(typeof roboticsSyncMembership_==='function')roboticsSyncMembership_(fresh);return roboticsOnboardingView_(roboticsState_(),session.email);
  }else return {status:400};
  entry.record.updated=new Date().toISOString();roboticsPrivateSave_(entry);return roboticsProfileView_(entry,member);
 }

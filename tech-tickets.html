@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEST™ — Tech Tickets</title>
+  <link rel="stylesheet" href="css/styles.css?v=qr-click-1" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/resource-viewer.css">
+  <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1">
+  <link rel="stylesheet" href="/css/tech-tickets.css?v=graphic-new-slide-3">
+</head>
+<body>
+  <div class="bg-watermark"></div>
+
+  <header>
+    <div class="logo-container">
+      <a href="index.html">
+        <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;" />
+      </a>
+    </div>
+
+    <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+
+      <!-- Quick Links Dropdown -->
+      <div class="header-dropdown">
+        <button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button>
+        <div class="dropdown-content">
+          <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+          <a href="/safety">SmartPass</a>
+          <a href="/hiring">🚀 Join Us</a>
+          <a href="/weather">🌤️ Weather Report</a>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false">
+        <img src="assets/qr-code.png" alt="QR Code" />
+      </button>
+    </div>
+  </header>
+
+  <main class="tech-page">
+    <section class="tech-hero"><p class="tech-eyebrow">Help &amp; Support · Technology</p><h1>Tech Tickets</h1><p>Something getting in your way? Tell the Software Techs and follow your ticket from report to resolution.</p><div class="tech-actions"><a href="/tech-management" id="tech-workspace" hidden>Software Tech workspace →</a></div></section>
+    <div id="tech-inline-form"><p>Loading the tech ticket form…</p></div>
+    <p id="tech-status" class="tech-status" role="status" aria-live="polite">Sign in to see tickets you created.</p>
+    <section id="tech-content" hidden><section class="tech-panel tech-health-toolbar"><div class="tech-filters"><label>School year<select id="tech-year"></select></label><label>Show<select id="tech-state"><option value="open">Active tickets</option><option value="closed">Resolved &amp; closed</option><option value="all">All tickets</option></select></label><label>Search<input id="tech-search" type="search" placeholder="Title, station, or ticket ID"></label><button id="tech-refresh" type="button">Refresh</button></div></section><section class="tech-panel tech-health" id="tech-health" aria-label="Room tech health"></section><h2>Your tickets</h2><div class="tech-counts" id="tech-counts"></div><section class="tech-panel"><div id="tech-list" class="tech-table-wrap"></div></section></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright © <span id="current-year"></span> by the NEST™ supervisor, Mr. Peñalver</span>
+      <div class="footer-links">
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="/computer-lookup">💻 Computer Look-up</a>
+            <a href="/tech-tickets">🎫 Tech Ticket</a>
+            <a href="/weather">🌤️ Weather Report</a>
+          </div>
+        </div>
+
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/nest-auth.js"></script>
+  <script src="js/main.js"></script>
+  <script src="/js/tech-tickets.js?v=graphic-new-slide-3"></script>
+  <script src="/js/resource-viewer.js"></script>
+</body>
+</html>

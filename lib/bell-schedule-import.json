@@ -1,0 +1,1310 @@
+{
+  "capturedAt": "2026-11-06",
+  "spreadsheetId": "1Q__VbFIWZEslB_FR2W-K6cIC5sC9AJvxy3tLHd8zhno",
+  "templates": [
+    [
+      "Bell Schedule",
+      "Color Background",
+      "Lunch Period",
+      "0 Hour",
+      "Halls Open",
+      "1st Period",
+      "Advisory",
+      "Study Support",
+      "Assembly",
+      "2nd Period",
+      "3rd Period",
+      "4th Period",
+      "5th Period",
+      "Dismissal",
+      "",
+      "Sort Order",
+      "Bell Schedule|Color Background|Lunch Period|0 Hour|Halls Open|1st Period|Advisory|Study Support|Assembly|2nd Period|3rd Period|4th Period|5th Period|Dismissal"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "#72acf7",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:46",
+      "",
+      "8:51-9:21",
+      "",
+      "9:26-10:27",
+      "10:32-12:03",
+      "12:08-1:09",
+      "1:14-2:15",
+      "2:15-2:25",
+      "64",
+      "5",
+      "BLUE Bell Schedule|#72acf7|3rd Period|6:55-7:40|7:30-7:40|7:45-8:46||8:51-9:21||9:26-10:27|10:32-12:03|12:08-1:09|1:14-2:15|2:15-2:25"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "#ff7e05",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:53\t",
+      "",
+      "",
+      "",
+      "8:58-10:06",
+      "10:11-11:49",
+      "11:54-1:02",
+      "1:07-2:15",
+      "2:15-2:25\t",
+      "62",
+      "73",
+      "ORANGE Bell Schedule|#ff7e05|3rd Period|6:55-7:40|7:30-7:40|7:45-8:53\t||||8:58-10:06|10:11-11:49|11:54-1:02|1:07-2:15|2:15-2:25\t"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "#94f874",
+      "3rd Period",
+      "7:55-8:40",
+      "8:30-8:40",
+      "8:45-9:30",
+      "9:35-10:10",
+      "",
+      "",
+      "10:15-11:00",
+      "11:05-12:35",
+      "12:40-1:25",
+      "1:30-2:15",
+      "2:15-2:25",
+      "30",
+      "29",
+      "ADVISORY W/ 1HR Late Start|#94f874|3rd Period|7:55-8:40|8:30-8:40|8:45-9:30|9:35-10:10|||10:15-11:00|11:05-12:35|12:40-1:25|1:30-2:15|2:15-2:25"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "#94f874",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:46",
+      "8:51-9:21",
+      "",
+      "",
+      "9:26-10:27",
+      "10:32-12:03",
+      "12:08-1:09",
+      "1:14-2:15",
+      "2:15-2:25",
+      "11",
+      "8",
+      "ADVISORY No Late Start|#94f874|3rd Period|6:55-7:40|7:30-7:40|7:45-8:46|8:51-9:21|||9:26-10:27|10:32-12:03|12:08-1:09|1:14-2:15|2:15-2:25"
+    ],
+    [
+      "No School",
+      "#e8aee8",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "7",
+      "0",
+      "No School|#e8aee8||||||||||||"
+    ],
+    [
+      "Conferences (W)",
+      "#D2E468",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25 –7:40",
+      "7:45-8:58",
+      "9:03-10:15",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "10:15-10:25",
+      "2",
+      "3",
+      "Conferences (W)|#D2E468|3rd Period|6:55-7:40|7:25 –7:40|7:45-8:58|9:03-10:15|||||||10:15-10:25"
+    ],
+    [
+      "Conferences (TH)",
+      "#D2E468",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "",
+      "",
+      "",
+      "",
+      "7:45-8:58",
+      "9:03-10:15",
+      "",
+      "",
+      "10:15-10:25",
+      "2",
+      "0",
+      "Conferences (TH)|#D2E468|3rd Period|6:55-7:40|7:25-7:40|||||7:45-8:58|9:03-10:15|||10:15-10:25"
+    ],
+    [
+      "Conferences (F)",
+      "#D2E468",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25 –7:40",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "7:45-8:58",
+      "9:03-10:15",
+      "10:15-10:25",
+      "2",
+      "3",
+      "Conferences (F)|#D2E468|3rd Period|6:55-7:40|7:25 –7:40|||||||7:45-8:58|9:03-10:15|10:15-10:25"
+    ],
+    [
+      "Early Release",
+      "#e8aee8",
+      "",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:11",
+      "",
+      "",
+      "",
+      "8:16-8:42",
+      "8:47-9:13",
+      "9:18-9:44",
+      "9:49-10:15",
+      "10:15-10:25",
+      "2",
+      "0",
+      "Early Release|#e8aee8||6:55-7:40|7:25-7:40|7:45-8:11||||8:16-8:42|8:47-9:13|9:18-9:44|9:49-10:15|10:15-10:25"
+    ],
+    [
+      "Assembly: PM",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:40",
+      "",
+      "",
+      "1:25-2:15",
+      "8:45-9:40",
+      "10:45-12:20",
+      "9:45-10:40",
+      "12:25-1:20",
+      "2:15-2:25",
+      "1",
+      "0",
+      "Assembly: PM|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:40|||1:25-2:15|8:45-9:40|10:45-12:20|9:45-10:40|12:25-1:20|2:15-2:25"
+    ],
+    [
+      "College & Career Fair",
+      "#D2E468",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "9:20-10:07",
+      "7:45-9:14",
+      "",
+      "8:25-8:49",
+      "10:12-11:00",
+      "11:05-12:31",
+      "12:36-1:23",
+      "1:28-2:15",
+      "2:15-2:25",
+      "1",
+      "1",
+      "College & Career Fair|#D2E468|3rd Period|6:55-7:40|7:25-7:40|9:20-10:07|7:45-9:14||8:25-8:49|10:12-11:00|11:05-12:31|12:36-1:23|1:28-2:15|2:15-2:25"
+    ],
+    [
+      "Assembly: Homecoming",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:40",
+      "",
+      "",
+      "1:25-2:15",
+      "8:45-9:40",
+      "10:45-12:20",
+      "9:45-10:40",
+      "12:25-1:20",
+      "2:15-2:25",
+      "1",
+      "0",
+      "Assembly: Homecoming|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:40|||1:25-2:15|8:45-9:40|10:45-12:20|9:45-10:40|12:25-1:20|2:15-2:25"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:44",
+      "",
+      "",
+      "12:32-2:15",
+      "8:48-9:48",
+      "9:53-11:23",
+      "11:28-12:27",
+      "12:32-2:15",
+      "2:15-2:20",
+      "1",
+      "0",
+      "Assembly: Veterans' Day|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:44|||12:32-2:15|8:48-9:48|9:53-11:23|11:28-12:27|12:32-2:15|2:15-2:20"
+    ],
+    [
+      "State Testing",
+      "#dc7fff",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "9:50-10:28",
+      "7:45-9:45",
+      "",
+      "",
+      "10:33-11:13",
+      "11:18-12:49",
+      "12:54-1:32",
+      "1:37-2:15",
+      "2:15-2:25",
+      "0",
+      "6",
+      "State Testing|#dc7fff|3rd Period|6:55-7:40|7:25-7:40|9:50-10:28|7:45-9:45|||10:33-11:13|11:18-12:49|12:54-1:32|1:37-2:15|2:15-2:25"
+    ],
+    [
+      "Spirit Assembly",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:40",
+      "1:25-1:30",
+      "",
+      "1:40-2:15",
+      "8:45-9:40",
+      "10:45-12:20",
+      "9:45-10:40",
+      "12:25-1:20",
+      "2:15-2:25",
+      "0",
+      "0",
+      "Spirit Assembly|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:40|1:25-1:30||1:40-2:15|8:45-9:40|10:45-12:20|9:45-10:40|12:25-1:20|2:15-2:25"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "#e8aee8",
+      "3rd Period",
+      "7:55-8:40",
+      "8:25 – 8:40",
+      "8:45-9:40",
+      "",
+      "",
+      "",
+      "9:45-10:41",
+      "10:46-12:15",
+      "12:20-1:15",
+      "1:20-2:15",
+      "2:15-2:25",
+      "0",
+      "2",
+      "1HR Late Start-No Advisory|#e8aee8|3rd Period|7:55-8:40|8:25 – 8:40|8:45-9:40||||9:45-10:41|10:46-12:15|12:20-1:15|1:20-2:15|2:15-2:25"
+    ],
+    [
+      "MLK Assembly",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:43",
+      "",
+      "",
+      "8:56-9:36",
+      "9:41-10:36",
+      "10:41-12:\n 09",
+      "12:14-1:1\n 2",
+      "1:17-2:15",
+      "2:15-2:20",
+      "0",
+      "",
+      "MLK Assembly|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:43|||8:56-9:36|9:41-10:36|10:41-12:\n 09|12:14-1:1\n 2|1:17-2:15|2:15-2:20"
+    ],
+    [
+      "Assembly: Decision Day",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:38",
+      "",
+      "",
+      "1:15-2:15",
+      "8:43-9:36",
+      "10:39-12:12",
+      "9:41-10:34",
+      "12:17-1:10",
+      "2:15-2:20",
+      "0",
+      "0",
+      "Assembly: Decision Day|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:38|||1:15-2:15|8:43-9:36|10:39-12:12|9:41-10:34|12:17-1:10|2:15-2:20"
+    ],
+    [
+      "Carnival",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25–7:40",
+      "7:45-8:35",
+      "",
+      "",
+      "12:45-2:15",
+      "8:40-9:30",
+      "9:35-10:55",
+      "11:00-11:50",
+      "11:55-12:45",
+      "2:15-2:20",
+      "0",
+      "",
+      "Carnival|#D4AC0D|3rd Period|6:55-7:40|7:25–7:40|7:45-8:35|||12:45-2:15|8:40-9:30|9:35-10:55|11:00-11:50|11:55-12:45|2:15-2:20"
+    ],
+    [
+      "iPad Collection",
+      "#D2E468",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25–7:40",
+      "7:45-8:42",
+      "8:47-9:32",
+      "",
+      "",
+      "9:37-10:34",
+      "10:39-12:11",
+      "12:16-1:13",
+      "1:18-2:15",
+      "2:15-2:25",
+      "0",
+      "0",
+      "iPad Collection|#D2E468|3rd Period|6:55-7:40|7:25–7:40|7:45-8:42|8:47-9:32|||9:37-10:34|10:39-12:11|12:16-1:13|1:18-2:15|2:15-2:25"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "#e8aee8",
+      "3rd Period",
+      "8:55-9:40",
+      "9:30-9:40",
+      "9:45-10:25",
+      "",
+      "",
+      "",
+      "10:30-11:10",
+      "11:15-12:45",
+      "12:50-1:30",
+      "1:35-2:15",
+      "2:15-2:25",
+      "0",
+      "1",
+      "2HR Late Start-No Advisory|#e8aee8|3rd Period|8:55-9:40|9:30-9:40|9:45-10:25||||10:30-11:10|11:15-12:45|12:50-1:30|1:35-2:15|2:15-2:25"
+    ],
+    [
+      "Assembly: AM",
+      "#D4AC0D",
+      "Advisory",
+      "6:55-7:40",
+      "7:25 – 7:40",
+      "7:45 – 8:46",
+      "",
+      "",
+      "",
+      "8:51-10:22",
+      "10:27-12:03",
+      "12:08-1:09",
+      "1:14-2:15",
+      "2:15 – 2:25",
+      "0",
+      "0",
+      "Assembly: AM|#D4AC0D|Advisory|6:55-7:40|7:25 – 7:40|7:45 – 8:46||||8:51-10:22|10:27-12:03|12:08-1:09|1:14-2:15|2:15 – 2:25"
+    ],
+    [
+      "Clubs Assembly",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:46",
+      "",
+      "",
+      "8:51-9:21",
+      "9:26-10:27",
+      "10:32-12:03",
+      "12:08-1:09",
+      "1:14-2:15",
+      "2:15-2:25",
+      "0",
+      "1",
+      "Clubs Assembly|#D4AC0D|3rd Period|6:55-7:40|7:30-7:40|7:45-8:46|||8:51-9:21|9:26-10:27|10:32-12:03|12:08-1:09|1:14-2:15|2:15-2:25"
+    ]
+  ],
+  "current": [
+    [
+      "Date",
+      "Schedule Name",
+      "Color Background",
+      "Lunch Period",
+      "0 Hour",
+      "Halls Open",
+      "1st Period",
+      "Advisory",
+      "Study Support",
+      "Assembly",
+      "2nd Period",
+      "3rd Period",
+      "4th Period",
+      "5th Period",
+      "Dismissal",
+      "Date|Schedule Name|Color Background|Lunch Period|0 Hour|Halls Open|1st Period|Advisory|Study Support|Assembly|2nd Period|3rd Period|4th Period|5th Period|Dismissal|11/06/2026|Assembly: Veterans' Day|#D4AC0D|3rd Period|6:55-7:40|7:25-7:40|7:45-8:44|||12:32-2:15|8:48-9:48|9:53-11:23|11:28-12:27|12:32-2:15|2:15-2:20"
+    ],
+    [
+      "11/06/2026",
+      "Assembly: Veterans' Day",
+      "#D4AC0D",
+      "3rd Period",
+      "6:55-7:40",
+      "7:25-7:40",
+      "7:45-8:44",
+      "",
+      "",
+      "12:32-2:15",
+      "8:48-9:48",
+      "9:53-11:23",
+      "11:28-12:27",
+      "12:32-2:15",
+      "2:15-2:20",
+      "11/09/2026|ADVISORY W/ 1HR Late Start|#94f874|3rd Period|7:55-8:40|8:30-8:40|8:45-9:30|9:35-10:10|||10:15-11:00|11:05-12:35|12:40-1:25|1:30-2:15|2:15-2:25"
+    ],
+    [
+      "11/09/2026",
+      "ADVISORY W/ 1HR Late Start",
+      "#94f874",
+      "3rd Period",
+      "7:55-8:40",
+      "8:30-8:40",
+      "8:45-9:30",
+      "9:35-10:10",
+      "",
+      "",
+      "10:15-11:00",
+      "11:05-12:35",
+      "12:40-1:25",
+      "1:30-2:15",
+      "2:15-2:25",
+      "11/10/2026|ORANGE Bell Schedule|#ff7e05|3rd Period|6:55-7:40|7:30-7:40|7:45-8:53\t||||8:58-10:06|10:11-11:49|11:54-1:02|1:07-2:15|2:15-2:25\t"
+    ],
+    [
+      "11/10/2026",
+      "ORANGE Bell Schedule",
+      "#ff7e05",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:53\t",
+      "",
+      "",
+      "",
+      "8:58-10:06",
+      "10:11-11:49",
+      "11:54-1:02",
+      "1:07-2:15",
+      "2:15-2:25\t",
+      "11/11/2026|No School|#e8aee8||||||||||||"
+    ],
+    [
+      "11/11/2026",
+      "No School",
+      "#e8aee8",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "11/12/2026|BLUE Bell Schedule|#72acf7|3rd Period|6:55-7:40|7:30-7:40|7:45-8:46||8:51-9:21||9:26-10:27|10:32-12:03|12:08-1:09|1:14-2:15|2:15-2:25"
+    ],
+    [
+      "11/12/2026",
+      "BLUE Bell Schedule",
+      "#72acf7",
+      "3rd Period",
+      "6:55-7:40",
+      "7:30-7:40",
+      "7:45-8:46",
+      "",
+      "8:51-9:21",
+      "",
+      "9:26-10:27",
+      "10:32-12:03",
+      "12:08-1:09",
+      "1:14-2:15",
+      "2:15-2:25",
+      "||||||||||||||"
+    ]
+  ],
+  "lunches": [
+    [
+      "Bell Schedule",
+      "LUNCH BLOCK",
+      "SCHEDULE",
+      "TIME"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:27-10:57"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:02-12:03"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:32-11:00"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:00-11:30"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:35-12:03"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:32-11:33"
+    ],
+    [
+      "BLUE Bell Schedule",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:33-12:03"
+    ],
+    [],
+    [
+      "ORANGE Bell Schedule",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:06-10:36"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "1st Lunch",
+      "3RD PERIOD",
+      "10:41-11:49"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:11-10:42"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "10:42-11:12"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:17-11:39"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:11-11:19"
+    ],
+    [
+      "ORANGE Bell Schedule",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:19-11:49"
+    ],
+    [],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "1st Lunch",
+      "1ST LUNCH",
+      "11:00-11:30"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:35-12:35"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:05-11:33"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:33-12:03"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "12:08-12:35"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "11:05-12:05"
+    ],
+    [
+      "ADVISORY W/ 1HR Late Start",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "12:05-12:35"
+    ],
+    [],
+    [
+      "ADVISORY No Late Start",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:27-10:57"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:02-12:03"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:32-11:00"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:00-11:30"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:35-12:03"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:32-11:33"
+    ],
+    [
+      "ADVISORY No Late Start",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:33-12:03"
+    ],
+    [],
+    [
+      "Assembly: PM",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:40-11:10"
+    ],
+    [
+      "Assembly: PM",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:15-12:20"
+    ],
+    [
+      "Assembly: PM",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:45-11:15"
+    ],
+    [
+      "Assembly: PM",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:15-11:45"
+    ],
+    [
+      "Assembly: PM",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:50-12:20"
+    ],
+    [
+      "Assembly: PM",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:45-11:50"
+    ],
+    [
+      "Assembly: PM",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:50-12:20"
+    ],
+    [],
+    [
+      "College & Career Fair",
+      "1st Lunch",
+      "1ST LUNCH",
+      "11:00–11:30"
+    ],
+    [
+      "College & Career Fair",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:35–12:31"
+    ],
+    [
+      "College & Career Fair",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:05–11:30"
+    ],
+    [
+      "College & Career Fair",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:30–12:00"
+    ],
+    [
+      "College & Career Fair",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "12:05–12:31"
+    ],
+    [
+      "College & Career Fair",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "11:05–12:01"
+    ],
+    [
+      "College & Career Fair",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "12:01–12:31"
+    ],
+    [],
+    [
+      "Assembly: Homecoming",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:40-11:10"
+    ],
+    [
+      "Assembly: Homecoming",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:15-12:20"
+    ],
+    [
+      "Assembly: Homecoming",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:45-11:15"
+    ],
+    [
+      "Assembly: Homecoming",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:15-11:45"
+    ],
+    [
+      "Assembly: Homecoming",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:50-12:20"
+    ],
+    [
+      "Assembly: Homecoming",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:45-11:50"
+    ],
+    [
+      "Assembly: Homecoming",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:50-12:20"
+    ],
+    [],
+    [
+      "Assembly: Veterans' Day",
+      "1st Lunch",
+      "1ST LUNCH",
+      "9:48-10:18"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "1st Lunch",
+      "3RD PERIOD",
+      "10:21-11:19"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "9:51-10:17"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "10:17-10:47"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:52-11:19"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "9:51-10:49"
+    ],
+    [
+      "Assembly: Veterans' Day",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "10:49-11:19"
+    ],
+    [],
+    [
+      "State Testing",
+      "1st Lunch",
+      "1ST LUNCH",
+      "11:13-11:43"
+    ],
+    [
+      "State Testing",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:48-12:49"
+    ],
+    [
+      "State Testing",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:18-11:46"
+    ],
+    [
+      "State Testing",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:46-12:16"
+    ],
+    [
+      "State Testing",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "12:21-12:49"
+    ],
+    [
+      "State Testing",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "11:18-12:19"
+    ],
+    [
+      "State Testing",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "12:19-12:49"
+    ],
+    [],
+    [
+      "Spirit Assembly",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:40-11:10"
+    ],
+    [
+      "Spirit Assembly",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:15-12:20"
+    ],
+    [
+      "Spirit Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:40-11:15"
+    ],
+    [
+      "Spirit Assembly",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:15-11:45"
+    ],
+    [
+      "Spirit Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:45-12:20"
+    ],
+    [
+      "Spirit Assembly",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:40-11:50"
+    ],
+    [
+      "Spirit Assembly",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:50-12:20"
+    ],
+    [],
+    [
+      "1HR Late Start-No Advisory",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:41-11:11"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:16-12:15"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:46-11:13"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:13-11:43"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:48-12:15"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:46-11:45"
+    ],
+    [
+      "1HR Late Start-No Advisory",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:45-12:15"
+    ],
+    [],
+    [
+      "MLK Assembly",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:36-11:06"
+    ],
+    [
+      "MLK Assembly",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:11-12:09"
+    ],
+    [
+      "MLK Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:41-11:08"
+    ],
+    [
+      "MLK Assembly",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:08-11:38"
+    ],
+    [
+      "MLK Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:43-12:09"
+    ],
+    [
+      "MLK Assembly",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:41-11:39"
+    ],
+    [
+      "MLK Assembly",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:39-12:09"
+    ],
+    [],
+    [
+      "Assembly: Decision Day",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:34-11:04"
+    ],
+    [
+      "Assembly: Decision Day",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:09-12:12"
+    ],
+    [
+      "Assembly: Decision Day",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:39-11:06"
+    ],
+    [
+      "Assembly: Decision Day",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:06-11:36"
+    ],
+    [
+      "Assembly: Decision Day",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:41-12:12"
+    ],
+    [
+      "Assembly: Decision Day",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:39-11:42"
+    ],
+    [
+      "Assembly: Decision Day",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:42-12:12"
+    ],
+    [],
+    [
+      "Carnival",
+      "1st Lunch",
+      "1ST LUNCH",
+      "9:30-10:00"
+    ],
+    [
+      "Carnival",
+      "1st Lunch",
+      "3RD PERIOD",
+      "10:05-10:55"
+    ],
+    [
+      "Carnival",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "NA"
+    ],
+    [
+      "Carnival",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "NA"
+    ],
+    [
+      "Carnival",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "NA"
+    ],
+    [
+      "Carnival",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "9:35-10:25"
+    ],
+    [
+      "Carnival",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "10:25-10:55"
+    ],
+    [],
+    [
+      "iPad Collection",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:30-11:06"
+    ],
+    [
+      "iPad Collection",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:10-12:09"
+    ],
+    [
+      "iPad Collection",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "NA"
+    ],
+    [
+      "iPad Collection",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "NA"
+    ],
+    [
+      "iPad Collection",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "NA"
+    ],
+    [
+      "iPad Collection",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:40-11:39"
+    ],
+    [
+      "iPad Collection",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:39-12:09"
+    ],
+    [],
+    [
+      "2HR Late Start-No Advisory",
+      "1st Lunch",
+      "1ST LUNCH",
+      "11:10-11:40"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:45-12:45"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:15-11:42"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:42-12:12"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "12:17-12:45"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "11:15-12:15"
+    ],
+    [
+      "2HR Late Start-No Advisory",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "12:15-12:50"
+    ],
+    [],
+    [
+      "Clubs Assembly",
+      "1st Lunch",
+      "1ST LUNCH",
+      "10:27-10:57"
+    ],
+    [
+      "Clubs Assembly",
+      "1st Lunch",
+      "3RD PERIOD",
+      "11:02-12:03"
+    ],
+    [
+      "Clubs Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "10:32-11:00"
+    ],
+    [
+      "Clubs Assembly",
+      "2nd Lunch",
+      "2ND LUNCH",
+      "11:00-11:30"
+    ],
+    [
+      "Clubs Assembly",
+      "2nd Lunch",
+      "3RD PERIOD",
+      "11:35-12:03"
+    ],
+    [
+      "Clubs Assembly",
+      "3rd Lunch",
+      "3RD PERIOD",
+      "10:32-11:33"
+    ],
+    [
+      "Clubs Assembly",
+      "3rd Lunch",
+      "3RD LUNCH",
+      "11:33-12:03"
+    ]
+  ]
+}

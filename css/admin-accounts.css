@@ -1,0 +1,38 @@
+.account-directory-controls{display:flex;gap:1rem;align-items:end;flex-wrap:wrap;margin:1.25rem 0}.account-directory-controls label{display:grid;gap:.4rem;font-weight:700}.account-directory-controls label:first-child{flex:1;min-width:220px}.account-directory-controls input,.account-directory-controls select,.account-notes textarea{font:inherit;padding:.7rem;border:1px solid #bdc9d6;border-radius:8px;width:100%;box-sizing:border-box}.account-directory-controls button,.account-notes button{font:inherit;font-weight:700;padding:.7rem 1rem;border-radius:8px;cursor:pointer}.account-entry{min-width:0}.account-entry h4{font-size:1.15rem;margin:0 0 .5rem}.account-entry p{overflow-wrap:anywhere}.account-metadata{display:grid;grid-template-columns:minmax(110px,170px) minmax(0,1fr);gap:.4rem 1rem}.account-metadata dt{font-weight:700}.account-metadata dd{margin:0;overflow-wrap:anywhere}.account-notes{display:flex;flex-wrap:wrap;align-items:center;gap:.7rem;margin:1rem 0}.account-notes label{display:grid;gap:.4rem;font-weight:700;flex-basis:100%}.account-entry details{margin-top:1rem}.account-entry summary{cursor:pointer;font-weight:700}.account-hash{font-family:monospace;word-break:break-all}.account-credential-details{background:#f1f5f9;border-radius:8px;padding:.75rem}@media(max-width:520px){.account-metadata{grid-template-columns:1fr;gap:.25rem}.account-metadata dd{margin-bottom:.5rem}.account-directory-controls{align-items:stretch;flex-direction:column}}
+
+/* Keep form text readable independently of the surrounding dark profile theme. */
+.internal-page input:not([type="checkbox"]):not([type="radio"]),
+.internal-page textarea,
+.internal-page select,
+.internal-page option {
+  color: #102d42;
+  background-color: #fff;
+  caret-color: #102d42;
+  color-scheme: light;
+  -webkit-text-fill-color: #102d42;
+}
+.internal-page input::placeholder,
+.internal-page textarea::placeholder {
+  color: #526577;
+  -webkit-text-fill-color: #526577;
+  opacity: 1;
+}
+.internal-page input:disabled,
+.internal-page textarea:disabled,
+.internal-page select:disabled {
+  color: #506173;
+  -webkit-text-fill-color: #506173;
+  background-color: #e6edf3;
+  opacity: 1;
+}
+.account-credential-details {
+  color: #102d42;
+}
+
+#profile-admin-panel .account-credential-details,
+#profile-admin-panel .account-credential-details * {
+  color: #102d42;
+  -webkit-text-fill-color: #102d42;
+}
+
+#staff-division-fields{grid-column:1/-1;min-width:0;border:1px solid #a2b6c6;border-radius:10px;padding:1rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:1rem}#staff-division-fields[hidden]{display:none}#staff-division-fields p{grid-column:1/-1;margin:0}#staff-division-fields label{display:grid;gap:.4rem}#staff-access-list h4{overflow-wrap:anywhere}#staff-access-form [type=submit]{align-self:end}

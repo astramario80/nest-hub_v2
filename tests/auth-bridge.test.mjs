@@ -1,37 +1,13 @@
+import {accountSchool as service} from './helpers/account-school.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
 
-const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Auth.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Account.js',import.meta.url),'utf8') + '\n' + fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
+const source = fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8');
 const hash = value => createHash('sha256').update(value).digest('hex');
-function service() {
-  let now=1_000_000_000, accounts=[], sent=[],leaders=[],failAuditUpdate=false,failSort=false,allowedHeader='',recoveryHeader='',linkedHeader='';
-  const state=new Map(),store={getProperty:key=>state.get(key)||null,setProperty:(key,value)=>state.set(key,value),deleteProperty:key=>state.delete(key),getProperties:()=>Object.fromEntries(state)};
-  const cacheState=new Map(),cache={get:key=>cacheState.get(key)?.expires>now?cacheState.get(key).value:null,put:(key,value,seconds)=>cacheState.set(key,{value,expires:now+seconds*1000}),remove:key=>cacheState.delete(key)};
-  const lock={tryLock:()=>true,releaseLock:()=>{}};
-  const values={
-    get(_id,range){
-      if(range.includes('StudentNESTAccess')&&range.includes('I1'))return {values:allowedHeader?[[allowedHeader,recoveryHeader,linkedHeader]]:[]};
-      if(range.includes('StudentNESTAccess'))return {values:accounts};
-      if(range.includes("'Imported'"))return {values:leaders};
-      if(range.includes("'Period 1'"))return {values:[['Student','','student@students.bethelsd.org']]};
-      return {values:[]};
-    },
-    update(resource,_id,range){if(range.includes('I1')){allowedHeader=resource.values[0][0];recoveryHeader=resource.values[0][1];linkedHeader=resource.values[0][2];return {};}if(failAuditUpdate)throw new Error('Audit column unavailable');accounts[Number(range.match(/H(\d+)/)[1])-2][7]=resource.values[0][0];return {};},
-    batchUpdate(resource){for(const item of resource.data){const match=item.range.match(/!([A-I])(\d+)/),row=accounts[Number(match[2])-2],value=item.values[0];if(match[1]==='A')row[0]=value[0];if(match[1]==='C'){row[2]=value[0];row[3]=value[1];}if(match[1]==='E')row[4]=value[0];if(match[1]==='F')row[5]=value[0];}return {};},
-    append(resource){accounts.push(resource.values[0]);return {};}
-  };
-  const batchUpdate=({requests})=>{for(const request of requests){
-    if(request.insertDimension)accounts.splice(request.insertDimension.range.startIndex-1,0,[]);
-    if(request.updateCells)accounts[request.updateCells.range.startRowIndex-1]=request.updateCells.rows[0].values.map(cell=>Object.values(cell.userEnteredValue)[0]);
-    if(request.sortRange){assert.equal(request.sortRange.range.endColumnIndex,11,'Account sorts must include Linked Student Email');if(failSort)throw new Error('Sort unavailable');accounts.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));}
-  }return {};};
-  const ctx=vm.createContext({Date:class extends Date{static now(){return now;}},console,Utilities:{DigestAlgorithm:{SHA_256:'sha256'},computeDigest:(_,input)=>[...createHash('sha256').update(input).digest()]},PropertiesService:{getScriptProperties:()=>store},CacheService:{getScriptCache:()=>cache},LockService:{getScriptLock:()=>lock},Sheets:{Spreadsheets:{Values:values,get:(_id,options)=>options?.fields?.includes('properties(sheetId,title)')?{sheets:[{properties:{sheetId:57426151,title:'StudentNESTAccess'}}]}:{sheets:[]},batchUpdate}},MailApp:{getRemainingDailyQuota:()=>100,sendEmail:message=>sent.push(message)}});
-  vm.runInContext(source,ctx);
-  return {call:request=>JSON.parse(JSON.stringify(ctx.authDispatch_(request))),tool:request=>JSON.parse(JSON.stringify(ctx.dispatch_(request))),manager:(identity,period)=>ctx.manager_(identity,period),state,sent,accounts,setLeaders:value=>leaders=value,setAuditFailure:value=>failAuditUpdate=value,setSortFailure:value=>failSort=value,advance:ms=>now+=ms};
-}
+
 const challenge='a'.repeat(64),ticket='b'.repeat(64),session='c'.repeat(64),ip='d'.repeat(64),email='student@students.bethelsd.org';
 test('registration requires known district email, verified code, and unique username',()=>{
   const app=service();
@@ -182,3 +158,105 @@ test('profile changes revoke old sessions and recovery email carries banner and 
   assert.equal(app.call({action:'auth-recover-reset',ticket:reset,username:'visitor2',passwordHash:'c'.repeat(64),passwordSalt:'d'.repeat(32)}).status,401);
   assert.equal(app.accounts[1][2],'c'.repeat(64));
 });
+
+test('recovery request retries reuse one email and verification retries reuse one ticket',()=>{
+ const app=service();app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1,'','','',email]);
+ const request={action:'auth-recover-request',email,challenge,code:'123456',ip};
+ assert.equal(app.call(request).status,200);assert.equal(app.call(request).status,200);assert.equal(app.sent.length,1);
+ assert.equal(app.call({...request,code:'654321'}).status,400);assert.equal(app.sent.length,1);
+ const verify={action:'auth-recover-verify',challenge,code:'123456',ticket};
+ assert.deepEqual(app.call(verify).usernames,['student']);assert.deepEqual(app.call(verify).usernames,['student']);
+ assert.equal(app.call({...verify,code:'000000'}).status,401);
+ assert.equal(app.call({...verify,ticket:'e'.repeat(64)}).status,401);
+ assert.equal(app.call({action:'auth-recover-reset',ticket,username:'student',passwordHash:'a'.repeat(64),passwordSalt:'b'.repeat(32)}).status,200);
+ assert.equal(app.call(verify).status,401);
+});
+test('uncertain mail delivery is not resent when the same recovery request is replayed',()=>{
+ const app=service();app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1,'','','',email]);
+ const request={action:'auth-recover-request',email,challenge,code:'123456',ip};
+ assert.equal(app.call(request).status,200);
+ const key='authrecover:'+hash(challenge),record=JSON.parse(app.state.get(key));record.delivery='uncertain';app.state.set(key,JSON.stringify(record));
+ assert.equal(app.call(request).status,503);assert.equal(app.sent.length,1);
+});
+test('verification replay rechecks the active account and expires with its ticket',()=>{
+ const app=service();app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1,'','','',email]);
+ app.call({action:'auth-recover-request',email,challenge,code:'123456',ip});const verify={action:'auth-recover-verify',challenge,code:'123456',ticket};
+ assert.equal(app.call(verify).status,200);app.accounts[0][4]=false;assert.equal(app.call(verify).status,401);
+ app.accounts[0][4]=true;app.advance(600001);assert.equal(app.call(verify).status,401);
+});
+test('unknown recovery addresses keep the same private success response on replay without email',()=>{
+ const app=service(),request={action:'auth-recover-request',email,challenge,code:'123456',ip};
+ assert.equal(app.call(request).status,200);assert.equal(app.call(request).status,200);assert.equal(app.sent.length,0);
+});
+
+
+test('registration and recovery use NEST Communications transactional mail without tracking',()=>{
+ for(const action of ['auth-register-request','auth-recover-request']){
+  const app=service();if(action==='auth-recover-request')app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1]);
+  assert.equal(app.call({action,email,challenge,code:'123456',ip}).status,200);
+  const message=app.sent[0];assert.equal(message.From,'NEST Communications <communications@gknest.org>');assert.equal(message.To,email);
+  assert.equal(message.MessageStream,'outbound');assert.equal(message.TrackOpens,false);assert.equal(message.TrackLinks,'None');
+  assert.ok(!message.HtmlBody.includes('unsubscribe'));assert.ok(!JSON.stringify([...app.state.values()]).includes('test-mail-token'));
+ }
+});
+test('failed or uncertain provider delivery never falls back to work email or repeats a recovery send',()=>{
+ for(const mode of ['throw','rejected','malformed']){
+  const app=service();app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1]);app.setMailMode(mode);
+  const request={action:'auth-recover-request',email,challenge,code:'123456',ip};
+  assert.equal(app.call(request).status,503);assert.equal(app.call(request).status,503);assert.equal(app.sent.length,1);
+  assert.equal(JSON.parse(app.state.get('authrecover:'+hash(challenge))).delivery,'uncertain');
+ }
+});
+test('account email fails closed when the server credential is missing',()=>{
+ for(const action of ['auth-register-request','auth-recover-request']){
+  const app=service();if(action==='auth-recover-request')app.accounts.push(['student',email,'e'.repeat(64),'f'.repeat(32),true,1]);
+  assert.equal(app.call({action,email,challenge,code:'123456',ip,accountMailToken:undefined}).status,503);assert.equal(app.sent.length,0);
+ }
+});
+
+test('owner directory includes active district and manual student/staff accounts and protects credential metadata',()=>{
+ const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
+ app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'2026-11-02T17:00:00.000Z',''],['student',email,'a'.repeat(64),'b'.repeat(32),true,3,'2026-10-01T12:00:00Z','','','','','Private note'],['teacher','teacher@bethelsd.org','c'.repeat(64),'d'.repeat(32),true,2,'2026-09-01T12:00:00Z',''],['disabled','old@students.bethelsd.org','','',false,1,'','']);
+ app.setLeaders([['1','','Manager','Able, Zoe','teacher@bethelsd.org']]);
+ app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});app.call({action:'auth-session',email,session:studentSession,duration:'1d'});
+ assert.equal(app.call({action:'auth-admin-directory'}).status,403);assert.equal(app.call({action:'auth-admin-directory',session:studentSession}).status,403);
+ const result=app.call({action:'auth-admin-directory',session:ownerSession});assert.equal(result.status,200);assert.equal(result.accounts.length,3);assert.equal(result.accounts[0].name,'Able, Zoe');assert.equal(result.accounts[0].type,'staff');
+ const student=result.accounts.find(a=>a.username==='student');assert.equal(student.type,'student');assert.equal(student.passwordHash,'a'.repeat(64));assert.equal(student.passwordSalt,'b'.repeat(32));assert.equal(student.sessionVersion,3);assert.equal(student.notes,'Private note');assert.equal(student.createdAt,'2026-10-01T12:00:00Z');
+ assert.ok(!JSON.stringify(app.call({action:'auth-profile-read',session:studentSession})).includes('Private note'));
+});
+test('owner notes write only administrator metadata, validate input, and preserve existing sessions',()=>{
+ const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64),studentSession='2'.repeat(64);
+ app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'',''],['student',email,'a'.repeat(64),'b'.repeat(32),true,3,'2026-10-01T12:00:00Z','']);
+ app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});app.call({action:'auth-session',email,session:studentSession,duration:'1d'});
+ assert.equal(app.call({action:'auth-admin-notes',session:studentSession,accountKey:email,notes:'bad'}).status,403);
+ assert.equal(app.call({action:'auth-admin-notes',session:ownerSession,accountKey:email,notes:'x'.repeat(1001)}).status,400);
+ const before=app.accounts[1].slice(0,8);assert.equal(app.call({action:'auth-admin-notes',session:ownerSession,accountKey:email,notes:'=SUM(1,2)\nFollow up'}).status,200);
+ assert.equal(app.accounts[1][11],'=SUM(1,2)\nFollow up');assert.deepEqual(app.accounts[1].slice(0,8),before);assert.equal(app.call({action:'auth-me',session:studentSession}).status,200);
+ assert.equal(app.call({action:'auth-admin-notes',session:ownerSession,accountKey:email,notes:''}).status,200);assert.equal(app.accounts[1][11],'');
+});
+test('signup reset is owner-only, email-specific, temporary, and never sends email or bypasses verification',()=>{
+ const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64),now=1_000_000_000;
+ app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'});
+ app.call({action:'auth-register-request',email,challenge,code:'123456',ip});
+ for(let i=0;i<5;i++)assert.equal(app.call({action:'auth-register-verify',challenge,code:'000000',ticket}).status,401);
+ app.state.set('auth-ip:'+ip,JSON.stringify({count:30,expires:now+3600000}));app.state.set('auth-email:'+hash(email),JSON.stringify({count:5,expires:now+3600000}));
+ assert.equal(app.call({action:'auth-admin-registration-unlock',email}).status,403);
+ assert.equal(app.call({action:'auth-admin-registration-unlock',session:ownerSession,email:'unknown@students.bethelsd.org'}).status,404);
+ assert.equal(app.call({action:'auth-admin-registration-unlock',session:ownerSession,email:owner}).status,409);
+ const sent=app.sent.length,result=app.call({action:'auth-admin-registration-unlock',session:ownerSession,email});assert.equal(result.status,200);assert.equal(result.expires,now+600000);assert.equal(result.challengesReset,1);assert.equal(app.sent.length,sent);
+ assert.equal(app.call({action:'auth-register-verify',challenge,code:'123456',ticket}).status,200);
+ assert.equal(app.call({action:'auth-register-request',email:'other@students.bethelsd.org',challenge:'7'.repeat(64),code:'123456',ip}).status,429);
+ assert.equal(app.call({action:'auth-register-request',email,challenge:'8'.repeat(64),code:'123456',ip}).status,200);
+ assert.equal(app.call({action:'auth-register-request',email,challenge:'9'.repeat(64),code:'123456',ip}).status,429,'one-minute cooldown remains');
+ app.advance(600001);assert.equal(app.call({action:'auth-register-request',email,challenge:'9'.repeat(64),code:'123456',ip}).status,429,'shared-network exception expires');
+});
+
+test('old eleven-column account sheets remain readable and gain only the notes column on first save',()=>{
+ const app=service(),owner='mpenalver@bethelsd.org',ownerSession='1'.repeat(64);app.setColumns(11);app.accounts.push(['mario',owner,'e'.repeat(64),'f'.repeat(32),true,1,'','']);
+ assert.equal(app.call({action:'auth-session',email:owner,session:ownerSession,duration:'1d'}).status,200);
+ assert.equal(app.call({action:'auth-admin-directory',session:ownerSession}).status,200);assert.equal(app.getColumns(),11);
+ assert.equal(app.call({action:'auth-admin-notes',session:ownerSession,accountKey:owner,notes:'Private note'}).status,200);assert.equal(app.getColumns(),12);assert.equal(app.accounts[0][11],'Private note');assert.equal(app.call({action:'auth-me',session:ownerSession}).status,200);
+});
+test('recovery cooldown denials do not consume hourly email or shared-network allowances',()=>{const app=service(),email='fictional@students.bethelsd.org',ip='e'.repeat(64);app.accounts.push(['fictional',email,'e'.repeat(64),'f'.repeat(32),true,1]);const request=()=>app.call({action:'auth-recover-request',email,challenge:cryptoChallenge(),code:'123456',ip});let count=0;function cryptoChallenge(){return (++count).toString(16).padStart(64,'0');}assert.equal(request().status,200);for(let i=0;i<10;i++){const result=request();assert.equal(result.status,429);assert.equal(result.retryAfter,60);}assert.equal(JSON.parse(app.state.get('auth-recover-email:'+hash(email))).count,1);assert.equal(JSON.parse(app.state.get('auth-recover-ip:'+ip)).count,1);app.advance(60001);assert.equal(request().status,200);assert.equal(app.sent.length,2);});
+test('an account read failure never consumes recovery allowance',()=>{const app=service();app.ctx.accounts_=()=>{throw Error('Read quota');};assert.throws(()=>app.call({action:'auth-recover-request',email,challenge,code:'123456',ip}),/Read quota/);assert.equal([...app.state.keys()].some(k=>k.startsWith('auth-recover-')),false);});
+test('recovery uses a fresh native account read and restores its request context',()=>{const app=service(),old=new Map([['before','value']]);let advanced=0;app.ctx.SpreadsheetApp={openById:()=>({getSheetByName:()=>({getLastRow:()=>2,getMaxColumns:()=>12,getRange:()=>({getValues:()=>[['fictional',email,'a'.repeat(64),'b'.repeat(32),true,1]]})})})};vm.runInContext('NEST_ACCESS_READS=new Map([["before","value"]]);',app.ctx);const get=app.ctx.Sheets.Spreadsheets.Values.get;app.ctx.Sheets.Spreadsheets.Values.get=()=>{advanced++;throw Error('Advanced API must not be used');};const result=app.ctx.authRecoveryReadContext_(()=>app.ctx.accounts_());assert.equal(result[0].username,'fictional');assert.equal(advanced,0);assert.equal(vm.runInContext('NEST_ACCESS_READS.get("before")',app.ctx),'value');app.ctx.Sheets.Spreadsheets.Values.get=get;});

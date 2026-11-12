@@ -1,0 +1,22 @@
+{
+  "readDate": "2026-10-28",
+  "builderScriptId": "1EkuHAx1haLg7oVXpgk1kCzF3msx_SrngwPGJ01qxkBvNNHWwKIhHBdEb",
+  "calendarSourceSha256": "a5e334982ab0657833c77b4eb5ea458def18394db63200f9b228fd0b80d53d5b",
+  "staffScriptId": "1EA_2ubUuHUMu2pAI_qPk7_fFjWwyH4edS4CCDZ5JulzL0dF3MiJEXgKV",
+  "databaseId": "12yZuGqPRJnm0GfiAf6OSrsc10K13ZW0rlx5mwbVNqDE",
+  "staffRanges": [
+    "Notifications!G3:G",
+    "Notifications!H3:J"
+  ],
+  "calendarRanges": [
+    "Schedule!A9:B15",
+    "FolderIDs!F6:G"
+  ],
+  "deployed": false,
+  "mailboxPatternsVerified": [
+    "Submitted:",
+    "Edit and Resubmit:",
+    "Completed:"
+  ],
+  "privateMailBodiesOrTokensIncluded": false
+}

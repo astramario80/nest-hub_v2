@@ -4,8 +4,8 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Your NEST™ Profile</title>
   <link rel="icon" href="/assets/nest_menu_icon.png" type="image/png">
-  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1"><link rel="stylesheet" href="/css/internal-workspaces.css">
-  <link rel="stylesheet" href="/css/diagnostics.css">
+  <link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1"><link rel="stylesheet" href="/css/internal-workspaces.css?v=all-student-access-20261106">
+  <link rel="stylesheet" href="/css/diagnostics.css"><link rel="stylesheet" href="/css/admin-accounts.css?v=contrast-3">
 </head>
 <body>
   <div class="bg-watermark"></div>
@@ -27,7 +27,7 @@
     <div id="profile-signed-in" hidden>
       <nav id="profile-tabs" class="profile-tabs" role="tablist" aria-label="Profile sections">
         <button type="button" id="profile-details-tab" role="tab" aria-controls="profile-details-panel" aria-selected="true">My profile</button>
-        <button type="button" id="profile-admin-tab" role="tab" aria-controls="profile-admin-panel" aria-selected="false" hidden>Student accounts</button>
+        <button type="button" id="profile-admin-tab" role="tab" aria-controls="profile-admin-panel" aria-selected="false" hidden>Accounts</button>
       <button type="button" id="profile-diagnostics-tab" role="tab" aria-controls="profile-diagnostics-panel" aria-selected="false" hidden>Access diagnostics</button>
       </nav>
       <section class="internal-card" id="profile-details-panel" role="tabpanel" aria-labelledby="profile-details-tab">
@@ -41,8 +41,36 @@
         <p>Changing your username or password signs out your other sessions.</p>
       </section>
       <section class="internal-card" id="profile-admin-panel" role="tabpanel" aria-labelledby="profile-admin-tab" hidden>
-        <h2>Student account management</h2><p id="admin-status" role="status">Checking administrator access…</p>
+        <h2>Student &amp; staff accounts</h2><p id="admin-status" role="status">Checking administrator access…</p>
         <div id="admin-tools" hidden>
+          <section class="account-management-section" id="staff-access"><h3>Staff access &amp; division delegation</h3>
+            <p>Students receive basic access to their roster periods when they register; their current student leadership assignments still apply. Any Bethel staff member can create an account using their verified @bethelsd.org email. Staff start with basic access until you delegate divisions.</p>
+            <p><strong>Viewer:</strong> the same division data and tools as a student without a leadership role. <strong>Manager:</strong> that division’s manager tools and data. <strong>Website admin:</strong> access across all divisions and website teaching tools. Account credentials, staff delegation, and diagnostics remain owner-only.</p>
+            <form id="staff-access-form" class="internal-form">
+              <label>Staff district email<input name="email" type="email" maxlength="254" autocomplete="off" placeholder="name@bethelsd.org" required></label>
+              <label>Access level<select name="level"><option value="basic">Basic — no delegated division access</option><option value="division">Choose access for each division</option><option value="admin">Website admin — all divisions</option></select></label>
+              <fieldset id="staff-division-fields" hidden><legend>Division access</legend><p>Choose Viewer or Manager for each assigned division. Leave other divisions at No access.</p><label>Division 1<select name="division-1"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>Division 2<select name="division-2"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>Division 3<select name="division-3"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>Division 4<select name="division-4"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>Division 5<select name="division-5"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>Division 7<select name="division-7"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label><label>NEST™ Robotics<select name="division-CTSO"><option value="">No access</option><option value="viewer">Viewer</option><option value="manager">Manager</option></select></label></fieldset>
+              <button type="submit">Save staff access</button>
+            </form><p id="staff-access-status" role="status"></p>
+            <p>You can set access before registration. The staff person creates their own username and password through Create account. Saving a change signs them out everywhere.</p>
+            <button type="button" id="staff-access-refresh">Refresh staff access</button><div id="staff-access-list" class="account-list"></div>
+          </section>
+          <section class="account-management-section" id="account-directory"><h3>Active account directory</h3>
+            <p>All active registered student and staff accounts, sorted by last name, first name. Created times use Pacific time in YYYY-MM-DD-HH:mm:ss format. This shows enabled accounts, not users currently online.</p>
+            <div class="account-directory-controls">
+              <label>Search accounts<input id="admin-account-search" type="search" placeholder="Name, email, or username" autocomplete="off"></label>
+              <label>Account type<select id="admin-account-type"><option value="">Students &amp; staff</option><option value="student">Students</option><option value="staff">Staff</option><option value="unknown">Unclassified</option></select></label>
+              <button id="admin-account-refresh" type="button">Refresh accounts</button>
+            </div>
+            <p id="admin-account-count" role="status"></p>
+            <p>Passwords cannot be displayed. Stored password hashes and salts are available in each account’s details. Notes are visible only to NEST administrators. Editing a manual account’s credentials or removing its access signs it out everywhere.</p>
+            <div id="admin-accounts-list" class="account-list" aria-live="polite">Loading accounts…</div>
+          </section>
+          <section class="account-management-section"><h3>Help with signup attempts</h3>
+            <p>Give one recognized student or staff email a fresh signup attempt. This clears its email cooldown and existing verification-code attempt count, and allows it past the shared-network limit for 10 minutes. Email verification is still required. No email is sent by this button.</p>
+            <form id="admin-registration-unlock" class="internal-form"><label>Student or staff email<input name="email" type="email" maxlength="254" autocomplete="off" placeholder="name@students.bethelsd.org" required></label><button type="submit">Reset signup attempts</button></form>
+            <p id="admin-registration-status" role="status"></p>
+          </section>
           <section class="account-management-section"><h3>Create a student account</h3><p>Choose a period and a student from the live roster. Their district email and current leadership role determine their NEST access. Give the generated username and password to the student directly. A recovery address is optional; it must be an approved district address, and you may use your own.</p>
             <form id="admin-create" class="internal-form">
               <label>Period<select name="period" id="admin-period" required><option value="">Choose a period</option><option value="1">Period 1</option><option value="2">Period 2</option><option value="3">Period 3</option><option value="4">Period 4</option><option value="5">Period 5</option><option value="7">Period 7</option><option value="CTSO">NEST Robotics</option></select></label>
@@ -55,7 +83,7 @@
               <button type="submit">Create account</button>
             </form>
           </section>
-          <section class="account-management-section"><h3>Created accounts</h3><p>Passwords are never displayed again. Editing a username, setting a new password, or removing access signs that account out everywhere.</p><div id="admin-accounts-list" class="account-list" aria-live="polite">Loading accounts…</div></section>
+
         </div>
       </section>
       <section class="internal-card" id="profile-diagnostics-panel" role="tabpanel" aria-labelledby="profile-diagnostics-tab" hidden><h2>Access diagnostics</h2><p id="diagnostics-status" role="status">Checking your administrator access…</p><div id="diagnostics-workspace" hidden><div class="diagnostics-controls"><label>Time period<select id="diagnostics-period"><option value="24">Last 24 hours</option><option value="168">Last 7 days</option><option value="all">All retained records</option></select></label><label>Area<select id="diagnostics-area"><option value="">All areas</option><option value="auth">Sign-in</option><option value="service">Service requests</option><option value="hiring">Hiring</option><option value="tracker">Tracker</option><option value="signals">Signals</option><option value="division">Division</option><option value="leadership">Leadership</option><option value="fabrication">Fabrication</option><option value="lunch">Lunch</option><option value="profile">Profile</option></select></label><label>Show<select id="diagnostics-outcome"><option value="all">All attempts</option><option value="errors">Errors</option><option value="slow">Slow: 5 seconds or more</option></select></label><label>Account or request ID<input id="diagnostics-search" type="search" placeholder="Search records"></label><button id="diagnostics-refresh">Refresh records</button><button id="diagnostics-copy">Copy filtered report</button></div><div id="diagnostics-summary" class="diagnostics-summary"></div><p>Tracking starts with this release. The latest 5,000 records are retained. Browser wait measures time to response; server wait measures request processing. Attempts with both measurements appear once, with both times. Attempted usernames on failed sign-ins are unverified.</p><p>No passwords, verification codes, tokens, ticket text, or client contacts are included.</p><p id="diagnostics-count"></p><div class="diagnostics-table"><table><thead><tr><th>Time</th><th>Account</th><th>Area / action</th><th>Result</th><th>Browser / server wait</th><th>Share</th></tr></thead><tbody id="diagnostics-rows"></tbody></table></div><label>Copyable report<textarea id="diagnostics-report" rows="8" readonly placeholder="Choose Copy error or Copy filtered report. If automatic copying is unavailable, select this text and copy it."></textarea></label></div></section>
@@ -65,6 +93,7 @@
       <form id="recover-request" class="internal-form"><label>District recovery email<input name="email" type="email" autocomplete="email" maxlength="254" required></label><button type="submit">Email recovery code</button></form>
       <form id="recover-verify" class="internal-form" hidden><label>Six-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required></label><button type="submit">Verify code</button></form>
       <form id="recover-reset" class="internal-form" hidden><label>Account to reset<select name="username" required></select></label><label>New password<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label><button type="submit">Reset password</button></form>
+      <p>Haven’t created an account yet? Create one to choose your NEST username and password.</p><button type="button" id="profile-create-account">Create account</button>
       <p>If your account has no reachable email, ask a NEST administrator to reset it.</p><button type="button" id="profile-login">NEST sign in</button>
     </section>
   </main>
@@ -72,15 +101,16 @@
     <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
     <div class="footer-links"><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">Help &amp; Support ▾</span><div class="footer-dropdown-content">
       <a href="/computer-lookup" rel="noopener noreferrer">💻 Computer Look-up</a>
-      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeB9z95XH0vrXiglF1Mr15pxrhhkLS3jYBDZOx6tki3Rt3Mkw/viewform" target="_blank" rel="noopener noreferrer">🎫 Tech Ticket</a>
+      <a href="/tech-tickets">🎫 Tech Ticket</a>
       <a href="/weather">🌤️ Weather Report</a>
     </div></div><div class="footer-dropdown"><span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span><div class="footer-dropdown-content">
       <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mpenalver@bethelsd.org" target="_blank" rel="noopener noreferrer">Email me</a>
       <a href="tel:2538006221">253.800.6221</a>
       <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
-      <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div></div></div>
   </div></footer>
-  <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/main.js"></script><script src="/js/profile.js"></script><script src="/js/admin-accounts.js?v=password-toggle-1"></script><script src="/js/diagnostics.js"></script>
+  <script src="/js/access-diagnostics.js"></script><script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/main.js"></script><script src="/js/profile.js?v=recovery-timeout-1"></script><script src="/js/admin-accounts.js?v=staff-access-1"></script><script src="/js/staff-access.js?v=1"></script><script src="/js/diagnostics.js?v=all-student-access-20261106"></script>
 </body>
 </html>

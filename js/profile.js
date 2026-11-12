@@ -12,10 +12,17 @@
     document.dispatchEvent(new CustomEvent('nest-profile-tab-change'));
   }
   async function api(action,details) {
-    const response=await fetch('/api/account',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...details})});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.error||'Account service unavailable.');
-    return data;
+    const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),65000);
+    try {
+      const response=await fetch('/api/account',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...details}),signal:controller.signal});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Account service unavailable.');
+      return data;
+    } catch(error) {
+      if(error.name==='AbortError')throw new Error(action==='recover-reset'?'The response took too long. Try signing in with your new password before retrying the reset.':action==='recover-request'?'Recovery took too long. Check your inbox before requesting another code. If no message arrives, try again.':'The account service took too long. Please try again.');
+      if(error instanceof SyntaxError)throw new Error('The account service returned an unreadable response. Please try again.');
+      throw error;
+    } finally {clearTimeout(timeout);}
   }
   function show() {
     const identity=window.NestAuth?.identity;
@@ -28,8 +35,11 @@
     if(identity){$('profile-identity').textContent=identity.username;$('profile-form').elements.username.value=identity.username;api('profile-read',{}).then(data=>{if(window.NestAuth?.identity?.email===identity.email)$('profile-identity').textContent=`${data.username} · ${data.manual?'Manually created account':'District account'} · Recovery: ${data.recoveryEmail||'administrator reset only'}`;}).catch(()=>{});}
   }
   async function submit(form,action,details) {
-    const button=form.querySelector('[type=submit]');button.disabled=true;status.textContent='Please wait…';
-    try{return await api(action,details);}catch(error){status.textContent=error.message;return null;}finally{button.disabled=false;}
+    const button=form.querySelector('[type=submit]');if(button.disabled)return null;
+    const label=button.textContent;button.disabled=true;form.setAttribute('aria-busy','true');
+    button.textContent=action==='recover-request'?'Requesting code…':action==='recover-verify'?'Checking code…':action==='recover-reset'?'Saving password…':'Saving…';
+    status.textContent=action==='recover-request'?'Requesting your recovery message. This can take up to a minute…':'Please wait…';
+    try{return await api(action,details);}catch(error){status.textContent=error.message;return null;}finally{button.disabled=false;button.textContent=label;form.removeAttribute('aria-busy');}
   }
   $('profile-form').addEventListener('submit',async event=>{
     event.preventDefault();const form=event.currentTarget;if(!form.reportValidity())return;
@@ -53,6 +63,7 @@
     if(result){$('recover-reset').hidden=true;status.textContent=result.message;window.NestAuth?.open('login');}
   });
   $('profile-login').addEventListener('click',()=>window.NestAuth?.open('login'));
+  $('profile-create-account').addEventListener('click',()=>window.NestAuth?.open('register-request'));
   $('profile-details-tab').addEventListener('click',()=>selectTab('profile',true));
   $('profile-admin-tab').addEventListener('click',()=>selectTab('accounts',true));
   $('profile-diagnostics-tab').addEventListener('click',()=>selectTab('diagnostics',true));

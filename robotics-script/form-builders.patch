@@ -1,0 +1,33 @@
+--- pow/ProgramOfWork.gs
++++ pow/ProgramOfWork.gs
+@@ -2010,7 +2010,7 @@
+     attendeesItem
+       .asCheckboxItem()
+       .setChoiceValues(
+-        choices
++        nestRoboticsChoices_(choices, nestRoboticsActiveNames_(), "_")
+       );
+   }
+ 
+--- signin/FormQuestions.gs
++++ signin/FormQuestions.gs
+@@ -144,7 +144,7 @@
+   }
+ 
+   const listItem = targetItem.asListItem();
+-  listItem.setChoiceValues(uniqueOptions);
++  listItem.setChoiceValues(nestRoboticsChoices_(uniqueOptions, nestRoboticsActiveNames_(), " "));
+ }
+ 
+ function syncFoodEventOptionsFromFieldTripBuilder() {
+--- signin/RoboticsAttendance.gs
++++ signin/RoboticsAttendance.gs
+@@ -195,7 +195,7 @@
+       let allChoices = [];
+       if (currentAttendeesLabel) allChoices.push(currentAttendeesLabel);
+       allChoices = allChoices.concat(divisionBlocks, labelData);
+-      checkboxItem.asCheckboxItem().setChoiceValues(allChoices);
++      checkboxItem.asCheckboxItem().setChoiceValues(nestRoboticsChoices_(allChoices, nestRoboticsActiveNames_(), "_"));
+       Logger.log(`✅ Updated checkbox with ${allChoices.length} total options.`);
+     } else {
+       Logger.log('❌ Checkbox question not found or not of type CHECKBOX.');

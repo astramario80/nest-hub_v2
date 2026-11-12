@@ -1,0 +1,1 @@
+(()=>{const owners=new Set(['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com']);const show=value=>{const link=document.getElementById('bell-studio-link');if(link)link.hidden=!(value?.signedIn&&owners.has(value.email));};document.addEventListener('nest-auth-change',e=>show(e.detail));window.NestAuth?.ready.then(show);})();

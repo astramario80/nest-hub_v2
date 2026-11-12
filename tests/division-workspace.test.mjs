@@ -1,3 +1,4 @@
+import {staffContext} from './helpers/staff-context.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,6 +8,8 @@ import handler from '../api/division.mjs';
 import pageHandler,{renderDivisionPage} from '../api/division-page.mjs';
 import {DIVISIONS} from '../lib/divisions.mjs';
 import {LEADER_SLIDES} from '../lib/division-slides.mjs';
+const executiveSource=fs.readFileSync('google-spinner/Code.js','utf8').split('function nestExecutive_')[1].split('// Staff registration proves identity;')[0];
+const executiveHelper='function nestExecutive_'+executiveSource;
 const tick=()=>new Promise(r=>setTimeout(r,25));
 const id='12345678-1234-1234-1234-123456789abc';
 const access=(canManage=true)=>({team:[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}],canManage,manager:{id:DIVISIONS['1'].slides,role:'Manager Slideshow',canEdit:canManage},leaders:LEADER_SLIDES['1'].map(slide=>({...slide,canEdit:canManage||slide.role==='Software Technician'}))});
@@ -64,11 +67,11 @@ test('division API rejects unsigned sessions, forged targets and cross-site star
  r=res();await handler({method:'POST',headers:{origin:'https://example.com',host:'gknest.org','content-type':'application/json'},body:{action:'load-slides',period:'1',job:id}},r);assert.equal(r.code,403);
 });
 function queue(){
- const properties=new Map(),setups=[],updates=[];
+ const properties=new Map([['nest-executive-slide-policy','v1']]),setups=[],updates=[];
  const store={getProperty:k=>properties.get(k),setProperty:(k,v)=>properties.set(k,v),deleteProperty:k=>properties.delete(k),getProperties:()=>Object.fromEntries(properties)};
  let allowed=true;
- const ctx=vm.createContext({console,Date,ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>JSON.parse(text)})},Utilities:{getUuid:()=> 'revision-'+Date.now(),DigestAlgorithm:{SHA_256:'sha'},computeDigest:()=>Array.from(Buffer.from('fa73c87e353c83d23f5a447adf018eda6be9a8096a6d84e03318eb8833f984cf','hex'))},PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>[{getHandlerFunction:()=> 'nestDivisionSlidesWorker'}]},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>100,getRange:range=>typeof range==='number'?{getValues:()=>allowed?[['Period 1','','Division Manager','','manager@students.bethelsd.org']]:[]}:{setValue:value=>setups.push(value)}})})},updateManagerSlides:(division,locked)=>updates.push({division,locked})});
- vm.runInContext(fs.readFileSync('google-control-center/NestDivisionWeb.js','utf8'),ctx);
+ const ctx=staffContext({console,Date,ContentService:{MimeType:{JSON:'json'},createTextOutput:text=>({setMimeType:()=>JSON.parse(text)})},Utilities:{getUuid:()=> 'revision-'+Date.now(),DigestAlgorithm:{SHA_256:'sha'},computeDigest:()=>Array.from(Buffer.from('fa73c87e353c83d23f5a447adf018eda6be9a8096a6d84e03318eb8833f984cf','hex'))},PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>[{getHandlerFunction:()=> 'nestDivisionSlidesWorker'}]},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>100,getRange:range=>typeof range==='number'?{getValues:()=>allowed?[['Period 1','','Division Manager','','manager@students.bethelsd.org']]:[]}:{setValue:value=>setups.push(value)}})})},updateManagerSlides:(division,locked)=>updates.push({division,locked})});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8')+fs.readFileSync('google-control-center/NestDivisionWeb.js','utf8'),ctx);
  ctx.nestSlideRoster_=()=>new Set(['manager@students.bethelsd.org']);
  const call=r=>ctx.doPost({postData:{contents:JSON.stringify({token:'test',period:'1',email:'manager@students.bethelsd.org',job:id,...r})}});
  return {ctx,properties,updates,setups,call,revoke:()=>{allowed=false;}};
@@ -96,26 +99,26 @@ test('all divisions have verified server-side slide catalogs and public links st
 });
 test('wrong bridge token cannot enqueue a job',()=>{
  const q=queue();q.ctx.Utilities.computeDigest=()=>Array(32).fill(0);
- assert.equal(q.call({operation:'start'}).status,401);assert.equal(q.properties.size,0);
+ assert.equal(q.call({operation:'start'}).status,401);assert.equal(q.properties.size,1);
 });
 
-test('school bridge resolves manual identities and does not grant other divisions or executive review-only roles',()=>{
+test('school bridge resolves manual identities and grants current executives all divisions while restricting ordinary managers',()=>{
  const rows=[['Period 1','','Division Manager','','manager@students.bethelsd.org'],['Period 2','','Assistant Manager','','assistant@students.bethelsd.org'],['CTSO','','Chief Financial Officer','','cfo@students.bethelsd.org'],['Period CTSO','','Chief Executive Officer','','ceo@students.bethelsd.org']];
- const ctx=vm.createContext({OWNER_EMAILS:['mpenalver@bethelsd.org'],email_:x=>String(x||'').trim().toLowerCase(),memberEmail_:(identity,period)=>identity==='manual:manager'&&period==='1'?'manager@students.bethelsd.org':identity,LEADERSHIP_DATABASE:'leadership',Sheets:{Spreadsheets:{Values:{get:()=>({values:rows})}}}});
- vm.runInContext(fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
+ const ctx=staffContext({rows_:()=>[['CFO','cfo@students.bethelsd.org'],['CEO','ceo@students.bethelsd.org']],OWNER_EMAILS:['mpenalver@bethelsd.org'],email_:x=>String(x||'').trim().toLowerCase(),memberEmail_:(identity,period)=>identity==='manual:manager'&&period==='1'?'manager@students.bethelsd.org':identity,LEADERSHIP_DATABASE:'leadership',Sheets:{Spreadsheets:{Values:{get:()=>({values:rows})}}}});
+ vm.runInContext(executiveHelper+fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
  assert.equal(ctx.divisionSlidesPermissions_('manual:manager','1'),true);
  assert.equal(ctx.divisionSlidesPermissions_('manual:manager','2'),false);
  assert.equal(ctx.divisionSlidesPermissions_('assistant@students.bethelsd.org','2'),true);
- assert.equal(ctx.divisionSlidesPermissions_('cfo@students.bethelsd.org','CTSO'),false);
+ assert.equal(ctx.divisionSlidesPermissions_('cfo@students.bethelsd.org','CTSO'),true);
  assert.equal(ctx.divisionSlidesPermissions_('ceo@students.bethelsd.org','CTSO'),true);
 });
 test('school bridge retries temporary Google redirect failures without submitting another update',()=>{
  let posts=0,gets=0;
- const ctx=vm.createContext({PERIODS:{'1':'roster'},rows_:()=>[],LEADERSHIP_DATABASE:'leaders',Sheets:{Spreadsheets:{Values:{get:()=>({values:[]})}}},OWNER_EMAILS:['owner@bethelsd.org'],email_:x=>x,memberEmail_:x=>x,authSession_:()=>({email:'owner@bethelsd.org'}),PropertiesService:{getScriptProperties:()=>({})},Utilities:{sleep(){}},UrlFetchApp:{fetch:(url,options)=>{
+ const ctx=staffContext({PERIODS:{'1':'roster'},rows_:()=>[],LEADERSHIP_DATABASE:'leaders',Sheets:{Spreadsheets:{Values:{get:()=>({values:[]})}}},OWNER_EMAILS:['owner@bethelsd.org'],email_:x=>x,memberEmail_:x=>x,authSession_:()=>({email:'owner@bethelsd.org'}),PropertiesService:{getScriptProperties:()=>({})},Utilities:{sleep(){}},UrlFetchApp:{fetch:(url,options)=>{
   if(options.method==='post'){posts++;return {getResponseCode:()=>302,getAllHeaders:()=>({Location:'https://script.googleusercontent.com/example'})};}
   gets++;return {getResponseCode:()=>gets===1?404:200,getContentText:()=>JSON.stringify({status:200,job:id,state:'queued'})};
  }}});
- vm.runInContext(fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
+ vm.runInContext(executiveHelper+fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
  assert.equal(ctx.divisionSlidesDispatch_({period:'1',operation:'start',job:id,token:'test'}).state,'queued');assert.equal(posts,1);assert.equal(gets,2);
 });
 
@@ -132,26 +135,26 @@ test('API allows managers to edit every position but restricts ordinary members 
  }finally{globalThis.fetch=oldFetch;if(oldURL===undefined)delete process.env.SPINNER_BRIDGE_URL;else process.env.SPINNER_BRIDGE_URL=oldURL;if(oldToken===undefined)delete process.env.SPINNER_BRIDGE_TOKEN;else process.env.SPINNER_BRIDGE_TOKEN=oldToken;}
 });
 test('school bridge denies nonmembers even if a stale management assignment remains',()=>{
- const ctx=vm.createContext({PERIODS:{'1':'roster'},OWNER_EMAILS:[],email_:x=>x,memberEmail_:x=>x,rows_:()=>[['Current member','member@school.test']],authSession_:()=>({email:'former@school.test'}),PropertiesService:{getScriptProperties:()=>({})}});
- vm.runInContext(fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
+ const ctx=staffContext({LEADERSHIP_DATABASE:'leaders',Sheets:{Spreadsheets:{Values:{get:()=>({values:[]})}}},PERIODS:{'1':'roster'},OWNER_EMAILS:[],email_:x=>x,memberEmail_:x=>x,rows_:()=>[['Current member','member@school.test']],authSession_:()=>({email:'former@school.test'}),PropertiesService:{getScriptProperties:()=>({})}});
+ vm.runInContext(executiveHelper+fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);
  assert.equal(ctx.divisionSlidesDispatch_({period:'1',operation:'access'}).status,403);
  assert.equal(ctx.divisionSlidesDispatch_({period:'1',operation:'start',job:id}).status,403);
 });
 test('sharing removes public and outsider access and keeps division managers, role holders and readers',()=>{
  let permissions=[{id:'owner',type:'user',role:'owner',emailAddress:'teacher@school.test'},{id:'public',type:'anyone',role:'reader'},{id:'domain',type:'domain',role:'reader'},{id:'outsider',type:'user',role:'writer',emailAddress:'outside@school.test'},{id:'member',type:'user',role:'writer',emailAddress:'member@school.test'}];
- const ctx=vm.createContext({console,Drive:{Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);},patch:(value,id,key)=>{permissions.find(p=>p.id===key).role=value.role;},insert:(p)=>permissions.push({...p,emailAddress:p.value,id:p.value})}}});
+ const ctx=staffContext({console,Drive:{Permissions:{list:()=>({items:permissions}),remove:(id,key)=>{permissions=permissions.filter(p=>p.id!==key);},patch:(value,id,key)=>{permissions.find(p=>p.id===key).role=value.role;},insert:(p)=>permissions.push({...p,emailAddress:p.value,id:p.value})}}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
  ctx.nestSlidePermissions_('deck',new Set(['manager@school.test','assistant@school.test','leader@school.test']),new Set(['member@school.test','manager@school.test','assistant@school.test','leader@school.test']));
  assert.equal(permissions.length,5);assert.equal(permissions.find(p=>p.emailAddress==='member@school.test').role,'reader');
  assert.ok(['manager','assistant','leader'].every(name=>permissions.find(p=>p.emailAddress===name+'@school.test').role==='writer'));assert.equal(ctx.nestSlideRole_('3d Print Specialist'),'fabrication supervisor');
 });
 test('unexpected inherited access fails the sharing audit',()=>{
- const ctx=vm.createContext({console,Drive:{Permissions:{list:()=>({items:[{id:'wide',type:'anyone',role:'reader'}]}),remove:()=>{throw new Error('Inherited permission');},insert(){}}}});
+ const ctx=staffContext({console,Drive:{Permissions:{list:()=>({items:[{id:'wide',type:'anyone',role:'reader'}]}),remove:()=>{throw new Error('Inherited permission');},insert(){}}}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);assert.throws(()=>ctx.nestSlidePermissions_('deck',new Set(),new Set()),/Unexpected inherited/);
 });
 test('limited-access folders verify their boundary and ignore metadata-only parent visibility',()=>{
  const patches=[];
- const ctx=vm.createContext({console,Drive:{Files:{patch:(value,id)=>patches.push({value,id}),get:()=>({inheritedPermissionsDisabled:true})},Permissions:{list:()=>({items:[{id:'parent',type:'user',role:'reader',view:'metadata'}]}),remove:()=>{throw new Error('Metadata permission should not be changed');},insert(){}}}});
+ const ctx=staffContext({console,Drive:{Files:{patch:(value,id)=>patches.push({value,id}),get:()=>({inheritedPermissionsDisabled:true})},Permissions:{list:()=>({items:[{id:'parent',type:'user',role:'reader',view:'metadata'}]}),remove:()=>{throw new Error('Metadata permission should not be changed');},insert(){}}}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestSlideLimitFolder_('folder');ctx.nestSlidePermissions_('folder',new Set(),new Set());
  assert.equal(patches[0].value.inheritedPermissionsDisabled,true);assert.equal(patches[0].id,'folder');
  ctx.Drive.Files.get=()=>({inheritedPermissionsDisabled:false});assert.throws(()=>ctx.nestSlideLimitFolder_('folder'),/Could not isolate/);
@@ -159,7 +162,7 @@ test('limited-access folders verify their boundary and ignore metadata-only pare
 test('first-time sharing checkpoints each division and resumes after interruption',()=>{
  const properties=new Map(),triggers=[],synced=[];
  const store={getProperty:key=>properties.get(key),setProperty:(key,value)=>properties.set(key,value),deleteProperty:key=>properties.delete(key)};
- const ctx=vm.createContext({console,Date,PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>triggers,newTrigger:name=>({timeBased:()=>({everyMinutes:()=>({create:()=>triggers.push({getHandlerFunction:()=>name})})})}),deleteTrigger:trigger=>triggers.splice(triggers.indexOf(trigger),1)}});
+ const ctx=staffContext({console,Date,PropertiesService:{getScriptProperties:()=>store},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock(){}})},ScriptApp:{getProjectTriggers:()=>triggers,newTrigger:name=>({timeBased:()=>({everyMinutes:()=>({create:()=>triggers.push({getHandlerFunction:()=>name})})})}),deleteTrigger:trigger=>triggers.splice(triggers.indexOf(trigger),1)}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
  ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=()=>{};ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);
  ctx.nestSyncAllDivisionSlideAccess();assert.deepEqual(synced,['1']);assert.equal(triggers.length,1);
@@ -173,15 +176,15 @@ test('the live sharing routine includes both division managers on every individu
  const iterator=items=>({hasNext:()=>items.length>0,next:()=>items.shift()});
  const slide={getId:()=> 'role-slide',getName:()=> 'Division 1_Software Technician',getMimeType:()=> 'application/vnd.google-apps.presentation'},manager={getId:()=> 'manager-slide',getName:()=> 'Division 1 Team_Manager Slides'};
  const source={getId:()=> 'source-folder',getFiles:()=>iterator([slide])},folder={getId:()=> 'division-folder',getFiles:()=>iterator([manager]),getFoldersByName:()=>iterator([source])};
- const ctx=vm.createContext({console,DriveApp:{getFolderById:()=>folder},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>leaders.length+1,getRange:()=>({getValues:()=>leaders})})})}});
- vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestSlideRoster_=()=>new Set(['manager@school.test','assistant@school.test','leader@school.test','member@school.test']);ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=(id,editors,viewers)=>applied.push({id,editors:[...editors].sort(),viewers:[...viewers].sort()});
+ const ctx=staffContext({console,DriveApp:{getFolderById:()=>folder},SpreadsheetApp:{openById:()=>({getSheetByName:()=>({getLastRow:()=>leaders.length+1,getRange:()=>({getValues:()=>leaders})})})}});
+ vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);ctx.nestStaffDelegates_=()=>[];ctx.nestSlideRoster_=()=>new Set(['manager@school.test','assistant@school.test','leader@school.test','member@school.test']);ctx.nestSlideLimitFolder_=()=>{};ctx.nestSlidePermissions_=(id,editors,viewers)=>applied.push({id,editors:[...editors].sort(),viewers:[...viewers].sort()});
  ctx.nestSyncDivisionSlideAccess('1');
  assert.deepEqual(applied.find(p=>p.id==='role-slide').editors,['assistant@school.test','leader@school.test','manager@school.test']);assert.deepEqual(applied.find(p=>p.id==='manager-slide').editors,['assistant@school.test','manager@school.test']);assert.equal(applied.find(p=>p.id==='role-slide').viewers.length,4);
 });
 
 test('empty divisions revoke member access while unavailable or malformed rosters fail safely',()=>{
  let rows=[],sheetAvailable=true;
- const ctx=vm.createContext({console,SpreadsheetApp:{openById:()=>({getSheetByName:()=>sheetAvailable?{getRange:()=>({getValues:()=>rows})}:null})}});
+ const ctx=staffContext({console,SpreadsheetApp:{openById:()=>({getSheetByName:()=>sheetAvailable?{getRange:()=>({getValues:()=>rows})}:null})}});
  vm.runInContext(fs.readFileSync('google-control-center/DivisionSlideAccess.js','utf8'),ctx);
  assert.equal(ctx.nestSlideRoster_('3').size,0);
  rows=[['Member without an email','','']];assert.throws(()=>ctx.nestSlideRoster_('3'),/no valid member emails/);
@@ -207,8 +210,8 @@ test('division bootstrap escapes script-breaking team names and pages do not int
 });
 test('the school bridge returns only the selected division current members and reads leadership once',()=>{
  let reads=0;const rows=[['Period 1','','Division Manager','Manager, Morgan','manager@school.test'],['Period 1','','Software Technician','Technician, Taylor','member@school.test'],['Period 1','','Safety Officer','Former, Leader','former@school.test'],['Period 2','','Division Manager','Other, Division','other@school.test']];
- const ctx=vm.createContext({PERIODS:{'1':'roster'},OWNER_EMAILS:[],email_:x=>x,memberEmail_:x=>x,rows_:()=>[['Manager','manager@school.test'],['Member','member@school.test']],authSession_:()=>({email:'manager@school.test'}),PropertiesService:{getScriptProperties:()=>({})},LEADERSHIP_DATABASE:'leadership',Sheets:{Spreadsheets:{Values:{get:()=>{reads++;return {values:rows};}}}}});
- vm.runInContext(fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);const result=ctx.divisionSlidesDispatch_({period:'1',operation:'access'});assert.equal(result.status,200);assert.equal(reads,1);assert.deepEqual(JSON.parse(JSON.stringify(result.team)),[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}]);
+ const ctx=staffContext({PERIODS:{'1':'roster'},OWNER_EMAILS:[],email_:x=>x,memberEmail_:x=>x,rows_:()=>[['Manager','manager@school.test'],['Member','member@school.test']],authSession_:()=>({email:'manager@school.test'}),PropertiesService:{getScriptProperties:()=>({})},LEADERSHIP_DATABASE:'leadership',Sheets:{Spreadsheets:{Values:{get:()=>{reads++;return {values:rows};}}}}});
+ vm.runInContext(executiveHelper+fs.readFileSync('google-spinner/DivisionSlides.js','utf8'),ctx);const result=ctx.divisionSlidesDispatch_({period:'1',operation:'access'});assert.equal(result.status,200);assert.equal(reads,1);assert.deepEqual(JSON.parse(JSON.stringify(result.team)),[{position:'Division Manager',name:'Morgan Manager'},{position:'Software Technician',name:'Taylor Technician'}]);
 });
 
 test('signing out clears the protected team, slide frames and manager actions immediately',async()=>{
@@ -238,4 +241,11 @@ test('partner hires queue a sharing refresh on the permanent worker without rebu
  const q=queue(),synced=[];q.ctx.nestSyncDivisionSlideAccess=period=>synced.push(period);
  assert.equal(q.call({operation:'sync-access',job:undefined,email:undefined}).status,200);
  q.ctx.nestDivisionSlidesWorker();assert.deepEqual(synced,['1']);assert.equal(q.properties.has('nest-hiring-access:1'),false);assert.equal(q.updates.length,0);
+});
+
+test('editors distinguish original leadership decks from compiled meeting slides',async()=>{
+ const {w}=ui();try{await tick();const individual=w.document.querySelector('.division-individual');assert.match(w.document.querySelector('[data-manager-open]').href,new RegExp(DIVISIONS['1'].slides));
+  [...w.document.querySelectorAll('.division-window-positions button')].find(button=>button.textContent.includes('Assistant Manager')).click();await tick();assert.match(individual.querySelector('[role=status]').textContent,/editing the original Assistant Manager/);assert.match(individual.textContent,/Saved to Drive/);assert.match(individual.querySelector('[data-external]').href,new RegExp(LEADER_SLIDES['1'][0].id));
+  individual.querySelector('[data-back]').click();w.document.querySelector('[data-edit-manager]').click();await tick();assert.match(individual.querySelector('[role=status]').textContent,/compiled meeting slideshow.*replaces slides after the title/);assert.match(individual.querySelector('[role=status]').textContent,/private backup/);
+ }finally{w.close();}
 });

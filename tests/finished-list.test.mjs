@@ -1,3 +1,4 @@
+import {staffContext} from './helpers/staff-context.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,7 +16,7 @@ function school(){
   const properties=new Map(),store={getProperty:key=>properties.get(key),setProperty:(key,value)=>properties.set(key,value)};
   const state={leaders:[],members:new Map(),files:new Map(),writes:0,locked:false,email:'member@students.bethelsd.org',lockAvailable:true};
   const save=blob=>{state.writes++;state.files.set('list-file',blob);};
-  const context=vm.createContext({console,Date,PERIODS:{1:'one',2:'two',3:'three',4:'four',5:'five',7:'seven',CTSO:'robotics'},LEADERSHIP_DATABASE:'leadership',NEST_DATABASE:'database',OWNER_EMAILS:['mpenalver@bethelsd.org'],
+  const context=staffContext({console,Date,PERIODS:{1:'one',2:'two',3:'three',4:'four',5:'five',7:'seven',CTSO:'robotics'},LEADERSHIP_DATABASE:'leadership',NEST_DATABASE:'database',OWNER_EMAILS:['mpenalver@bethelsd.org'],
     Sheets:{Spreadsheets:{Values:{get:(_id,range)=>({values:range.includes('!R2:')?skills.map(skill=>[skill]):state.leaders})}}},email_:value=>String(value||'').trim().toLowerCase(),
     memberEmail_:(identity,period)=>identity==='manual:member'&&period==='2'?'linked@students.bethelsd.org':identity,
     rows_:period=>state.members.get(period)||[],hash_:hash,authSession_:value=>value==='valid'?{email:state.email}:null,

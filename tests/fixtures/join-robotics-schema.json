@@ -1,0 +1,249 @@
+{
+  "status": 200,
+  "schema": {
+    "title": "NEST™ Robotics Membership Form",
+    "description": "Thank you for being an essential part of our program. Please take a minute to sign up here for the experience of a lifetime!",
+    "fields": [
+      {
+        "id": "34471636",
+        "label": "Your FIRST Name",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1397560213",
+        "label": "Your LAST Name",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1389398262",
+        "label": "Your cell/home number",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1840155363",
+        "label": "Your MOBILE phone number",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "2025891696",
+        "label": "Your HOME phone number",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1357632178",
+        "label": "Home Street Address",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1268064705",
+        "label": "Home City",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1640570964",
+        "label": "Home State",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1692286781",
+        "label": "Zip Code",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1427754229",
+        "label": "T-Shirt Size",
+        "section": "About you",
+        "help": "",
+        "type": "LIST",
+        "required": true,
+        "choices": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL",
+          "XXL"
+        ],
+        "other": false
+      },
+      {
+        "id": "317309113",
+        "label": "What is your graduation year?",
+        "section": "About you",
+        "help": "",
+        "type": "TEXT",
+        "required": true
+      },
+      {
+        "id": "1029113467",
+        "label": "What is your race/ethnicity?",
+        "section": "About you",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "American Indian or Alaska Native",
+          "Asian",
+          "Black or African American",
+          "Hispanic or Latino",
+          "Native Hawaiian or Other Pacific Islander",
+          "White",
+          "All Other"
+        ],
+        "other": false
+      },
+      {
+        "id": "128660676",
+        "label": "What is your gender?",
+        "section": "About you",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "Male",
+          "Female",
+          "Non-Binary"
+        ],
+        "other": false
+      },
+      {
+        "id": "1045933712",
+        "label": "Curiouscentricity. None of us is an expert — and that’s a good thing. We approach every challenge with curiosity and a mindset for learning, reframing “Why?” as an invitation, not a shutdown.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "862075866",
+        "label": "Shared Understanding. We work together to ensure everyone understands how our team operates — so we can all grow, contribute, and help each other succeed. We actively create and share resources to build on what we know and support others in doing the same.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "1527218072",
+        "label": "All in, All heard. Everyone’s voice matters. Make space to speak, and make space to listen. We iterate, we don’t tear down. Team norms are decided on by the team and not unilaterally.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "925692892",
+        "label": "Teamship. We own our actions — and their impact — together. If something goes wrong, we focus on solutions, not blame.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "245445622",
+        "label": "Objective Leadership. Leadership is built on trust, fairness, and integrity. To uphold these values, our leaders avoid conflicts of interest — including romantic relationships with fellow leaders — that could impact team confidence or decision-making. Relationships are encouraged, but not at the cost of the group’s success and productivity.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "660806787",
+        "label": "Accountability. to one’s own position and to the group. If there is a concern brought by a member of the group, we have a shared role in resolving the issue.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "711691449",
+        "label": "Living Document. We believe that we change. And because we change, so do our beliefs. Accordingly, we believe that these community agreements need to evolve with us.",
+        "section": "Our Community Agreements",
+        "help": "",
+        "type": "MULTIPLE_CHOICE",
+        "required": true,
+        "choices": [
+          "I agree",
+          "I disagree"
+        ],
+        "other": false
+      },
+      {
+        "id": "14623043",
+        "label": "Share your team interest. Check all that apply!",
+        "section": "Tell us your interests!",
+        "help": "",
+        "type": "CHECKBOX",
+        "required": true,
+        "choices": [
+          "Controls Engineering Team: Developing and testing the software and script necessary to control the engineered robot, as intended.",
+          "Design & Fabrication Team: The Design & Fabrication Team turns robot concepts into detailed Onshape CAD models, production-ready drawings, and build plans. The team leads part fabrication using appropriate processes and tooling (hand tools, machining, 3D printing, and light CAM as needed), ensuring components meet fit, strength, and weight requirements. They collaborate closely with Mechanical Systems and Systems Integration to iterate quickly, maintain design standards, and deliver reliable parts on schedule.",
+          "Electrical & Power Systems Team: Wiring and working to ensure that the mechanisms are functional along with the code from the programming team being able to connect to the mechanisms. Often this team becomes more of a puzzle solving team than anything else.",
+          "Mechanical Systems Team",
+          "Pit Operations: The design, installation, and eventual management of the first NEST™ Robotics Team 2927 Pit space. This team is tasked with developing our organizational process for maintaining this space so that every team and member of 2927 has a functional space during competition.",
+          "NEST™ Division Managers: NEST™ Division Managers hired to oversee operations in core NEST™ divisions: hiring teams, supervising division budgets and advocating for service-centered leadership inside the NEST™ Ecosystem.",
+          "Administration and Outreach: Organizing and managing the day-to-day operations of our teams, as well as supervising the marketing and business side of our organization."
+        ],
+        "other": true
+      }
+    ],
+    "declineNotice": "We understand if our Community Agreements aren't exactly what you were looking for. If you'd like to seek understanding from one of the NEST Robotics active members to better prepare for our community, feel free to reach out to one of them, or their advisory, Mr. Penalver (in Rm. 174), for clarification. We're in the business of welcoming, not shutting doors. ",
+    "revision": "faa8f3e4997f026df31e739a6be33ad40e0dc5daa61f7b98c165ecf38f6655d8"
+  }
+}

@@ -7,13 +7,13 @@ const member=(firstName,lastName='Example')=>({division:'Period 1',position:'Div
 const signedIn=w=>{w.NestAuth={identity:{signedIn:true,email:'viewer@students.bethelsd.org'},ready:Promise.resolve({signedIn:true}),open(){}};};
 test('Imported directory projects only current first names and normalizes divisions',()=>{
  const ctx=vm.createContext({Sheets:{Spreadsheets:{Values:{get:(id,range)=>{assert.equal(range,"'Imported'!B2:E");return {values:[['Period 1','private-sheet','Division Manager','Example, Alex'],['CTSO','private-sheet','Chief Executive Officer','Example, Sam'],['Period 2','private-sheet','Assistant Manager','']]};}}}}});
- vm.runInContext(fs.readFileSync('google-spinner/Code.js','utf8')+fs.readFileSync('google-spinner/Tracker.js','utf8'),ctx);
+ vm.runInContext(fs.readFileSync('google-spinner/Code.js','utf8'),ctx);
  const result=JSON.parse(JSON.stringify(ctx.leadershipDirectory_()));
  assert.deepEqual(result.leaders,[{division:'Period 1',position:'Division Manager',firstName:'Alex'},{division:'NEST Robotics',position:'Chief Executive Officer',firstName:'Sam'}]);
 });
 test('member directory includes district emails and last names without private sheet links',()=>{
  const ctx=vm.createContext({Sheets:{Spreadsheets:{Values:{get:(id,range)=>{assert.equal(range,"'Imported'!B2:F");return {values:[['Period 1','private-link','Division Manager','Example, Alex','Alex@students.bethelsd.org'],['CTSO','private-link','Chief Executive Officer','Example, Sam','sam@bethelsd.org'],['Period 2','private-link','Open','Vacant','vacant@students.bethelsd.org']]};}}}}});
- vm.runInContext(fs.readFileSync('google-spinner/Code.js','utf8')+fs.readFileSync('google-spinner/Auth.js','utf8')+fs.readFileSync('google-spinner/Tracker.js','utf8'),ctx);
+ vm.runInContext(fs.readFileSync('google-spinner/Code.js','utf8'),ctx);
  const result=JSON.parse(JSON.stringify(ctx.memberLeadershipDirectory_()));
  assert.deepEqual(result.leaders,[{division:'Period 1',position:'Division Manager',firstName:'Alex',lastName:'Example',email:'alex@students.bethelsd.org'},{division:'NEST Robotics',position:'Chief Executive Officer',firstName:'Sam',lastName:'Example',email:'sam@bethelsd.org'}]);
  assert.doesNotMatch(JSON.stringify(result),/private-link/);

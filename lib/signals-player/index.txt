@@ -54,6 +54,8 @@
         <option value="embed">Embedded playlists · manager test</option>
         <option value="sdk">Connected Spotify · existing player</option>
       </select>
+      <p>Before starting, set the playback device’s master volume to <strong>50%</strong> and leave it there. In Connected Spotify mode, Signals adjusts Spotify’s own volume: 100% between classes, 30% when class begins, and 80% for cleanup. Music is muted during second-period announcements.</p>
+      <p>Connected Spotify checks for playback interruptions and attempts to resume the music. Use <strong>Stop signals</strong> when you want to disable automatic playback recovery.</p>
       <div id="embed-panel">
         <p id="embed-status" role="status">Loading the playlist window…</p>
         <div id="spotify-embed"></div>
@@ -140,7 +142,8 @@
       <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=mpenalver@bethelsd.org" target="_blank" rel="noopener noreferrer">Email me</a>
       <a href="tel:2538006221">253.800.6221</a>
       <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
-      <a href="https://www.linkedin.com/in/astramario/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+      <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank" rel="noopener noreferrer">LinkedIn</a>
     </div></div></div>
   </div></footer>
   <script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/main.js"></script>

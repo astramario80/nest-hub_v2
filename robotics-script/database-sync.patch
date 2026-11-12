@@ -1,0 +1,27 @@
+--- database/DatabaseSync.gs
++++ database/DatabaseSync.gs
+@@ -4512,23 +4512,8 @@
+     roboticsSS.getSheetByName(
+       'MembershipForm'
+     );
+-
+-  const roboticsRawData =
+-    membershipSheet
+-      .getRange(
+-        'A2:E' +
+-        membershipSheet.getLastRow()
+-      )
+-      .getValues();
+ 
+-  const roboticsData =
+-    roboticsRawData.filter(
+-      row =>
+-        row[0] === true &&
+-        row[2] &&
+-        row[3] &&
+-        row[4]
+-    );
++  const roboticsData = nestRoboticsDatabaseRows_();
+ 
+   const guestsSheet =
+     dbSS.getSheetByName(

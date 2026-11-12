@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-const source=['Code.js','Auth.js','Tracker.js','DivisionSlides.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n');
+const source=['Code.js','DivisionSlides.js'].map(file=>fs.readFileSync('google-spinner/'+file,'utf8')).join('\n');
 const token='a'.repeat(64),hash=value=>createHash('sha256').update(value).digest('hex');
 function service(manual=false){
  const email=manual?'manual:manager':'manager@students.bethelsd.org',account=['manager',email,'','',true,1,'','','1','','manager@students.bethelsd.org'];
@@ -30,4 +30,35 @@ test('parallel service errors fall back to fresh Sheets reads; invalid sessions 
  const app=service();app.failRead();assert.equal(app.read().status,200);assert.deepEqual(app.fallback,["'Imported'!B2:F"]);
  app.request.session='b'.repeat(64);const before=app.parallel.length;assert.equal(app.read().status,401);assert.equal(app.parallel.length,before);
  app.ctx.nestAccessValues_('leadership',"'Imported'!B2:F");assert.equal(app.fallback.length,2);
+});
+
+test('send, archive and diagnostic requests reuse account reads without retaining revoked access',()=>{
+ for(const action of ['auth-group-email','auth-email-archive','diagnostics-record']){
+  const app=service(true),check=()=>app.ctx.withNestReadContext_({action},()=>{
+   const session=app.ctx.authSession_(token,app.ctx.PropertiesService.getScriptProperties(),Date.now());
+   if(session){app.ctx.accountByEmail_(session.email);app.ctx.memberEmail_(session.email,'1');}
+   return session;
+  });
+  assert.equal(check().username,'manager');assert.equal(app.fallback.filter(range=>range.includes('StudentNESTAccess')).length,1);
+  app.account[4]=false;assert.equal(check(),null);assert.equal(app.fallback.filter(range=>range.includes('StudentNESTAccess')).length,2);
+  assert.equal(app.parallel.length,0);
+ }
+});
+test('service fault categories retain no raw exception contents',()=>{
+ const app=service();
+ assert.equal(app.ctx.nestServiceFailure_('auth-group-email-access',new Error('Quota exceeded private account name')).code,'school-quota');
+ assert.equal(app.ctx.nestServiceFailure_('auth-group-email',new Error('Permission denied private workbook')).code,'school-permission');
+ assert.equal(app.ctx.nestServiceFailure_('auth-me',new Error('Unexpected private data')).code,'school-service');
+});
+
+test('service requests reuse the live account sheet across repeated linked-student checks and recheck revocation next time',()=>{
+ const app=service(true),request={action:'auth-service-manage',session:token};
+ const read=()=>app.ctx.withNestReadContext_(request,()=>{
+  const active=app.ctx.authSession_(token,app.ctx.PropertiesService.getScriptProperties(),Date.now());
+  if(!active)return null;
+  for(let i=0;i<150;i++)assert.equal(app.ctx.memberEmail_(active.email,'1'),'manager@students.bethelsd.org');
+  return active;
+ });
+ assert.ok(read());assert.equal(app.fallback.filter(r=>r.includes('StudentNESTAccess')).length,1);assert.equal(app.fallback.filter(r=>r.includes('Period 1')).length,1);
+ app.account[4]=false;assert.equal(read(),null);assert.equal(app.fallback.filter(r=>r.includes('StudentNESTAccess')).length,2);
 });

@@ -1,5 +1,5 @@
 import { withDiagnostics } from '../lib/diagnostics.mjs';
-import { COOKIE, cookies, validToken, bridge, originAllowed, verifiedIdentity } from '../lib/nest-auth.mjs';
+import { COOKIE, cookies, validToken, bridge, bridgeFailure, originAllowed, verifiedIdentity } from '../lib/nest-auth.mjs';
 import { DIVISIONS } from '../lib/divisions.mjs';
 import { LEADER_SLIDES, roleKey } from '../lib/division-slides.mjs';
 const validJob=id=>typeof id==='string'&&/^[a-f0-9-]{36}$/.test(id);
@@ -35,7 +35,7 @@ async function handler(req,res){
   }
   if(!['queued','running','completed','failed'].includes(result.state)||result.job!==job)throw new Error('Invalid slide update response');
   return res.status(200).json({job,state:result.state,updatedAt:result.updatedAt||null});
- }catch(error){console.error('Division slide request failed',{kind:error?.name||'Error'});return res.status(503).json({error:'The division workspace is temporarily unavailable. Please try again.'});}
+ }catch(error){console.error('Division slide request failed',{period,operation:req.method==='POST'?'start':job?'status':'access',...bridgeFailure(error)});return res.status(503).json({error:'The division workspace is temporarily unavailable. Please try again.'});}
 }
 
 export default withDiagnostics('division',handler);

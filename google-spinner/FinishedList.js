@@ -232,7 +232,7 @@ const FINISHED_LIST_SEED=[
 ];
 const FINISHED_LIST_KEY='finished-list-file-v1';
 function finishedAllowed_(identity){
-  if(OWNER_EMAILS.includes(email_(identity)))return true;
+  if(websiteAdmin_(identity))return true;
   const leaders=Sheets.Spreadsheets.Values.get(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
   return leaders.some(row=>{
     const period=String(row[0]||'').replace(/^period\s*/i,'').trim().toUpperCase();

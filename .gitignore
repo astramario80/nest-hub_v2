@@ -8,3 +8,9 @@ node_modules/
 school-readback/
 school-stage/
 school-verified/
+
+# Local release bundles, browser captures, and temporary audit data
+tmp/
+output/
+.DS_Store
+**/.DS_Store

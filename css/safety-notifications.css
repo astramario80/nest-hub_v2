@@ -1,0 +1,3 @@
+.nest-safety-notification{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #666;border-radius:9px;color:#f49a52!important;text-decoration:none;font:700 .85rem Montserrat,Arial,sans-serif;background:#202020;white-space:nowrap}.nest-safety-notification span{background:#b73333;color:#fff;border-radius:20px;min-width:20px;padding:3px 6px;text-align:center}.nest-safety-notification span[hidden]{display:none}.nest-safety-notification.has-notices{border-color:#e87722;box-shadow:0 0 0 2px #e8772240}
+
+.nest-safety-notification[hidden]{display:none!important}

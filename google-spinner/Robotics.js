@@ -14,7 +14,8 @@ function roboticsStorage_(){
  store.setProperty(key,'ready');
 }
 function roboticsAccess_(identity,leaders){
- if(OWNER_EMAILS.includes(email_(identity)))return true;
+ if(websiteAdmin_(identity))return true;
+ if(staffIdentity_(identity))return staffManager_(identity,'CTSO');
  const address=memberEmail_(identity,'CTSO');
  if(!rows_('CTSO').some(row=>email_(row[1])===address))return false;
  const roles=leaders||nestAccessValues_(LEADERSHIP_DATABASE,"'Imported'!B2:F").values||[];
@@ -55,7 +56,7 @@ function roboticsState_(){
 function roboticsView_(state){
  const members=state.members.map(({row,...member})=>member);
  const current=members.filter(member=>member.active);
- return {status:200,revision:state.revision,members,summary:{active:current.length,joined:current.filter(m=>m.joined).length,waivers:current.filter(m=>m.waiver===true).length,
+ return {status:200,revision:state.revision,members,sync:typeof roboticsSyncStatus_==='function'?roboticsSyncStatus_():null,summary:{active:current.length,joined:current.filter(m=>m.joined).length,waivers:current.filter(m=>m.waiver===true).length,
   needJoin:current.filter(m=>!m.joined).length,needWaiver:current.filter(m=>m.joined&&!m.waiver).length},
   importedAt:PropertiesService.getScriptProperties().getProperty('robotics-imported-at')||null,
   unmatched:state.raw.filter(row=>row[0]&&!members.some(m=>roboticsName_(m.name)===roboticsName_(row[3]||row[0]))).map(row=>String(row[0]))};
@@ -113,17 +114,18 @@ function roboticsDispatch_(r){
  if(r.operation==='view'&&typeof roboticsOnboardingView_==='function')return roboticsOnboardingView_(roboticsState_(),session.email);
  if(['onboarding','profile','profile-save','checklist','protocol-save','activate-request'].includes(r.operation))return roboticsOnboardingDispatch_(r,roboticsState_(),session);
  if(!(typeof roboticsManagementAccess_==='function'?roboticsManagementAccess_(session.email):roboticsAccess_(session.email)))return {status:403};
- if(!['view','status','refresh','import','preview','send'].includes(r.operation))return {status:400};
+ if(!['view','status','refresh','sync','import','preview','send'].includes(r.operation))return {status:400};
  const state=roboticsState_();if(r.operation==='view')return roboticsView_(state);
  if(['preview','send'].includes(r.operation))return roboticsNotify_(r,state,session,store);
  if(r.revision!==state.revision)return {status:409};
+ if(r.operation==='sync'){roboticsSyncMembership_(state);return roboticsView_(roboticsState_());}
  if(r.operation==='refresh')return roboticsView_(state); // Old clients reload without importing external data.
  if(r.operation==='import'){try{return roboticsImport_(r,state);}catch(error){if(/Youth Members|Accepted|youth members|accepted/.test(error.message))return {status:400};throw error;}}
  const member=state.members.find(m=>m.id===r.member);
  if(!member||!member.canChangeStatus||typeof r.active!=='boolean')return {status:400};
  const values=[[r.active,!r.active]];
  roboticsWrite_(PERIODS.CTSO,[{range:"'"+ROBOTICS_STORAGE+"'!A"+member.row+':B'+member.row,values}]);
- const fresh=roboticsState_();return roboticsView_(fresh);
+ const fresh=roboticsState_();if(typeof roboticsSyncMembership_==='function')roboticsSyncMembership_(fresh);return roboticsView_(roboticsState_());
 }
 
 // FIRST Dashboard parser supplied with the original Trip-o-Meter.

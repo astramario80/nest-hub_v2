@@ -1,3 +1,78 @@
+// Keep the About Me scheduling link consistent in static and inserted page footers.
+(() => {
+  function syncScheduleLinks(root) {
+    if (!root.querySelectorAll) return;
+    const joinLinks=[...root.querySelectorAll('header .header-dropdown a')];
+    if(root.matches?.('header .header-dropdown a'))joinLinks.push(root);
+    for(const join of joinLinks)if(/Join\s+Us/i.test(join.textContent||'')){join.setAttribute('href','/hiring');join.removeAttribute('target');join.removeAttribute('data-resource-exit');join.removeAttribute('data-external');}
+
+    const wrappers = [...root.querySelectorAll('.footer-dropdown')];
+    if (root.matches?.('.footer-dropdown')) wrappers.unshift(root);
+    for (const wrapper of wrappers) {
+      if (!/About\s+Me/i.test(wrapper.querySelector('.footer-dropdown-title')?.textContent || '')) continue;
+      const menu = wrapper.querySelector('.footer-dropdown-content');
+      if (!menu) continue;
+      const externalProfile=menu.querySelector('a[href*="linkedin.com"]');if(externalProfile){externalProfile.dataset.resourceExit='LinkedIn';externalProfile.removeAttribute('data-external');externalProfile.target='_blank';externalProfile.rel='noopener noreferrer';}
+      let link = menu.querySelector('a[href="https://calendly.com/mpenalver"]');
+      if (!link) {
+        link = document.createElement('a');
+        link.href = 'https://calendly.com/mpenalver';
+        const linkedIn = menu.querySelector('a[href*="linkedin.com"]');
+        menu.insertBefore(link, linkedIn);
+      }
+      if (link.textContent !== 'Schedule Me') link.textContent = 'Schedule Me';
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+    }
+  }
+  const start = () => {
+    syncScheduleLinks(document);
+    new MutationObserver(records => {
+      for (const record of records) for (const node of record.addedNodes) syncScheduleLinks(node);
+    }).observe(document.body, {childList: true, subtree: true});
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
+  else start();
+})();
+
+// Pin only the shared page chrome; tool-specific dialog headers stay inside their tools.
+(() => {
+ const start=()=>{
+  if(!document.querySelector('script[src*="resource-viewer.js"]')){const css=document.createElement('link');css.rel='stylesheet';css.href='/css/resource-viewer.css';document.head.append(css);const script=document.createElement('script');script.src='/js/resource-viewer.js';document.head.append(script);}
+  const link=document.createElement('link');link.rel='stylesheet';link.href='/css/nest-shell.css?v=1';document.head.append(link);
+  const original=getComputedStyle(document.body);document.body.style.setProperty('--nest-shell-original-top',original.paddingTop);document.body.style.setProperty('--nest-shell-original-bottom',original.paddingBottom);
+  let header=null,footer=null;const measure=()=>{document.documentElement.style.setProperty('--nest-shell-header-height',(header?.getBoundingClientRect().height||0)+'px');document.documentElement.style.setProperty('--nest-shell-footer-height',(footer?.getBoundingClientRect().height||0)+'px');};
+  const observer=typeof ResizeObserver==='function'?new ResizeObserver(measure):null;
+  const sync=()=>{const h=document.querySelector('body > header,body > .site-header'),f=document.querySelector('body > .site-footer');if(h!==header){if(header)observer?.unobserve(header);header=h;if(header){header.classList.add('nest-shell-header');observer?.observe(header);}}if(f!==footer){if(footer)observer?.unobserve(footer);footer=f;if(footer){footer.classList.add('nest-shell-footer');observer?.observe(footer);}}document.body.classList.toggle('nest-fixed-shell',!!(header||footer));measure();};
+  sync();link.onload=measure;window.addEventListener('resize',measure);new MutationObserver(sync).observe(document.body,{childList:true});
+ };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+
+// Keep the NEST wordmark consistent in static and dynamically rendered page content.
+(() => {
+ const blocked='script,style,textarea,input,code,pre,svg,math,[contenteditable],.nest-brand,sup';
+ const pattern=/(?<![A-Za-z0-9_])NEST(?:™)?(?![A-Za-z0-9_])/g;
+ const plain=value=>String(value).replace(pattern,'NEST™');
+ function text(node){
+  if(!node.parentElement||node.parentElement.closest(blocked)||!pattern.test(node.data)){pattern.lastIndex=0;return;}
+  pattern.lastIndex=0;const fragment=document.createDocumentFragment();let offset=0;
+  for(const match of node.data.matchAll(pattern)){
+   fragment.append(document.createTextNode(node.data.slice(offset,match.index)));
+   const word=document.createElement('span'),mark=document.createElement('sup');word.className='nest-brand';word.append('NEST');mark.textContent='™';word.append(mark);fragment.append(word);offset=match.index+match[0].length;
+  }
+  fragment.append(document.createTextNode(node.data.slice(offset)));node.replaceWith(fragment);pattern.lastIndex=0;
+ }
+ function decorate(root){
+  if(root.nodeType===Node.TEXT_NODE){text(root);return;}
+  if(root.nodeType!==Node.ELEMENT_NODE||root.closest(blocked))return;
+  const nodes=[root,...root.querySelectorAll('[aria-label],[alt],[title],[placeholder]')];
+  for(const node of nodes)for(const name of ['aria-label','alt','title','placeholder']){const value=node.getAttribute(name);if(value&&plain(value)!==value)node.setAttribute(name,plain(value));}
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),texts=[];while(walker.nextNode())texts.push(walker.currentNode);texts.forEach(text);
+ }
+ document.title=plain(document.title);decorate(document.body);
+ new MutationObserver(records=>{for(const record of records){if(record.type==='characterData')text(record.target);else if(record.type==='attributes'){const value=record.target.getAttribute(record.attributeName);if(value&&plain(value)!==value)record.target.setAttribute(record.attributeName,plain(value));}else record.addedNodes.forEach(decorate);}}).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['aria-label','alt','title','placeholder']});
+})();
+
 /* =========================
    SOP Auto-Link Definitions
    ========================= */
@@ -481,6 +556,8 @@ if (sopsButtons.length > 0) {
 
         if (!sopsData[label]) return;
 
+        window.resetMagicSpinner?.();
+
         sopsButtons.forEach(b => b.classList.remove("active"));
         button.classList.add("active");
 
@@ -512,6 +589,7 @@ let spinning = false;
 let spinnerInterval = null;
 window.resetMagicSpinner = function() {
   clearInterval(spinnerInterval);
+  window.SpinnerCelebration?.stop();
   remainingNames = [];
   spinning = false;
   const result = document.getElementById("spinner-result");
@@ -555,6 +633,8 @@ document.addEventListener("click", (event) => {
   }
 
   spinning = true;
+  window.SpinnerCelebration?.stop();
+  window.SpinnerCelebration?.prepare();
   statusEl.textContent = "Spinning…";
 
   const finalIndex = Math.floor(Math.random() * remainingNames.length);
@@ -571,6 +651,8 @@ document.addEventListener("click", (event) => {
 
       remainingNames.splice(finalIndex, 1);
       resultEl.textContent = finalName;
+
+      window.SpinnerCelebration?.celebrate();
 
       const li = document.createElement("li");
       li.textContent = finalName;
@@ -853,6 +935,11 @@ function parseCSV(str) {
 document.addEventListener('DOMContentLoaded', () => {
     const qr = document.querySelector('.header-qr');
     if (qr) {
+        const qrImage = qr.querySelector('img');
+        if (qrImage) {
+            qrImage.src = '/assets/qr-code.png?v=gknest-20261025';
+            qrImage.alt = 'QR code for the NEST™ menu at gknest.org';
+        }
         const setQrOpen = open => {
             qr.classList.toggle('is-expanded', open);
             qr.setAttribute('aria-expanded', String(open));
@@ -1052,3 +1139,25 @@ if (document.querySelector('header .logo-container') && !document.body.classList
   eagleMenuScript.src='/js/eagle-menu.js';
   document.body.append(eagleMenuScript);
 }
+
+// Support alerts follow authorized leaders throughout the NEST menu.
+if(window.NestAuth && !document.querySelector('script[src="/js/weather-alerts.js"]')){
+ const weatherAlertScript=document.createElement('script');weatherAlertScript.src='/js/weather-alerts.js';document.body.append(weatherAlertScript);
+}
+
+// Lab request and scheduled-arrival alerts follow the signed-in administrator across NEST pages.
+if(window.NestAuth && !document.querySelector('script[src="/js/lab-request-alerts.js"]')){
+ const labAlertScript=document.createElement('script');labAlertScript.src='/js/lab-request-alerts.js';document.body.append(labAlertScript);
+}
+
+// Division-authorized flight activity follows leaders across NEST partner screens.
+if(window.NestAuth&&!document.querySelector('script[src="/js/safety-notifications.js"]')){
+ const safetyAlertScript=document.createElement('script');safetyAlertScript.src='/js/safety-notifications.js?v=layout-20261106';document.body.append(safetyAlertScript);
+}
+
+// Site-wide Tech Ticket reporting and Software Technician alerts.
+(() => {
+ if(document.querySelector('script[data-nest-tech]'))return;
+ const css=document.createElement('link');css.rel='stylesheet';css.href='/css/tech-tickets.css?v=room-machines-1';document.head.append(css);
+ const script=document.createElement('script');script.src='/js/tech-report.js?v=room-machines-1';script.dataset.nestTech='';document.head.append(script);
+})();

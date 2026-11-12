@@ -31,3 +31,17 @@ README-diagnostics.md
 school-readback/
 school-stage/
 school-verified/
+
+output/
+tmp/
+
+README-inventory.md
+
+robotics-script/
+
+README-lab-requests.md
+
+integrations/
+
+README-tech-tickets.md
+docs/

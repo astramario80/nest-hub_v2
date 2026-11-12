@@ -1,0 +1,7 @@
+/* Keep the shared navigation, including the eagle menu, available while scrolling. */
+body.nest-fixed-shell{padding-top:calc(var(--nest-shell-original-top,0px) + var(--nest-shell-header-height,100px));padding-bottom:calc(var(--nest-shell-original-bottom,0px) + var(--nest-shell-footer-height,80px))}
+.nest-shell-header{position:fixed!important;inset:0 0 auto 0!important;width:100%;box-sizing:border-box;z-index:1000001!important;background:rgba(14,20,40,.96);backdrop-filter:blur(12px);margin:0!important}
+.nest-shell-footer{position:fixed!important;inset:auto 0 0 0!important;width:100%;box-sizing:border-box;z-index:1000000!important;background:rgba(14,20,40,.97);backdrop-filter:blur(12px);margin:0!important}
+html{scroll-padding-top:calc(var(--nest-shell-header-height,100px) + 18px);scroll-padding-bottom:calc(var(--nest-shell-footer-height,80px) + 18px)}
+body.nest-fixed-shell .tech-banner{top:calc(var(--nest-shell-header-height,90px) + 12px)}
+@media print{.nest-shell-header,.nest-shell-footer{position:static!important}body.nest-fixed-shell{padding-top:0;padding-bottom:0}}

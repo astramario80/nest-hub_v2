@@ -1,0 +1,57 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>METAR LookUp · NEST™</title><link rel="icon" href="/assets/nest_menu_icon.png"><link rel="stylesheet" href="/css/styles.css"><link rel="stylesheet" href="/css/metar.css?v=nest-theme-1"><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet"></head><body><header>
+        <div class="logo-container">
+            <a href="/">
+                <img src="/assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
+            </a>
+        </div>
+        <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+            
+            <!-- Quick Links Dropdown -->
+            <div class="header-dropdown">
+                <button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button>
+                <div class="dropdown-content">
+                    <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+                    <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+                    <a href="/hiring">🚀 Join Us</a>
+                    <a href="/weather">🌤️ Weather Report</a>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false">
+                <img src="/assets/qr-code.png" alt="QR Code">
+            </button>
+        </div>
+    </header><main class="metar-page"><div class="metar-heading"><div><a href="/safety">← Safety</a><p class="metar-eyebrow">DRONE PILOTING · WEATHER &amp; AIRSPACE</p><h1>METAR LookUp</h1><p>Find your station. Read the report. Understand each part.</p></div><span class="metar-icon" aria-hidden="true">☁</span></div>
+<form id="metar-search" class="metar-toolbar"><label for="metar-station">Station ID<input id="metar-station" value="KPLU" maxlength="4" pattern="[A-Za-z][A-Za-z0-9]{3}" required autocomplete="off" spellcheck="false" placeholder="KPLU"></label><button type="submit">Look up METAR</button><button id="metar-home" type="button">Thun Field · KPLU</button><span>Choose a station on the map, then enter its four-character ID here.</span></form><p id="metar-status" role="status" aria-live="polite">Loading the latest report from Thun Field…</p>
+<section id="metar-report" class="metar-report" hidden aria-labelledby="metar-report-title"><div class="metar-section-heading"><div><p class="metar-eyebrow">LATEST OBSERVATION</p><h2 id="metar-report-title"></h2><p id="metar-observed"></p></div><div class="metar-actions"><button id="metar-copy" type="button">Copy METAR</button><button id="metar-use" type="button" hidden>Use in pre-flight form ↗</button></div></div><p id="metar-age" role="status"></p><div id="metar-raw" class="metar-raw" aria-label="Color-coded METAR report"></div><p id="metar-action-status" role="status" aria-live="polite"></p></section>
+<div class="metar-layout"><section class="metar-map-card" aria-labelledby="metar-map-title"><div class="metar-section-heading"><div><p class="metar-eyebrow">EXPLORE THE OBSERVATIONS</p><h2 id="metar-map-title">Aviation weather map</h2></div><a id="metar-map-external" href="https://aviationweather.gov/gfa/?tab=obs" target="_blank" rel="noopener noreferrer">Open full map ↗</a></div><p>Click a station marker to see its METAR. Use the map’s search tool to find another location.</p><iframe id="metar-map" src="https://aviationweather.gov/gfa/?tab=obs&amp;center=47.10,-122.29&amp;zoom=8" title="Aviation Weather Center interactive observation map" loading="eager" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen"></iframe><p class="metar-muted">If your browser or school network cannot display the map, use <a href="https://aviationweather.gov/gfa/?tab=obs" target="_blank" rel="noopener noreferrer">Open full map</a>.</p><details class="metar-paste"><summary>Decode a METAR copied from the map</summary><form id="metar-paste-form"><label for="metar-pasted">Paste the complete METAR<textarea id="metar-pasted" required maxlength="4000" rows="4" placeholder="METAR KPLU 041635Z AUTO 00000KT 10SM -RA BKN095 05/05 A3007 RMK AO2"></textarea></label><button type="submit">Decode pasted report</button></form></details></section>
+<section class="metar-decoder-card" aria-labelledby="metar-decoder-title"><p class="metar-eyebrow">THE SHEET’S TEN PARTS, EXPLAINED</p><h2 id="metar-decoder-title">Read your METAR.</h2><p class="metar-muted">Match each color to the report above. Codes that are not decoded remain visible in the original report.</p><div id="metar-decoded"><p>Look up a station to see its decoded report.</p></div><p id="metar-other" class="metar-muted"></p><p class="metar-muted">A METAR describes an observation at a reporting station. Review it with your flight supervisor when completing your checklist.</p><a id="metar-source" href="https://aviationweather.gov/data/metar/?ids=KPLU" target="_blank" rel="noopener noreferrer">View official report ↗</a></section></div></main><footer class="site-footer">
+        <div class="footer-content">
+            <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+            <div class="footer-links">
+                <!-- Help & Support Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="/computer-lookup">💻 Computer Look-up</a>
+                        <a href="/tech-tickets">🎫 Tech Ticket</a>
+                        <a href="/weather">🌤️ Weather Report</a>
+                    </div>
+                </div>
+
+                <!-- About Me Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+                        <a href="tel:2538006221">253.800.6221</a>
+                        <a href="/assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+                        <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank">LinkedIn</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer><script type="module" src="/js/metar.mjs?v=1"></script><script src="/js/main.js"></script></body></html>

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {createHash} from 'node:crypto';
-const source=fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8')+'\n'+fs.readFileSync(new URL('../google-spinner/Tracker.js',import.meta.url),'utf8');
+const source=fs.readFileSync(new URL('../google-spinner/Code.js',import.meta.url),'utf8');
 function service(){
   let now=1000000000,leaders=[],admins=[{hyperlink:'mailto:ADMIN@example.org'}],manager=false,saves=0;
   const state=new Map(),sent=[],rows=[['Student A','ID','student@example.org']];
@@ -18,8 +18,8 @@ function service(){
 }
 const base={period:'1',email:'student@example.org',code:'012345',challenge:'a'.repeat(64),ip:'b'.repeat(64),session:'c'.repeat(64)};
 function signIn(s,email=base.email){s.state.set('authsession:'+s.ctx.hash_(base.session),JSON.stringify({email,expires:1000000000+21600000}));return {status:200};}
-test('one owner or administrator session opens other periods; student sessions remain period-bound',()=>{
-  for(const email of ['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com','admin@example.org']){
+test('one owner session opens other periods; student sessions remain period-bound',()=>{
+  for(const email of ['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com']){
     const s=service();assert.equal(signIn(s,email).status,200);
     assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);
     assert.equal(s.call({...base,period:'2',action:'roster'}).status,200);
@@ -31,9 +31,9 @@ test('one owner or administrator session opens other periods; student sessions r
   const formerOwner=service();signIn(formerOwner,'outsider@gmail.com');
   assert.equal(formerOwner.call({...base,period:'2',action:'tracker'}).status,403);
 });
-test('administrator emails are read from live rich links and removal revokes later access',()=>{
+test('staff directory rich links do not grant administrator access',()=>{
   const s=service();s.setAdmins([{textFormatRuns:[{format:{link:{uri:'mailto:ADMIN@example.org'}}}]}]);signIn(s,'admin@example.org');
-  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,200);s.setAdmins([]);
+  assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);s.setAdmins([]);
   assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
   assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
@@ -79,9 +79,9 @@ test('managers, assistants and temporary editors can grant district-only, period
     signIn(s,'helper@students.bethelsd.org');
     assert.equal(s.call({...base,action:'tracker'}).role,'editor');
     assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'assignment',title:'New assignment'}}).status,200);
-    const delegated=s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@bethelsd.org'}});
-    assert.equal(delegated.status,200);assert.deepEqual(delegated.grants.map(g=>g.email),['third@bethelsd.org']);
-    signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+    const delegated=s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'third@students.bethelsd.org'}});
+    assert.equal(delegated.status,200);assert.deepEqual(delegated.grants.map(g=>g.email),['third@students.bethelsd.org']);
+    signIn(s,'third@students.bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
     assert.equal(s.call({...base,action:'tracker-update',revision:2,change:{type:'grant',email:'manager@example.org'}}).status,400);
     assert.equal(s.call({...base,period:'2',action:'tracker'}).status,403);
     s.advance(21600000);assert.equal(s.call({...base,action:'tracker'}).status,401);
@@ -91,20 +91,20 @@ test('removing manager authority revokes their active delegated editors',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
   s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'helper@students.bethelsd.org'}});signIn(s,'helper@students.bethelsd.org');
   assert.equal(s.call({...base,action:'tracker'}).role,'editor');
-  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'third@bethelsd.org'}});
-  signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
+  s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email:'third@students.bethelsd.org'}});
+  signIn(s,'third@students.bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).role,'editor');
   s.setLeaders([]);assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
 test('a temporary editor may remove only grants they issued and revoking them ends downstream access',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
   const update=change=>s.call({...base,action:'tracker-update',revision:1,change});
   update({type:'grant',email:'helper@students.bethelsd.org'});
-  update({type:'grant',email:'peer@bethelsd.org'});
+  update({type:'grant',email:'peer@students.bethelsd.org'});
   signIn(s,'helper@students.bethelsd.org');
-  assert.equal(update({type:'revoke',email:'peer@bethelsd.org'}).status,403);
-  assert.equal(update({type:'grant',email:'third@bethelsd.org'}).status,200);
+  assert.equal(update({type:'revoke',email:'peer@students.bethelsd.org'}).status,403);
+  assert.equal(update({type:'grant',email:'third@students.bethelsd.org'}).status,200);
   signIn(s,'manager@example.org');assert.equal(update({type:'revoke',email:'helper@students.bethelsd.org'}).status,200);
-  signIn(s,'third@bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).status,403);
+  signIn(s,'third@students.bethelsd.org');assert.equal(s.call({...base,action:'tracker'}).status,403);
 });
 test('edit grants stay active after six hours and after the manager signs out, until revoked',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
@@ -122,7 +122,7 @@ test('edit grants stay active after six hours and after the manager signs out, u
 });
 test('an active older six-hour grant is retained until revoked',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);
-  const email='helper@bethelsd.org',key='grant:1:'+s.ctx.hash_(email);
+  const email='helper@students.bethelsd.org',key='grant:1:'+s.ctx.hash_(email);
   s.state.set(key,JSON.stringify({email,issuer:'manager@example.org',period:'1',expires:1000000000+1000}));
   signIn(s,email);assert.equal(s.call({...base,action:'tracker'}).role,'editor');
   assert.equal(JSON.parse(s.state.get(key)).expires,Number.MAX_SAFE_INTEGER);
@@ -131,7 +131,7 @@ test('an active older six-hour grant is retained until revoked',()=>{
 test('each successful grant remains usable through a longer delegation chain',()=>{
   const s=service();s.setLeaders([['1','','Division Manager','Manager, Test','manager@example.org']]);signIn(s,'manager@example.org');
   for(let index=0;index<10;index++){
-    const email=`delegate${index}@bethelsd.org`;
+    const email=`delegate${index}@students.bethelsd.org`;
     assert.equal(s.call({...base,action:'tracker-update',revision:1,change:{type:'grant',email}}).status,200);
     signIn(s,email);
     assert.equal(s.call({...base,action:'tracker'}).role,'editor');

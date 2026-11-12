@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NEST™ TripHub</title>
+  <link rel="canonical" href="https://gknest.org/triphub">
+  <link rel="stylesheet" href="/css/styles.css?v=qr-click-1">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/field-trips.css?v=triphub-connected-actions-1">
+<meta name="referrer" content="no-referrer"><link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1"></head>
+<body>
+<header>
+        <div class="logo-container">
+            <a href="/">
+                <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;">
+            </a>
+        </div>
+        <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+            
+            <!-- Quick Links Dropdown -->
+            <div class="header-dropdown">
+                <button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button>
+                <div class="dropdown-content">
+                    <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+                    <a href="https://app.smartpass.app/main/passes" target="_blank">SmartPass</a>
+                    <a href="/hiring">🚀 Join Us</a>
+                    <a href="/weather">🌤️ Weather Report</a>
+                    <a href="/sign-in-sheet">✍️ Sign-In Sheet</a>
+                </div>
+            </div>
+
+            <!-- QR Code -->
+            <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false">
+                <img src="assets/qr-code.png" alt="QR Code">
+            </button>
+        </div>
+    </header>
+<div class="field-trip-content">
+  <a class="skip" href="#workspace">Skip to trip workspace</a>
+  <div id="connection-status" class="trip-connection-status" role="status">Connecting to your trip workspace…</div>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">BEYOND THE CLASSROOM</p><h1><span class="trip-brand-nest">NEST™</span> <span class="trip-brand-name">TripHub</span><span class="trip-brand-dot">.</span></h1><p class="intro">The details, the paperwork, and everyone accounted for.</p></div><div class="trip-heading-actions"><button type="button" id="student-welcome" hidden>Welcome / show me around</button><button type="button" id="refresh">Refresh</button><button class="primary" id="new-trip">＋ Plan a trip</button><button type="button" id="end-parent" hidden>End parent session</button></div></div>
+    <div class="layout">
+      <aside class="trip-rail" aria-label="Your trips"><div class="rail-heading"><h2>Your trips</h2><span id="trip-count"></span></div><div id="trips"></div><div class="rail-note"><span aria-hidden="true">↗</span><p>One trip record, from the first plan to the ride home.</p></div></aside>
+      <section id="workspace" tabindex="-1">
+        <div class="trip-hero"><div><p id="trip-stage" class="eyebrow"></p><h2 id="trip-title"></h2><p id="trip-subtitle"></p></div><div class="date-tile"><span id="trip-month"></span><strong id="trip-day"></strong></div></div>
+        <div class="trip-facts" id="trip-facts"></div>
+        <div class="student-next" id="student-next" hidden></div>
+        <nav class="tabs" aria-label="Trip workspace" id="tabs"></nav>
+        <div id="panel"></div>
+      </section>
+    </div>
+    <div class="feedback" id="feedback" role="status" aria-live="polite"></div>
+  </main>
+  <dialog id="action-dialog"><form id="action-form"><h2 id="action-title"></h2><div id="action-fields"></div><p id="action-error" class="error" role="alert"></p><div class="actions"><button type="button" id="action-cancel">Cancel</button><button type="submit" class="primary" id="action-submit">Save</button></div></form></dialog>
+  <dialog id="signature-dialog" class="signature-dialog" aria-labelledby="signature-title" aria-describedby="signature-help"><div class="signature-heading"><div><p class="eyebrow">PARENT / GUARDIAN SIGNATURE</p><h2 id="signature-title">Sign with your finger</h2></div><span class="chip warn">Parent signature</span></div><p id="signature-help"></p><div class="signature-surface"><canvas id="signature-canvas" aria-label="Draw your parent or guardian signature here"></canvas><span aria-hidden="true" class="signature-guide">Sign above this line</span></div><div class="signature-actions"><div><button id="signature-undo" type="button">Undo</button><button id="signature-clear" type="button">Clear</button></div><div><button id="signature-cancel" type="button">Cancel</button><button id="signature-save" class="primary" type="button" disabled>Use this signature</button></div></div></dialog>
+</div>
+<footer class="site-footer">
+        <div class="footer-content">
+            <span class="copyright">Copyright © <span id="current-year"></span> by Mario Peñalver, MA MAE</span>
+            <div class="footer-links">
+                <!-- Help & Support Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="/computer-lookup">💻 Computer Look-up</a>
+                        <a href="/tech-tickets">🎫 Tech Ticket</a>
+                        <a href="/weather">🌤️ Weather Report</a>
+                    </div>
+                </div>
+
+                <!-- About Me Dropdown -->
+                <div class="footer-dropdown">
+                    <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+                    <div class="footer-dropdown-content">
+                        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+                        <a href="tel:2538006221">253.800.6221</a>
+                        <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+                        <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank">LinkedIn</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+  <script src="/js/nest-auth.js?v=password-toggle-1"></script><script src="/js/field-trips/signature-pad.js"></script><script src="/js/field-trips/trip-icons.js"></script><script src="/js/field-trips/k12-handoff.js"></script><script src="/js/field-trips/live.js?v=guardian-attestation-20261105"></script><script src="/js/main.js"></script></body></html>

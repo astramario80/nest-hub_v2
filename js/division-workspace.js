@@ -8,7 +8,7 @@
   }
   dialog.open=true;
   const individual=document.createElement('dialog');individual.className='division-workspace division-individual';individual.setAttribute('aria-labelledby','division-slide-title');
-  individual.innerHTML=`<div class="division-window-layout"><div class="division-window-header"><div><h2 id="division-slide-title"></h2><p data-mode></p></div><button type="button" data-back>Back to division</button></div><p class="division-window-status" role="status" aria-live="polite"></p><div class="division-window-stage"></div><div class="division-window-footer"><small>Editing uses your school Google account. Changes save automatically.</small><a class="division-original" data-external target="_blank" rel="noopener noreferrer" hidden>Open in Google ↗</a></div></div>`;
+  individual.innerHTML=`<div class="division-window-layout"><div class="division-window-header"><div><h2 id="division-slide-title"></h2><p data-mode></p></div><button type="button" data-back>Back to division</button></div><p class="division-window-status" role="status" aria-live="polite"></p><div class="division-window-stage"></div><div class="division-window-footer"><small>Editing uses your school Google account. Check that Google Slides says “Saved to Drive” before closing.</small><a class="division-original" data-external target="_blank" rel="noopener noreferrer" hidden>Open in Google ↗</a></div></div>`;
   document.body.append(individual);
   const status=dialog.querySelector('[role=status]'),loadButton=dialog.querySelector('[data-load]'),stage=dialog.querySelector('.division-window-stage'),positions=dialog.querySelector('.division-window-positions');
   let period=dialog.dataset.period,generation=0,timer,canManage=false,job='',busy=false,config=null,slideGeneration=0,slideOpener;
@@ -30,7 +30,7 @@
   function render(){if(config&&(!window.NestDivisionHQ||window.NestDivisionHQ.active==='meetings'))stage.replaceChildren(frame(config.manager));}
   function clearAccess(){
     window.NestDivisionHQ?.setAccess(false);
-    config=null;canManage=false;setBusy(false);positions.replaceChildren();dialog.querySelector('[data-team-summary]').replaceChildren();dialog.querySelector('[data-hiring]').hidden=true;stage.replaceChildren();
+    config=null;canManage=false;setBusy(false);dialog.querySelector('[data-manager-open]')?.remove();positions.replaceChildren();dialog.querySelector('[data-team-summary]').replaceChildren();dialog.querySelector('[data-hiring]').hidden=true;stage.replaceChildren();
     dialog.querySelector('.division-window-controls').hidden=true;dialog.querySelector('.division-window-footer').hidden=true;
     if(individual.open)individual.close();
   }
@@ -52,6 +52,7 @@
     dialog.querySelector('.division-window-controls').hidden=false;loadButton.hidden=!canManage;
     dialog.querySelector('.division-window-controls p').textContent=canManage?'Update the manager slideshow with this division’s latest leadership slides.':'You can view all leadership slides in your division. Only your assigned positions allow editing.';
     dialog.querySelector('[data-edit-manager]').hidden=!result.manager.canEdit;
+    let direct=dialog.querySelector('[data-manager-open]');if(!direct){direct=document.createElement('a');direct.dataset.managerOpen='';direct.className='division-original';direct.target='_blank';direct.rel='noopener noreferrer';direct.textContent='Open meeting slides in Google ↗';dialog.querySelector('.division-window-footer').append(direct);}direct.href='https://docs.google.com/presentation/d/'+result.manager.id+'/preview';
     dialog.querySelector('.division-window-footer').hidden=false;window.NestDivisionHQ?.setAccess(true,canManage,result.canManageRobotics===true,result.canViewRobotics===true);if(!window.NestDivisionHQ)render();
   }
   async function openSlide(id,button){
@@ -62,7 +63,8 @@
       const result=await request('GET');if(own!==slideGeneration||current!==generation||!individual.open)return;
       const slide=[result.manager,...result.leaders].find(slide=>slide.id===id);if(!slide)throw new Error('This leadership slide is no longer available.');
       individual.querySelector('h2').textContent=slide.role;individual.querySelector('[data-mode]').textContent=slide.canEdit?'Editing enabled':'View only · Assigned leaders and division managers can edit';
-      notice.textContent='';panel.append(frame(slide,slide.canEdit===true));external.href='https://docs.google.com/presentation/d/'+slide.id+(slide.canEdit?'/edit':'/preview');external.hidden=false;
+      notice.textContent=slide.canEdit?(slide.id===result.manager.id?'This is the compiled meeting slideshow. Loading division slides replaces slides after the title. Use the leadership-role buttons for lasting edits; a private backup is saved before each rebuild.':'You are editing the original '+slide.role+' slides. Wait for “Saved to Drive,” then load division slides to include your changes in the meeting slideshow.'):'';
+      panel.append(frame(slide,slide.canEdit===true));external.href='https://docs.google.com/presentation/d/'+slide.id+(slide.canEdit?'/edit':'/preview');external.textContent=slide.canEdit?'Edit in Google Slides ↗':'Open in Google ↗';external.hidden=false;
     }catch(error){if(own!==slideGeneration||current!==generation||!individual.open)return;notice.textContent=error.message;if([401,403].includes(error.status)){clearAccess();recover(error.message,checkAccess);}}
   }
   function recover(message,retry){
