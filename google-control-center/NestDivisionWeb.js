@@ -29,6 +29,7 @@ function doPost(e){
   const r=JSON.parse(e.postData.contents);
   const digest=typeof r.token==='string'?Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,r.token).map(b=>('0'+(b&255).toString(16)).slice(-2)).join(''):'';
   if(digest!==NEST_WEB_DIGEST)return nestWebJson_({status:401});
+  if(r.operation==='tech-graphic-export')return nestWebJson_(nestTechGraphicExport_(r));
   if(r.operation==='sync-staff-access'){
    if(!r.delegates||typeof r.delegates!=='object'||Array.isArray(r.delegates)||Object.keys(r.delegates).length!==NEST_WEB_PERIODS.length||NEST_WEB_PERIODS.some(p=>!Array.isArray(r.delegates[p])||r.delegates[p].length>500||r.delegates[p].some(g=>!g||!/^\S+@bethelsd\.org$/.test(g.email)||!['viewer','manager'].includes(g.role))))return nestWebJson_({status:400});
    const store=PropertiesService.getScriptProperties();NEST_WEB_PERIODS.forEach(period=>{store.setProperty('nest-staff-delegates:'+period,JSON.stringify(r.delegates[period]));store.setProperty('nest-hiring-access:'+period,Utilities.getUuid());});

@@ -4,11 +4,12 @@ const TECH_TYPES=['Website bug','Software / sign-in','Computer / hardware','Hard
 const TECH_STATUSES=['New','Assigned','In progress','Waiting','Pending','Resolved','Closed'];
 function techYear_(date){const parts=Utilities.formatDate(date,'America/Los_Angeles','yyyy-MM').split('-').map(Number),year=parts[0]-(parts[1]<8?1:0);return year+'–'+(year+1);}
 function techAccess_(session,brief,withoutTechnicians){
- const admin=websiteAdmin_(session.email),technicians=[],periods=[];if(admin&&(brief||withoutTechnicians))return {admin:true,canManage:true,canViewOverview:true,technicians,periods:[...HIRING_PERIODS]};const leaders=hiringRows_();let technician=false,overview=false;
+ const admin=websiteAdmin_(session.email),technicians=[],periods=[];if(admin&&(brief||withoutTechnicians))return {admin:true,canManage:true,canViewOverview:true,slideExportPeriods:[...HIRING_PERIODS],technicians,periods:[...HIRING_PERIODS]};const leaders=hiringRows_();let technician=false,overview=false;const slidePeriods=[];
  if(brief){const allowed=admin||leaders.some(row=>{const p=String(row[0]||'').replace(/period/ig,'').trim().toUpperCase();if(!HIRING_PERIODS.includes(p)||!/^software technician$/i.test(String(row[2]||'').trim()))return false;const address=memberEmail_(session.email,p);return email_(row[4])===address&&rows_(p).some(r=>email_(r[1])===address);});return {admin,canManage:allowed,technicians,periods};}
  HIRING_PERIODS.forEach(period=>{const address=memberEmail_(session.email,period),roster=rows_(period);if(roster.some(row=>email_(row[1])===address)||manualPeriodAccess_(session.email,period))periods.push(period);if(roster.some(row=>email_(row[1])===address)&&leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===address&&/^(division manager|assistant manager|chief (executive|financial|operations) officers?|executive vice-president)$/i.test(String(row[2]||'').trim())))overview=true;
+ if(roster.some(row=>email_(row[1])===address)&&leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===address&&/^(software technician|division manager|assistant manager|chief (executive|financial|operations) officers?|executive vice-president)$/i.test(String(row[2]||'').trim())))slidePeriods.push(period);
  leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&/^software technician$/i.test(String(row[2]||'').trim())).forEach(row=>{const mail=email_(row[4]),member=roster.find(r=>email_(r[1])===mail);if(member){if(mail===address)technician=true;if(!technicians.some(t=>t.email===mail))technicians.push({email:mail,name:String(member[0])});}});});
- return {admin,canManage:admin||technician,canViewOverview:admin||technician||overview,technicians,periods:admin?[...HIRING_PERIODS]:periods};
+ return {admin,canManage:admin||technician,canViewOverview:admin||technician||overview,slideExportPeriods:admin||typeof nestExecutive_==='function'&&nestExecutive_(session.email,leaders)?[...HIRING_PERIODS]:slidePeriods,technicians,periods:admin?[...HIRING_PERIODS]:periods};
 }
 let TECH_NATIVE_STATE=null;
 function techState_(){
@@ -54,17 +55,18 @@ function techDispatch_(r){
  const operation=r.operation||'view',access=techAccess_(session,operation==='access',!['view','update'].includes(operation));
  if(operation==='access')return {status:200,canManage:access.canManage,canEscalateOutside:techCanEscalate_(session)};
  if(['escalation-options','escalation-preview','escalation-send','escalate-owner','escalation-reconcile'].includes(operation))return techEscalationDispatch_(r,session,access);
- if(!['catalog','result','view','submit','update','image','legacy'].includes(operation))return {status:400};
+ if(!['slide-snapshot','slide-export','catalog','result','view','submit','update','image','legacy'].includes(operation))return {status:400};
  if(!access.admin&&!access.periods.length)return {status:403};
+ if(['slide-snapshot','slide-export'].includes(operation))return techSlideDispatch_(r,session,access);
  if(operation==='catalog')return {status:200,periods:access.periods,stations:roomComputerChoices_(),machines:roomMachineChoices_()};
  if(operation==='legacy'){
   if(!access.canManage)return {status:403};
   const tabs=Sheets.Spreadsheets.get(TECH_BOOK,{fields:'sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)))'}).sheets||[];
-  return {status:200,sheets:tabs.filter(s=>s.properties.title!==TECH_TAB).map(s=>{const p=s.properties;return {name:p.title,rows:Sheets.Spreadsheets.Values.get(TECH_BOOK,"'"+p.title.replace(/'/g,"''")+"'!A1:AZ"+Math.min(p.gridProperties.rowCount,10001)).values||[]};})};
+  return {status:200,sheets:tabs.filter(s=>s.properties.title==='TechTickets').map(s=>{const p=s.properties;return {name:p.title,rows:Sheets.Spreadsheets.Values.get(TECH_BOOK,"'"+p.title.replace(/'/g,"''")+"'!A1:AZ"+Math.min(p.gridProperties.rowCount,10001)).values||[]};})};
  }
  if(operation==='view'){
   const state=techState_(),records=state.records.map(x=>x.ticket).filter(t=>access.canManage||t.reporter===session.email);
-  return {status:200,canManage:access.canManage,canViewOverview:access.canViewOverview,canEscalateOutside:techCanEscalate_(session),periods:access.periods,technicians:access.canManage?access.technicians:[],types:TECH_TYPES,statuses:TECH_STATUSES,currentYear:techYear_(new Date()),roomHealth:techHealth_(state.records.map(x=>x.ticket),Date.now()),tickets:records.map(t=>techPublic_(t,access.canManage))};
+  return {status:200,canManage:access.canManage,canViewOverview:access.canViewOverview,slideExportPeriods:access.slideExportPeriods||[],overviewTables:access.canViewOverview?techOverviewTables_(state.records.map(x=>x.ticket)):{},canEscalateOutside:techCanEscalate_(session),periods:access.periods,technicians:access.canManage?access.technicians:[],types:TECH_TYPES,statuses:TECH_STATUSES,currentYear:techYear_(new Date()),roomHealth:techHealth_(state.records.map(x=>x.ticket),Date.now()),tickets:records.map(t=>techPublic_(t,access.canManage))};
  }
  if(!/^[a-f0-9-]{36}$/.test(r.id||''))return {status:400};
  if(operation==='result'){const entry=techState_().records.find(e=>e.ticket.id===r.id&&e.ticket.reporter===session.email);return entry?{status:200,ticket:techPublic_(entry.ticket,access.canManage)}:{status:404};}

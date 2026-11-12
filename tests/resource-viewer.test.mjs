@@ -77,3 +77,4 @@ test('SolidProfessor and Thingiverse have internal pages with working NEST chrom
  }
  menu.window.close();
 });
+test('LinkedIn uses the NEST Universe confirmation and keeps its external destination until Continue',()=>{const d=page('https://www.linkedin.com/in/astramario/');try{const link=d.window.document.getElementById('source');link.dataset.resourceExit='LinkedIn';link.click();const dialog=d.window.document.querySelector('[aria-labelledby=resource-exit-title]');assert.equal(dialog.open,true);assert.match(dialog.textContent,/leaving the NEST™ Universe for LinkedIn/);assert.equal(dialog.querySelector('[data-exit-ok]').href,'https://www.linkedin.com/in/astramario/');assert.equal(d.window.document.querySelector('iframe'),null);dialog.querySelector('[data-exit-cancel]').click();assert.equal(dialog.open,false);}finally{d.window.close();}});

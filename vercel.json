@@ -182,6 +182,10 @@
     "api/fabrication-intake.mjs": {
       "maxDuration": 300,
       "includeFiles": "lib/fabrication-media/**"
+    },
+    "api/tech-slide-export.mjs": {
+      "maxDuration": 90,
+      "includeFiles": "lib/tech-slide-assets/**"
     }
   },
   "redirects": [

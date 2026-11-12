@@ -2,12 +2,17 @@
 (() => {
   function syncScheduleLinks(root) {
     if (!root.querySelectorAll) return;
+    const joinLinks=[...root.querySelectorAll('header .header-dropdown a')];
+    if(root.matches?.('header .header-dropdown a'))joinLinks.push(root);
+    for(const join of joinLinks)if(/Join\s+Us/i.test(join.textContent||'')){join.setAttribute('href','/hiring');join.removeAttribute('target');join.removeAttribute('data-resource-exit');join.removeAttribute('data-external');}
+
     const wrappers = [...root.querySelectorAll('.footer-dropdown')];
     if (root.matches?.('.footer-dropdown')) wrappers.unshift(root);
     for (const wrapper of wrappers) {
       if (!/About\s+Me/i.test(wrapper.querySelector('.footer-dropdown-title')?.textContent || '')) continue;
       const menu = wrapper.querySelector('.footer-dropdown-content');
       if (!menu) continue;
+      const externalProfile=menu.querySelector('a[href*="linkedin.com"]');if(externalProfile){externalProfile.dataset.resourceExit='LinkedIn';externalProfile.removeAttribute('data-external');externalProfile.target='_blank';externalProfile.rel='noopener noreferrer';}
       let link = menu.querySelector('a[href="https://calendly.com/mpenalver"]');
       if (!link) {
         link = document.createElement('a');
@@ -28,6 +33,19 @@
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once: true});
   else start();
+})();
+
+// Pin only the shared page chrome; tool-specific dialog headers stay inside their tools.
+(() => {
+ const start=()=>{
+  if(!document.querySelector('script[src*="resource-viewer.js"]')){const css=document.createElement('link');css.rel='stylesheet';css.href='/css/resource-viewer.css';document.head.append(css);const script=document.createElement('script');script.src='/js/resource-viewer.js';document.head.append(script);}
+  const link=document.createElement('link');link.rel='stylesheet';link.href='/css/nest-shell.css?v=1';document.head.append(link);
+  const original=getComputedStyle(document.body);document.body.style.setProperty('--nest-shell-original-top',original.paddingTop);document.body.style.setProperty('--nest-shell-original-bottom',original.paddingBottom);
+  let header=null,footer=null;const measure=()=>{document.documentElement.style.setProperty('--nest-shell-header-height',(header?.getBoundingClientRect().height||0)+'px');document.documentElement.style.setProperty('--nest-shell-footer-height',(footer?.getBoundingClientRect().height||0)+'px');};
+  const observer=typeof ResizeObserver==='function'?new ResizeObserver(measure):null;
+  const sync=()=>{const h=document.querySelector('body > header,body > .site-header'),f=document.querySelector('body > .site-footer');if(h!==header){if(header)observer?.unobserve(header);header=h;if(header){header.classList.add('nest-shell-header');observer?.observe(header);}}if(f!==footer){if(footer)observer?.unobserve(footer);footer=f;if(footer){footer.classList.add('nest-shell-footer');observer?.observe(footer);}}document.body.classList.toggle('nest-fixed-shell',!!(header||footer));measure();};
+  sync();link.onload=measure;window.addEventListener('resize',measure);new MutationObserver(sync).observe(document.body,{childList:true});
+ };if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 
 // Keep the NEST wordmark consistent in static and dynamically rendered page content.

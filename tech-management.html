@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/css/resource-viewer.css">
   <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1">
-  <link rel="stylesheet" href="/css/tech-tickets.css?v=detail-spacing-1">
+  <link rel="stylesheet" href="/css/tech-tickets.css?v=graphic-exports-1">
 </head>
 <body>
   <div class="bg-watermark"></div>
@@ -29,7 +29,7 @@
         <div class="dropdown-content">
           <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
           <a href="/safety">SmartPass</a>
-          <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/viewform" target="_blank">🚀 Join Us</a>
+          <a href="/hiring">🚀 Join Us</a>
           <a href="/weather">🌤️ Weather Report</a>
         </div>
       </div>
@@ -44,7 +44,7 @@
   <main class="tech-page" data-management>
     <section class="tech-hero"><p class="tech-eyebrow">Help &amp; Support · Technology</p><h1>Software Tech workspace</h1><p>Keep technology moving. Triage issues, update reporters, and bring clear progress to leadership meetings.</p><div class="tech-actions"><button type="button" class="tech-primary" id="tech-new">Report a tech issue</button><button type="button" id="tech-signin">Sign in to NEST</button><a href="/tech-tickets" id="tech-workspace">My tickets →</a></div></section>
     <p id="tech-status" class="tech-status" role="status" aria-live="polite">Sign in to see tickets you created.</p>
-    <section id="tech-content" hidden><section class="tech-panel tech-health-toolbar"><div class="tech-filters"><label>School year<select id="tech-year"></select></label><label>Show<select id="tech-state"><option value="open">Active tickets</option><option value="closed">Resolved &amp; closed</option><option value="all">All tickets</option><option value="owner-review">Waiting for Mr. Peñalver</option><option value="external">Escalated outside NEST</option></select></label><label>Search<input id="tech-search" type="search" placeholder="Title, station, or ticket ID"></label><button id="tech-refresh" type="button">Refresh</button></div></section><section class="tech-panel tech-health" id="tech-health" aria-label="Room tech health"></section><h2>Ticket queue</h2><div class="tech-counts" id="tech-counts"></div><section class="tech-panel"><div id="tech-list" class="tech-table-wrap"></div></section><section class="tech-panel"><h2>Leadership meeting tables</h2><p>Tables follow the selected school year. Copy a formatted table into your leadership slide, or download CSV for Sheets.</p><div class="tech-actions"><button data-export="open">Copy open tickets</button><button data-export="types">Copy tickets by type</button><button data-export="stations">Copy tickets by station</button><button data-export="status">Copy tickets by status</button><button id="tech-csv">Download tickets CSV</button></div><p id="tech-export-status" role="status"></p><div id="tech-reports" class="tech-summary-grid"></div></section><section class="tech-panel"><h2>Earlier Google Form tickets</h2><p>The original workbook is preserved. Open the read-only history to find tickets submitted before the NEST form launched.</p><button id="tech-legacy" type="button">Load earlier ticket history</button><div id="tech-legacy-data" class="tech-table-wrap"></div></section></section>
+    <section id="tech-content" hidden><section class="tech-panel tech-health-toolbar"><div class="tech-filters"><label>School year<select id="tech-year"></select></label><label>Show<select id="tech-state"><option value="open">Active tickets</option><option value="closed">Resolved &amp; closed</option><option value="all">All tickets</option><option value="owner-review">Waiting for Mr. Peñalver</option><option value="external">Escalated outside NEST</option></select></label><label>Search<input id="tech-search" type="search" placeholder="Title, station, or ticket ID"></label><button id="tech-refresh" type="button">Refresh</button></div></section><section class="tech-panel tech-health" id="tech-health" aria-label="Room tech health"></section><h2>Ticket queue</h2><div class="tech-counts" id="tech-counts"></div><section class="tech-panel"><div id="tech-list" class="tech-table-wrap"></div></section><section class="tech-panel"><h2>Earlier Google Form tickets</h2><p>The original workbook is preserved. Open the read-only history to find tickets submitted before the NEST form launched.</p><button id="tech-legacy" type="button">Load earlier ticket history</button><div id="tech-legacy-data" class="tech-table-wrap"></div></section></section>
   </main>
 
   <footer class="site-footer">
@@ -67,7 +67,7 @@
             <a href="tel:2538006221">253.800.6221</a>
             <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
             <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
-<a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+<a href="https://www.linkedin.com/in/astramario/" data-resource-exit="LinkedIn" target="_blank">LinkedIn</a>
           </div>
         </div>
       </div>
@@ -76,7 +76,7 @@
 
   <script src="js/nest-auth.js"></script>
   <script src="js/main.js"></script>
-  <script src="/js/tech-tickets.js?v=detail-spacing-1"></script>
+  <script src="/js/tech-tickets.js?v=graphic-exports-1"></script>
   <script src="/js/resource-viewer.js"></script>
 </body>
 </html>
