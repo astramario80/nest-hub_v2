@@ -1,10 +1,11 @@
-// Only Mario's verified NEST identities may select or send an outside escalation.
+// Only Mr. Peñalver's verified NEST identities may select or send an outside escalation.
 const TECH_OWNER_IDENTITIES=['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com'];
 const TECH_OWNER_EMAIL='mpenalver@bethelsd.org';
+function techActorLabel_(session){return techCanEscalate_(session)?'NEST™ supervisor, Mr. Peñalver':session.username;}
 function techCanEscalate_(session){return TECH_OWNER_IDENTITIES.includes(email_(session.email));}
 function techRecipients_(){
  const rows=Sheets.Spreadsheets.Values.get(NEST_DATABASE,"'Notifications'!H2:J1000").values||[];
- return rows.map((row,index)=>{const name=String(row[0]||'').trim(),position=String(row[1]||'').trim(),email=email_(row[2]);if((!name&&!position)||! /^[^\s@,;<>]+@bethelsd\.org$/.test(email))return null;return {key:String(index+2),name,position,email,label:[name,position,email].filter(Boolean).join(' · ')};}).filter(Boolean);
+ return rows.map((row,index)=>{const email=email_(row[2]),supervisor=TECH_OWNER_IDENTITIES.includes(email),name=supervisor?'Mr. Peñalver':String(row[0]||'').trim(),position=supervisor?'NEST™ supervisor':String(row[1]||'').trim();if((!name&&!position)||! /^[^\s@,;<>]+@bethelsd\.org$/.test(email))return null;return {key:String(index+2),name,position,email,label:[name,position,email].filter(Boolean).join(' · ')};}).filter(Boolean);
 }
 function techSuggestedRecipient_(ticket,recipients){const software=/software request|cte-specific need/i.test(ticket.type);return recipients.find(r=>software?/\bCTE\s+TOSA\b/i.test(r.position):/^Tech Support$/i.test(r.position))?.key||'';}
 function techEmailEscape_(value){return String(value||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -15,8 +16,9 @@ function techStationTable_(ticket){
  return stations.map(s=>{const parts=s.split(';');return {station:parts[0].trim().replace(/^Station\s*/i,'')||'Not provided',barcode:parts.slice(1).join(';').trim().replace(/^BSD Serial Number\s*/i,'')||'Not provided'};});
 }
 function techEscalationEmail_(ticket,recipient,note,ownerReview){
- const stationRows=techStationTable_(ticket),greeting=ownerReview?'Mario':recipient.name||recipient.position;
+ const stationRows=techStationTable_(ticket),greeting=ownerReview?'Mr. Peñalver':recipient.name||recipient.position;
  let reporter=ticket.reporterName||ticket.reporter;try{const address=memberEmail_(ticket.reporter,ticket.period),student=rows_(ticket.period).find(r=>email_(r[1])===address);if(student)reporter=String(student[0]);}catch(_){}
+ if(TECH_OWNER_IDENTITIES.includes(email_(ticket.reporter)))reporter='the NEST™ supervisor, Mr. Peñalver';
  const summary=String(ticket.title||'Tech Issue Reported').replace(/[\r\n]+/g,' ').trim();
  const text=['Hello '+greeting+'!',ownerReview?'A Software Technician has escalated this ticket for your review. No outside recipient has been contacted.':'',reporter+', from NEST™ Division '+ticket.period+', is reporting a tech issue at the following computer station(s):',...stationRows.map(s=>'Station '+s.station+' | Bethel Barcode: '+s.barcode),'The issue being reported is: '+ticket.description,note?'Additional details: '+note:'',!ownerReview&&ticket.imageFile?'A screenshot is attached.':'',ownerReview?'Review ticket: https://gknest.org/tech-management':'Please address this issue at your earliest convenience.','Sincerely,','NEST™ Software Tech Team.'].filter(Boolean).join('\n\n');
  const html='<p>Hello '+techEmailEscape_(greeting)+'!</p>'+(ownerReview?'<p>A Software Technician has escalated this ticket for your review. No outside recipient has been contacted.</p>':'')+'<p>'+techEmailEscape_(reporter)+', from NEST™ Division '+techEmailEscape_(ticket.period)+', is reporting a tech issue at the following computer station(s):</p><table border="1" style="border-collapse:collapse;margin-left:2em"><tr><th>Station Number</th><th>Bethel Barcode</th></tr>'+stationRows.map(s=>'<tr><td style="padding:4px 8px">'+techEmailEscape_(s.station)+'</td><td style="padding:4px 8px">'+techEmailEscape_(s.barcode)+'</td></tr>').join('')+'</table><p>The issue being reported is: '+techEmailEscape_(ticket.description).replace(/\n/g,'<br>')+'</p>'+(note?'<p>Additional details: '+techEmailEscape_(note).replace(/\n/g,'<br>')+'</p>':'')+(!ownerReview&&ticket.imageFile?'<p>A screenshot is attached to illustrate the issue.</p>':'')+(ownerReview?'<p><a href="https://gknest.org/tech-management">Review the ticket in NEST™</a></p>':'<p>Please address this issue at your earliest convenience.</p>')+'<p>Sincerely,<br>NEST™ Software Tech Team.</p>';
@@ -48,13 +50,13 @@ function techEscalationDispatch_(r,session,access){
   const unresolved=(ticket.deliveries||[]).filter(d=>['sending','uncertain'].includes(d.state)).at(-1);if(!unresolved)return {status:409};
   unresolved.state=r.resolution==='sent'?'sent':'not-sent';unresolved.reconciledBy=session.email;unresolved.reconciledAt=new Date().toISOString();
   ticket.updated=unresolved.reconciledAt;if(r.resolution==='sent'&&unresolved.kind==='external'){ticket.status='Pending';ticket.escalation={stage:'external',recipient:unresolved.recipient,time:ticket.updated};}
-  ticket.history.push({time:ticket.updated,actor:session.username,status:ticket.status,note:'Mario checked sent mail and marked the escalation '+(r.resolution==='sent'?'sent.':'not sent. A new reviewed send is now allowed.'),internal:true});
+  ticket.history.push({time:ticket.updated,actor:techActorLabel_(session),status:ticket.status,note:'Mr. Peñalver checked sent mail and marked the escalation '+(r.resolution==='sent'?'sent.':'not sent. A new reviewed send is now allowed.'),internal:true});
   ticket.deliveries.push({actionId:r.actionId,actionHash,kind:'reconcile',state:'recorded',time:ticket.updated});techSave_(state,ticket,entry.row);return {status:200,ticket:techPublic_(ticket,true)};
  }
- if((ticket.deliveries||[]).some(d=>['sending','uncertain'].includes(d.state)))return {status:409,error:'A previous email has an uncertain delivery result. Mario must check sent mail and resolve it before another send.'};
+ if((ticket.deliveries||[]).some(d=>['sending','uncertain'].includes(d.state)))return {status:409,error:'A previous email has an uncertain delivery result. Mr. Peñalver must check sent mail and resolve it before another send.'};
  const ownerReview=operation==='escalate-owner';
- if(ownerReview&&ticket.escalation?.stage==='owner-review')return {status:409,error:'This ticket is already waiting for Mario’s review.'};
- let recipient={name:'Mario',position:'NEST Supervisor',email:TECH_OWNER_EMAIL};if(!ownerReview){recipient=techRecipients_().find(x=>x.key===r.recipientKey);if(!recipient)return {status:400,error:'Choose a current recipient from Notifications.'};}
+ if(ownerReview&&ticket.escalation?.stage==='owner-review')return {status:409,error:'This ticket is already waiting for Mr. Peñalver’s review.'};
+ let recipient={name:'Mr. Peñalver',position:'NEST™ supervisor',email:TECH_OWNER_EMAIL};if(!ownerReview){recipient=techRecipients_().find(x=>x.key===r.recipientKey);if(!recipient)return {status:400,error:'Choose a current recipient from Notifications.'};}
  const email=techEscalationEmail_(ticket,recipient,note,ownerReview),previewHash=hash_(JSON.stringify([r.version,email]));
  if(operation==='escalation-preview')return {status:200,preview:{to:email.to,name:recipient.name,position:recipient.position,subject:email.subject,body:email.body,htmlBody:email.htmlBody,hasScreenshot:email.hasScreenshot,previewHash}};
  if(!ownerReview&&r.previewHash!==previewHash)return {status:409,error:'The recipient or email changed. Review a fresh preview before sending.'};
@@ -62,10 +64,10 @@ function techEscalationDispatch_(r,session,access){
  if(email.hasScreenshot){const image=techImageRead_(ticket);if(!image)return {status:503,error:'The screenshot could not be loaded. Nothing was sent. Refresh and retry.'};mail.attachments=[Utilities.newBlob(Utilities.base64Decode(image.split(',')[1]),'image/jpeg','NEST-ticket-'+ticket.id.slice(0,8)+'.jpg')];}
  // Save an intent BEFORE invoking MailApp. Uncertain retries never send a second email.
  const now=new Date().toISOString(),delivery={actionId:r.actionId,actionHash,kind:ownerReview?'owner-review':'external',recipient:{name:recipient.name,position:recipient.position,email:recipient.email},state:'sending',time:now,actor:session.email};
- ticket.deliveries=ticket.deliveries||[];ticket.deliveries.push(delivery);ticket.updated=now;if(ownerReview){ticket.status='Waiting';ticket.escalation={stage:'owner-review',recipient:delivery.recipient,time:now};ticket.history.push({time:now,actor:session.username,status:ticket.status,note:'Escalated to Mario for review.',internal:false});}techSave_(state,ticket,entry.row);
+ ticket.deliveries=ticket.deliveries||[];ticket.deliveries.push(delivery);ticket.updated=now;if(ownerReview){ticket.status='Waiting';ticket.escalation={stage:'owner-review',recipient:delivery.recipient,time:now};ticket.history.push({time:now,actor:techActorLabel_(session),status:ticket.status,note:'Escalated to the NEST™ supervisor, Mr. Peñalver, for review.',internal:false});}techSave_(state,ticket,entry.row);
  try{
   MailApp.sendEmail(mail);delivery.state='sent';delivery.sentAt=new Date().toISOString();ticket.status=ownerReview?'Waiting':'Pending';ticket.escalation={stage:ownerReview?'owner-review':'external',recipient:delivery.recipient,time:delivery.sentAt};ticket.updated=delivery.sentAt;
-  if(!ownerReview)ticket.history.push({time:delivery.sentAt,actor:session.username,status:ticket.status,note:ownerReview?'Escalated to Mario for review.':'Mario escalated this ticket to '+(recipient.name||recipient.position)+'.',internal:false});techSave_(state,ticket,entry.row);return {status:200,ticket:techPublic_(ticket,true),deliveryState:'sent'};
+  if(!ownerReview)ticket.history.push({time:delivery.sentAt,actor:techActorLabel_(session),status:ticket.status,note:ownerReview?'Escalated to Mr. Peñalver for review.':'Mr. Peñalver escalated this ticket to '+(recipient.name||recipient.position)+'.',internal:false});techSave_(state,ticket,entry.row);return {status:200,ticket:techPublic_(ticket,true),deliveryState:'sent'};
  }catch(_){delivery.state='uncertain';ticket.updated=new Date().toISOString();try{techSave_(state,ticket,entry.row);}catch(__){}return {status:200,ticket:techPublic_(ticket,true),deliveryState:'uncertain'};}
  }finally{lock.releaseLock();}
 }

@@ -3,7 +3,7 @@ function sendTechTicketEmails() {
   // Only Mario may choose and contact outside recipients. Student techs escalate in NEST.
   var escalationActor = String(Session.getActiveUser().getEmail() || '').trim().toLowerCase();
   if (!['mpenalver@bethelsd.org','mario@memberhq.net','astramario@gmail.com'].includes(escalationActor)) {
-    SpreadsheetApp.getUi().alert('Only Mario may send an outside escalation. Use the NEST Software Tech workspace to escalate this ticket to Mario for review.');
+    SpreadsheetApp.getUi().alert('Only the NEST™ supervisor, Mr. Peñalver, may send an outside escalation. Use the NEST™ Software Tech workspace to escalate this ticket to Mr. Peñalver for review.');
     return;
   }
   var ui = SpreadsheetApp.getUi();

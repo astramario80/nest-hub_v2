@@ -64,3 +64,9 @@ The follow-up diagnostics confirmed shared Advanced Sheets read quota exhaustion
 ## Role-based landing order
 
 `canViewOverview` is computed from current hired roles plus current division membership. Software Technicians, Division Managers, Assistant Managers, CEO, Executive Vice-President, CFO, Operations Officers, and website administrators get room health and their ticket list before the embedded form. Other reporters get the form first, followed by their own tickets, with room-health charts hidden. The DOM is reordered after the authenticated response, and old role presentation is cleared when identity changes. This presentation flag does not grant management, other reporters' private ticket access, or outside-email escalation. Current Software Technicians and website administrators retain the separate management workspace; only Mario retains outside sending rights.
+
+## Supervisor naming and ticket detail readability
+
+Ticket workflow copy refers to the **NEST™ supervisor, Mr. Peñalver**, rather than using a first name. Escalation controls, review filters, banners, error messages, email greetings and future system history use this terminology. The supervisor's directory entry is labeled by that name and position in the ticket interface without changing Notifications cells, account identities, or routing addresses. Existing stored audit records remain intact; known legacy system notes and the supervisor's reporter/actor display are formatted when rendered.
+
+Opened tickets use a dedicated summary section: title, separated status/type row, then a labeled two-column station/division/reported/assignment grid. It stacks on narrow screens. Description and history have independent headings, spacing and line heights. These styles apply to ticket details, preserving the existing intake form layout.
