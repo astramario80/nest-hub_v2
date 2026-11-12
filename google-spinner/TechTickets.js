@@ -3,14 +3,16 @@ const TECH_BOOK='169SCXhVH1ufehSUSv_qkbVBJhrdz4MVAjBMOUfDBMGg',TECH_TAB='NEST Te
 const TECH_TYPES=['Website bug','Software / sign-in','Computer / hardware','Hardware / machines','Network / internet','Software Request','CTE-specific need','Other'];
 const TECH_STATUSES=['New','Assigned','In progress','Waiting','Pending','Resolved','Closed'];
 function techYear_(date){const parts=Utilities.formatDate(date,'America/Los_Angeles','yyyy-MM').split('-').map(Number),year=parts[0]-(parts[1]<8?1:0);return year+'–'+(year+1);}
-function techAccess_(session,brief){
- const admin=websiteAdmin_(session.email),leaders=hiringRows_(),technicians=[],periods=[];let technician=false;
+function techAccess_(session,brief,withoutTechnicians){
+ const admin=websiteAdmin_(session.email),technicians=[],periods=[];if(admin&&(brief||withoutTechnicians))return {admin:true,canManage:true,canViewOverview:true,technicians,periods:[...HIRING_PERIODS]};const leaders=hiringRows_();let technician=false,overview=false;
  if(brief){const allowed=admin||leaders.some(row=>{const p=String(row[0]||'').replace(/period/ig,'').trim().toUpperCase();if(!HIRING_PERIODS.includes(p)||!/^software technician$/i.test(String(row[2]||'').trim()))return false;const address=memberEmail_(session.email,p);return email_(row[4])===address&&rows_(p).some(r=>email_(r[1])===address);});return {admin,canManage:allowed,technicians,periods};}
- HIRING_PERIODS.forEach(period=>{const address=memberEmail_(session.email,period),roster=rows_(period);if(roster.some(row=>email_(row[1])===address)||manualPeriodAccess_(session.email,period))periods.push(period);
+ HIRING_PERIODS.forEach(period=>{const address=memberEmail_(session.email,period),roster=rows_(period);if(roster.some(row=>email_(row[1])===address)||manualPeriodAccess_(session.email,period))periods.push(period);if(roster.some(row=>email_(row[1])===address)&&leaders.some(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&email_(row[4])===address&&/^(division manager|assistant manager|chief (executive|financial|operations) officers?|executive vice-president)$/i.test(String(row[2]||'').trim())))overview=true;
  leaders.filter(row=>String(row[0]||'').replace(/period/ig,'').trim().toUpperCase()===period&&/^software technician$/i.test(String(row[2]||'').trim())).forEach(row=>{const mail=email_(row[4]),member=roster.find(r=>email_(r[1])===mail);if(member){if(mail===address)technician=true;if(!technicians.some(t=>t.email===mail))technicians.push({email:mail,name:String(member[0])});}});});
- return {admin,canManage:admin||technician,technicians,periods};
+ return {admin,canManage:admin||technician,canViewOverview:admin||technician||overview,technicians,periods:admin?[...HIRING_PERIODS]:periods};
 }
+let TECH_NATIVE_STATE=null;
 function techState_(){
+ if(TECH_NATIVE_STATE)return TECH_NATIVE_STATE;
  const tabs=Sheets.Spreadsheets.get(TECH_BOOK,{fields:'sheets(properties(sheetId,title,gridProperties(rowCount)))'}).sheets||[],tab=tabs.find(s=>s.properties.title===TECH_TAB)?.properties;
  if(!tab)return {tab,records:[]};
  const rows=Sheets.Spreadsheets.Values.get(TECH_BOOK,"'"+TECH_TAB+"'!A2:B"+tab.gridProperties.rowCount).values||[];
@@ -30,7 +32,7 @@ function techSave_(state,ticket,row){
  Sheets.Spreadsheets.Values.update({values},TECH_BOOK,"'"+TECH_TAB+"'!A"+nextRow+':B'+nextRow,{valueInputOption:'RAW'});
 }
 function techImageCreate_(data,id,store){
- let folder=store.getProperty('tech-ticket-image-folder');if(!folder){folder=Drive.Files.create({name:'NEST Tech Ticket Screenshots (private)',mimeType:'application/vnd.google-apps.folder'},{fields:'id'}).id;store.setProperty('tech-ticket-image-folder',folder);}
+ let folder=store.getProperty('tech-ticket-image-folder');if(!folder){folder=Drive.Files.create({name:'NEST Tech Ticket Screenshots (private)',mimeType:'application/vnd.google-apps.folder',writersCanShare:false}).id;store.setProperty('tech-ticket-image-folder',folder);}
  const blob=Utilities.newBlob(Utilities.base64Decode(data.split(',')[1]),'image/jpeg',id+'.jpg');return Drive.Files.create({name:id+'.jpg',mimeType:'image/jpeg',parents:[folder]},blob,{fields:'id'}).id;
 }
 // Aggregate counts only: never expose another reporter's ticket details or station text.
@@ -49,7 +51,7 @@ function techTargets_(fields){
 }
 function techDispatch_(r){
  const store=PropertiesService.getScriptProperties(),session=authSession_(r.session,store,Date.now());if(!session)return {status:401};
- const operation=r.operation||'view',access=techAccess_(session,operation==='access');
+ const operation=r.operation||'view',access=techAccess_(session,operation==='access',!['view','update'].includes(operation));
  if(operation==='access')return {status:200,canManage:access.canManage,canEscalateOutside:techCanEscalate_(session)};
  if(['escalation-options','escalation-preview','escalation-send','escalate-owner','escalation-reconcile'].includes(operation))return techEscalationDispatch_(r,session,access);
  if(!['catalog','result','view','submit','update','image','legacy'].includes(operation))return {status:400};
@@ -62,7 +64,7 @@ function techDispatch_(r){
  }
  if(operation==='view'){
   const state=techState_(),records=state.records.map(x=>x.ticket).filter(t=>access.canManage||t.reporter===session.email);
-  return {status:200,canManage:access.canManage,canEscalateOutside:techCanEscalate_(session),periods:access.periods,technicians:access.canManage?access.technicians:[],types:TECH_TYPES,statuses:TECH_STATUSES,currentYear:techYear_(new Date()),roomHealth:techHealth_(state.records.map(x=>x.ticket),Date.now()),tickets:records.map(t=>techPublic_(t,access.canManage))};
+  return {status:200,canManage:access.canManage,canViewOverview:access.canViewOverview,canEscalateOutside:techCanEscalate_(session),periods:access.periods,technicians:access.canManage?access.technicians:[],types:TECH_TYPES,statuses:TECH_STATUSES,currentYear:techYear_(new Date()),roomHealth:techHealth_(state.records.map(x=>x.ticket),Date.now()),tickets:records.map(t=>techPublic_(t,access.canManage))};
  }
  if(!/^[a-f0-9-]{36}$/.test(r.id||''))return {status:400};
  if(operation==='result'){const entry=techState_().records.find(e=>e.ticket.id===r.id&&e.ticket.reporter===session.email);return entry?{status:200,ticket:techPublic_(entry.ticket,access.canManage)}:{status:404};}
@@ -85,4 +87,27 @@ function techDispatch_(r){
  if(techVersion_(ticket)!==r.version)return {status:409};if(ticket.history.length>=100)return {status:409,error:'This ticket has reached its update limit. Contact the website owner.'};
  ticket.status=r.status;ticket.assignee=r.assignee;ticket.updated=now;if(techCanEscalate_(session)&&ticket.escalation?.stage==='owner-review'&&['Resolved','Closed'].includes(r.status))ticket.escalation={...ticket.escalation,stage:'reviewed',time:now};ticket.history.push({time:now,actor:session.username,status:r.status,note:r.note.trim(),internal:r.internal,assignee:r.assignee});ticket.lastAction={id:r.actionId,hash:actionHash};techSave_(state,ticket,entry.row);return {status:200,ticket:techPublic_(ticket,true)};
  }finally{lock.releaseLock();}
+}
+
+// Request-scoped native reads avoid the shared Advanced Sheets per-minute quota.
+// Every request rereads authentication and current roles; nothing survives this call.
+function techReadContext_(r,work){
+ const previous=NEST_ACCESS_READS,previousState=TECH_NATIVE_STATE;NEST_ACCESS_READS=new Map();TECH_NATIVE_STATE=null;
+ try{
+  const control=SpreadsheetApp.openById(NEST_DATABASE);
+  const read=(book,id,title,key,column,width,limit)=>{const sheet=book.getSheetByName(title);if(!sheet)throw Error('Ticket access source is unavailable');const count=Math.max(1,Math.min(sheet.getLastRow(),limit||sheet.getLastRow())-1);const values=sheet.getRange(2,column,count,width).getDisplayValues();NEST_ACCESS_READS.set(id+':'+key,values);};
+  read(control,NEST_DATABASE,'StudentNESTAccess',AUTH_SHEET,1,12);
+  const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
+  if(session){
+   const admin=websiteAdmin_(session.email);
+   if(!admin||['view','update'].includes(r.operation||'view')){
+    read(SpreadsheetApp.openById(LEADERSHIP_DATABASE),LEADERSHIP_DATABASE,'Imported',"'Imported'!B2:F",2,5);
+    HIRING_PERIODS.forEach(period=>{const title=period==='CTSO'?'CTSO':'Period '+period;read(control,NEST_DATABASE,title,"'"+title+"'!A2:C1000",1,3,1000);});
+   }
+   const sheet=SpreadsheetApp.openById(TECH_BOOK).getSheetByName(TECH_TAB);
+   if(!sheet)TECH_NATIVE_STATE={tab:null,records:[]};
+   else{const rows=sheet.getLastRow()>1?sheet.getRange(2,1,Math.min(sheet.getLastRow()-1,10000),2).getDisplayValues():[];TECH_NATIVE_STATE={tab:{sheetId:sheet.getSheetId(),title:TECH_TAB},records:rows.map((row,i)=>{if(!row[0])return null;const ticket=JSON.parse(row[1]);if(ticket.id!==row[0])throw Error('Invalid ticket record');return {row:i+2,ticket};}).filter(Boolean)};}
+  }
+  return work();
+ }finally{NEST_ACCESS_READS=previous;TECH_NATIVE_STATE=previousState;}
 }

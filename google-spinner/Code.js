@@ -20,7 +20,7 @@ function doPost(e) {
   return withNestReadContext_(r,()=>nestRequest_(r));
 }
 function nestRequest_(r){
-  if(r.action==='auth-tech-tickets'){try{return json_(techDispatch_(r));}catch(_){return json_({status:503});}}
+  if(r.action==='auth-tech-tickets'){try{return json_(techDispatch_(r));}catch(error){return json_({status:503,diagnostic:String(error.message||error).split(String(r.session||'__no_session__')).join('[session]').split(String(r.token||'__no_token__')).join('[credential]').slice(0,400)});}}
   if(r.action==='auth-fabrication-intake'){try{return json_(fabIntakeDispatch_(r));}catch(_){return json_({status:503});}}
   if(r.action==='safety-drive-worker'){try{return json_(safetyDriveWorker_(r));}catch(error){console.error('Safety Drive worker failed',String(error.stack||error));return json_({status:503});}}
   if(r.action==='auth-safety'){try{return json_(safetyDispatch_(r));}catch(error){console.error('Safety dispatch failed',String(error.stack||error));return json_({status:503,error:'Safety workspace is unavailable. Refresh before retrying.'});}}
@@ -156,7 +156,8 @@ function nestAccessValues_(id,range){
 function withNestReadContext_(r,work){
  if(/^auth-(recover-(request|verify|reset)|register(-request|-verify)?)$/.test(r.action||''))return authRecoveryReadContext_(work);
  if(r.action==='safety-drive-worker')return safetyReadContext_(r,work);
- if(r.action==='auth-safety')return safetyReadContext_(r,work);
+ if(r.action==='auth-safety'){const result=safetyReadContext_(r,work);return result&&typeof result.status==='number'?json_(result):result;}
+ if(r.action==='auth-tech-tickets')return techReadContext_(r,work);
  const readonly=r.action==='auth-division-slides'&&r.operation==='access'||r.action==='auth-hiring-view'||r.action==='auth-leadership-directory'||r.action==='auth-group-email-access';
  if(!readonly){
   if(!/^auth-service-/.test(r.action||'')&&!['auth-tech-tickets','auth-me','auth-group-email','auth-email-archive','diagnostics-record','auth-diagnostics-read','auth-weather-native'].includes(r.action))return work();
