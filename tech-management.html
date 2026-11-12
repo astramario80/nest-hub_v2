@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEST™ — Software Tech Workspace</title>
+  <link rel="stylesheet" href="css/styles.css?v=qr-click-1" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/resource-viewer.css">
+  <link rel="stylesheet" href="/css/nest-auth.css?v=password-toggle-1">
+  <link rel="stylesheet" href="/css/tech-tickets.css">
+</head>
+<body>
+  <div class="bg-watermark"></div>
+
+  <header>
+    <div class="logo-container">
+      <a href="index.html">
+        <img src="assets/nest_menu_icon.png" alt="NEST™ Logo" class="logo" style="height: 60px; object-fit: contain;" />
+      </a>
+    </div>
+
+    <div class="header-right">
+            <div id="today-date" class="date-display">Today is...</div>
+
+      <!-- Quick Links Dropdown -->
+      <div class="header-dropdown">
+        <button class="dropdown-btn" aria-haspopup="true">Quick Access ▾</button>
+        <div class="dropdown-content">
+          <a href="https://portal.bethelsd.org" target="_blank">StudentVue</a>
+          <a href="/safety">SmartPass</a>
+          <a href="https://docs.google.com/forms/d/e/1FAIpQLSd2gKo0xAsKn_by8MAWW9fqL-Rne3bxUQbPouL7FhJALGMfeA/viewform" target="_blank">🚀 Join Us</a>
+          <a href="/weather">🌤️ Weather Report</a>
+        </div>
+      </div>
+
+      <!-- QR Code -->
+      <button class="header-qr" type="button" aria-label="Enlarge QR code" aria-expanded="false">
+        <img src="assets/qr-code.png" alt="QR Code" />
+      </button>
+    </div>
+  </header>
+
+  <main class="tech-page" data-management>
+    <section class="tech-hero"><p class="tech-eyebrow">Help &amp; Support · Technology</p><h1>Software Tech workspace</h1><p>Keep technology moving. Triage issues, update reporters, and bring clear progress to leadership meetings.</p><div class="tech-actions"><button type="button" class="tech-primary" id="tech-new">Report a tech issue</button><button type="button" id="tech-signin">Sign in to NEST</button><a href="/tech-tickets" id="tech-workspace">My tickets →</a></div></section>
+    <p id="tech-status" class="tech-status" role="status" aria-live="polite">Sign in to see tickets you created.</p>
+    <section id="tech-content" hidden><section class="tech-panel tech-health-toolbar"><div class="tech-filters"><label>School year<select id="tech-year"></select></label><label>Show<select id="tech-state"><option value="open">Active tickets</option><option value="closed">Resolved &amp; closed</option><option value="all">All tickets</option><option value="owner-review">Waiting for Mario</option><option value="external">Escalated outside NEST</option></select></label><label>Search<input id="tech-search" type="search" placeholder="Title, station, or ticket ID"></label><button id="tech-refresh" type="button">Refresh</button></div></section><section class="tech-panel tech-health" id="tech-health" aria-label="Room tech health"></section><h2>Ticket queue</h2><div class="tech-counts" id="tech-counts"></div><section class="tech-panel"><div id="tech-list" class="tech-table-wrap"></div></section><section class="tech-panel"><h2>Leadership meeting tables</h2><p>Tables follow the selected school year. Copy a formatted table into your leadership slide, or download CSV for Sheets.</p><div class="tech-actions"><button data-export="open">Copy open tickets</button><button data-export="types">Copy tickets by type</button><button data-export="stations">Copy tickets by station</button><button data-export="status">Copy tickets by status</button><button id="tech-csv">Download tickets CSV</button></div><p id="tech-export-status" role="status"></p><div id="tech-reports" class="tech-summary-grid"></div></section><section class="tech-panel"><h2>Earlier Google Form tickets</h2><p>The original workbook is preserved. Open the read-only history to find tickets submitted before the NEST form launched.</p><button id="tech-legacy" type="button">Load earlier ticket history</button><div id="tech-legacy-data" class="tech-table-wrap"></div></section></section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <span class="copyright">Copyright © <span id="current-year"></span> by Mario Penalver, MA MAE</span>
+      <div class="footer-links">
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">Help & Support ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="/computer-lookup">💻 Computer Look-up</a>
+            <a href="/tech-tickets">🎫 Tech Ticket</a>
+            <a href="/weather">🌤️ Weather Report</a>
+          </div>
+        </div>
+
+        <div class="footer-dropdown">
+          <span class="footer-dropdown-title" aria-haspopup="true">About Me ▾</span>
+          <div class="footer-dropdown-content">
+            <a href="https://mail.google.com/mail/?view=cm&fs=1&to=mpenalver@bethelsd.org" target="_blank">Email me</a>
+            <a href="tel:2538006221">253.800.6221</a>
+            <a href="assets/Mario_Penalver.vcf" download="Mario_Penalver.vcf">Download card</a>
+            <a href="https://calendly.com/mpenalver" target="_blank" rel="noopener noreferrer">Schedule Me</a>
+<a href="https://www.linkedin.com/in/astramario/" target="_blank">LinkedIn</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/nest-auth.js"></script>
+  <script src="js/main.js"></script>
+  <script src="/js/tech-tickets.js"></script>
+  <script src="/js/resource-viewer.js"></script>
+</body>
+</html>

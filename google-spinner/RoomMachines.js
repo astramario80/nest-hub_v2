@@ -1,0 +1,34 @@
+// One machine catalog supplies Inventory, tech reports, and fabrication requests.
+const ROOM_MACHINE_BOOK='1dRyHDG8UbdjaOyQVXaGWS6UoqiEJr5uOg2LUQPM_rEY',ROOM_MACHINE_TAB='Room Machines';
+const ROOM_MACHINE_TYPES={'3d-printer':'3D printer','laser-cnc':'Laser CNC','waterjet-cnc':'Waterjet CNC',other:'Other machine'};
+const ROOM_MACHINE_PROFILES=['Sketch Large','Replicator +','Method'];
+function roomMachineVersion_(m){return hash_(JSON.stringify(m));}
+function roomMachineFab_(m){return m.active!==false&&['3d-printer','laser-cnc','waterjet-cnc'].includes(m.machineType);}
+function roomMachineState_(){
+ const tabs=Sheets.Spreadsheets.get(ROOM_MACHINE_BOOK,{fields:'sheets(properties(sheetId,title,gridProperties(rowCount)))'}).sheets||[],tab=tabs.find(s=>s.properties.title===ROOM_MACHINE_TAB)?.properties;
+ const stored=tab?(Sheets.Spreadsheets.Values.get(ROOM_MACHINE_BOOK,"'Room Machines'!A2:B"+Math.min(tab.gridProperties.rowCount,1001)).values||[]):[];
+ const entries=stored.map((r,i)=>{if(!r[0])return null;const machine=JSON.parse(r[1]);if(machine.id!==r[0])throw Error('Invalid machine record');return {row:i+2,machine};}).filter(Boolean),ids=new Set(entries.map(e=>e.machine.id));
+ const seed=[];const printers=(Sheets.Spreadsheets.Values.get(ROOM_MACHINE_BOOK,"'3d Printers'!A2:D1001").values||[]);
+ printers.forEach(r=>{const name=String(r[0]||'').trim();if(!name)return;const serial=String(r[2]||r[3]||'').trim(),id=hash_('room-printer|'+(serial||name.toLowerCase())),make=String(r[1]||'');const profile=/sketch/i.test(make)?'Sketch Large':/replicator/i.test(make)?'Replicator +':/method/i.test(make)?'Method':/^(wall\s*e\s*(ii|2)|r2|atto)$/i.test(name)?'Sketch Large':'';if(!ids.has(id)){seed.push({id,name,serial,machineType:'3d-printer',profile,icon:'',active:true,source:'printer-register'});ids.add(id);}});
+ for(const [key,name,machineType] of [['laser','Laser CNC machine','laser-cnc'],['wazer','Wazer CNC machine','waterjet-cnc']]){const id=hash_('room-machine|'+key);if(!ids.has(id))seed.push({id,name,serial:'',machineType,profile:'',icon:'',active:true,source:'room-equipment'});}
+ const all=[...entries.map(e=>e.machine),...seed];return {tab,entries,all,revision:hash_(JSON.stringify(all))};
+}
+function roomMachineChoices_(){return roomMachineState_().all.filter(m=>m.active!==false).map(m=>({id:m.id,name:m.name,serial:m.serial,machineType:m.machineType,profile:m.profile||'',icon:m.icon||'',version:roomMachineVersion_(m),fabrication:roomMachineFab_(m)}));}
+function roomComputerChoices_(){return (Sheets.Spreadsheets.Values.get(ROOM_MACHINE_BOOK,"'LaptopInventory'!A2:E1001").values||[]).filter(r=>String(r[1]||'').trim()).map(r=>{const number=String(r[1]).trim(),serial=String(r[2]||'').trim();return {id:hash_('room-station|'+number.toLowerCase().replace(/^0+(?=\d)/,'')),number,serial,label:'Station '+number+(serial?' · '+serial:'')};});}
+function roomMachineIcon_(icon){if(typeof icon!=='string'||icon.length>20000)return false;if(!icon)return true;const match=/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/.exec(icon);if(!match)return false;try{const bytes=Utilities.base64Decode(match[2]).map(b=>b&255);return match[1]==='png'?bytes[0]===137&&bytes[1]===80&&bytes[2]===78&&bytes[3]===71:match[1]==='jpeg'?bytes[0]===255&&bytes[1]===216&&bytes[2]===255:bytes.slice(0,4).map(b=>String.fromCharCode(b)).join('')==='RIFF'&&bytes.slice(8,12).map(b=>String.fromCharCode(b)).join('')==='WEBP';}catch(_){return false;}}
+function roomMachineView_(r){const state=roomMachineState_(),active=state.all.filter(m=>m.active!==false);return {status:200,records:active.slice(r.page*30,(r.page+1)*30).map(m=>({id:m.id,number:m.name,serial:m.serial,machineType:m.machineType,profile:m.profile||'',icon:m.icon||'',assigned:false,version:roomMachineVersion_(m),cells:[{column:0,label:'Machine type',value:ROOM_MACHINE_TYPES[m.machineType],editable:false,choices:null},{column:1,label:'Fabrication requests',value:roomMachineFab_(m)?'Available':'Not included',editable:false,choices:null},{column:2,label:'Filament pricing profile',value:m.profile||'Not configured',editable:false,choices:null}]})),choices:{},total:active.length,page:r.page,hasMore:active.length>(r.page+1)*30,catalogVersion:state.revision,idLabel:'Machine name',serialLabel:'Manufacturer serial number'};}
+function roomMachineManage_(session,r){
+ if(!['add','edit','remove'].includes(r.change))return {status:400};const state=roomMachineState_(),adding=r.change==='add',remove=r.change==='remove',original=state.all.find(m=>m.id===r.id);
+ if(adding?r.catalogVersion!==state.revision:!original||roomMachineVersion_(original)!==r.version)return {status:409};
+ const name=remove?original.name:typeof r.number==='string'?r.number.trim():'',serial=remove?original.serial:typeof r.serial==='string'?r.serial.trim():'';
+ if(!remove&&(!name||name.length>80||serial.length>100||/[\u0000-\u001f\u007f]/.test(name+serial)||!Object.prototype.hasOwnProperty.call(ROOM_MACHINE_TYPES,r.machineType)||typeof r.profile!=='string'||r.profile&&!ROOM_MACHINE_PROFILES.includes(r.profile)||!roomMachineIcon_(r.icon)))return {status:400};
+ if(adding&&state.all.filter(m=>m.active!==false).length>=200)return {status:409,error:'The room machine catalog is full.'};
+ if(!remove&&state.all.some(m=>m.active!==false&&m.id!==original?.id&&(m.name.toLowerCase()===name.toLowerCase()||serial&&m.serial.toLowerCase()===serial.toLowerCase())))return {status:409,error:'That machine name or serial number is already registered.'};
+ const machine=remove?{...original,active:false}:{id:original?.id||hash_(Utilities.getUuid()),name,serial,machineType:r.machineType,profile:r.machineType==='3d-printer'?r.profile:'',icon:r.icon,active:true,source:original?.source||'room-register'};
+ let tab=state.tab;if(!tab){tab=Sheets.Spreadsheets.batchUpdate({requests:[{addSheet:{properties:{title:ROOM_MACHINE_TAB,gridProperties:{rowCount:1001,columnCount:2}}}}]},ROOM_MACHINE_BOOK).replies[0].addSheet.properties;Sheets.Spreadsheets.Values.update({values:[['Machine ID','Machine record']]},ROOM_MACHINE_BOOK,"'Room Machines'!A1:B1",{valueInputOption:'RAW'});}
+ const entry=state.entries.find(e=>e.machine.id===machine.id),row=entry?.row||state.entries.reduce((max,e)=>Math.max(max,e.row),1)+1;if(row>1001)return {status:409};
+ const values=[machine.id,JSON.stringify(machine)].map(value=>({userEnteredValue:{stringValue:value}}));
+ const log=inventoryLogRequest_(SpreadsheetApp.openById(ROOM_MACHINE_BOOK),session.email,'machines',name,original||null,{change:r.change,machine});
+ Sheets.Spreadsheets.batchUpdate({requests:[{updateCells:{range:{sheetId:tab.sheetId,startRowIndex:row-1,endRowIndex:row,startColumnIndex:0,endColumnIndex:2},rows:[{values}],fields:'userEnteredValue'}},log]},ROOM_MACHINE_BOOK);
+ return {status:200,saved:true,id:machine.id,page:0,mirrorSync:'updated'};
+}

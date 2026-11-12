@@ -175,9 +175,21 @@
       "regions": [
         "sfo1"
       ]
+    },
+    "api/tech-tickets.mjs": {
+      "maxDuration": 60
+    },
+    "api/fabrication-intake.mjs": {
+      "maxDuration": 300,
+      "includeFiles": "lib/fabrication-media/**"
     }
   },
   "redirects": [
+    {
+      "source": "/lib/fabrication-media/:asset*",
+      "destination": "/api/fabrication-intake?media=:asset*",
+      "permanent": false
+    },
     {
       "source": "/leadership-application.html",
       "destination": "/employment",

@@ -1,6 +1,6 @@
 // Website assignments follow the existing workbook’s validation and free-text fields.
 const INVENTORY_BOOK='1gAksPMtChw2vwC61aBDqVBEx8BrgG2GLbqX31Ld2ZqM';
-const INVENTORY_TYPES={kits:'EE Kits',drones:'Drones',laptops:'Laptops',usbs:'USBs',radios:'Radios',computers:'Computer serials',printers:'3D printers'};
+const INVENTORY_TYPES={kits:'EE Kits',drones:'Drones',laptops:'Laptops',usbs:'USBs',radios:'Radios',computers:'Computer serials',printers:'3D printers',machines:'Room machines'};
 const INVENTORY_HARDWARE_BOOK='1dRyHDG8UbdjaOyQVXaGWS6UoqiEJr5uOg2LUQPM_rEY';
 function inventoryBookId_(type){return ['computers','printers'].includes(type)?INVENTORY_HARDWARE_BOOK:INVENTORY_BOOK;}
 function inventoryCanonical_(value){const text=String(value||'').trim().toLowerCase();return /^\d+$/.test(text)?String(Number(text)):text;}
@@ -131,6 +131,7 @@ function inventoryDispatch_(r){
  const session=authSession_(r.session,PropertiesService.getScriptProperties(),Date.now());
  if(!session)return {status:401};
  if(!inventoryAllowed_(session.email))return {status:403};
+ if(r.type==='machines'){if(r.operation==='view'&&Number.isInteger(r.page)&&r.page>=0&&r.page<=166)return roomMachineView_(r);if(r.operation!=='manage')return {status:400};const lock=LockService.getScriptLock();if(!lock.tryLock(15000))return {status:503};try{return roomMachineManage_(session,r);}finally{lock.releaseLock();}}
  if(!['view','save','sync','manage'].includes(r.operation)||!Object.prototype.hasOwnProperty.call(INVENTORY_TYPES,r.type))return {status:400};
  const book=SpreadsheetApp.openById(inventoryBookId_(r.type));
  if(r.operation==='view')return inventoryView_(r,book);

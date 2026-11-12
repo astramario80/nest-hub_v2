@@ -1136,3 +1136,10 @@ if(window.NestAuth && !document.querySelector('script[src="/js/lab-request-alert
 if(window.NestAuth&&!document.querySelector('script[src="/js/safety-notifications.js"]')){
  const safetyAlertScript=document.createElement('script');safetyAlertScript.src='/js/safety-notifications.js?v=layout-20261106';document.body.append(safetyAlertScript);
 }
+
+// Site-wide Tech Ticket reporting and Software Technician alerts.
+(() => {
+ if(document.querySelector('script[data-nest-tech]'))return;
+ const css=document.createElement('link');css.rel='stylesheet';css.href='/css/tech-tickets.css?v=room-machines-1';document.head.append(css);
+ const script=document.createElement('script');script.src='/js/tech-report.js?v=room-machines-1';script.dataset.nestTech='';document.head.append(script);
+})();

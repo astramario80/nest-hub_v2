@@ -1,7 +1,8 @@
 (()=>{
  'use strict';
  const hosted=Boolean(document.getElementById('purchase-equipment'));let opened=false;
- const $=id=>document.getElementById('equipment-'+id),names={kits:'EE Kit',drones:'Drone',laptops:'Laptop',usbs:'USB',radios:'Radio',computers:'Computer station',printers:'3D printer'};
+ const $=id=>document.getElementById('equipment-'+id),names={kits:'EE Kit',drones:'Drone',laptops:'Laptop',usbs:'USB',radios:'Radio',computers:'Computer station',printers:'3D printer',machines:'Machine'};
+ let machineIcon='',iconGeneration=0,iconLoading=false;
  let catalogVersion='',idLabel='Equipment ID',serialLabel='Serial number',manageChange='add',total=0;
  let type='kits',page=0,records=[],choices={},selected=null,dirty=false,busy=false,loading=false,generation=0;
  const signedIn=()=>window.NestAuth?.identity?.signedIn;
@@ -12,7 +13,7 @@
  function controls(){
   $('fields').disabled=busy||loading;
   $('add').disabled=busy||loading||!catalogVersion;$('details').disabled=busy||loading;$('remove').disabled=busy||loading||selected?.assigned===true;
-  $('manage-fields').disabled=busy||loading;$('manage-save').disabled=busy||loading;$('manage-cancel').disabled=busy||loading;
+  $('manage-fields').disabled=busy||loading;$('manage-save').disabled=busy||loading||iconLoading;$('manage-cancel').disabled=busy||loading;
   $('save').disabled=!dirty||busy||loading;$('reset').disabled=!dirty||busy||loading;
   $('sync').disabled=busy||loading;$('retry').disabled=busy||loading;$('refresh').disabled=busy||loading;$('prev').disabled=busy||loading||page===0;$('next').disabled=busy||loading||!$('next').dataset.more;
   document.querySelectorAll('[data-type]').forEach(b=>b.disabled=busy||loading);
@@ -26,9 +27,9 @@
   const query=$('search').value.trim().toLowerCase(),matches=records.filter(r=>[r.number,r.serial||'',...r.cells.map(c=>c.value)].join(' ').toLowerCase().includes(query));
   $('list').replaceChildren(...matches.map(row=>{
    const button=node('button','');button.type='button';button.className='equipment-item';button.setAttribute('aria-pressed',String(selected?.id===row.id));
-   button.append(node('strong',names[type]+' '+row.number));
+   if(type==='machines'&&row.icon){const img=document.createElement('img');img.src=row.icon;img.alt='';img.width=40;img.height=40;button.append(img);}button.append(node('strong',names[type]+' '+row.number));
    const summary=row.cells.filter(c=>c.value&&(!/note|serial/i.test(c.label))).map(c=>c.label+': '+c.value).slice(0,3).join(' · ');
-   button.append(node('span',summary||(['computers','printers'].includes(type)?'Equipment record':'No assignment recorded')));if(row.serial)button.append(node('span','Serial: '+row.serial));
+   button.append(node('span',summary||(['computers','printers','machines'].includes(type)?'Equipment record':'No assignment recorded')));if(row.serial)button.append(node('span','Serial: '+row.serial));
    button.addEventListener('click',()=>{if(busy||loading||!confirmDiscard())return;show(row);render();});return button;
   }));
   if(!matches.length)$('list').append(node('p',query?'No equipment matches on this page. Try another page or clear the search.':'No equipment is available in this category.'));
@@ -55,7 +56,7 @@
   try{
    const result=await request();if(current!==generation||!signedIn())return;
    records=result.records;choices=result.choices;catalogVersion=result.catalogVersion||'';idLabel=result.idLabel||'Equipment ID';serialLabel=result.serialLabel||'Serial number';total=result.total;
-   $('sync').hidden=['computers','printers'].includes(type);$('workspace').hidden=false;$('count').textContent=result.total+' items';$('page').textContent='Page '+(page+1);$('next').dataset.more=result.hasMore?'yes':'';
+   $('sync').hidden=['computers','printers','machines'].includes(type);$('workspace').hidden=false;$('count').textContent=result.total+' items';$('page').textContent='Page '+(page+1);$('next').dataset.more=result.hasMore?'yes':'';
    $('category-title').textContent=document.querySelector(`[data-type="${type}"]`).textContent;
    const row=records.find(r=>r.id===old);if(row)show(row);else{selected=null;dirty=false;$('edit').hidden=true;$('fields').replaceChildren();$('empty').hidden=false;}
    render();message(result.unavailable?'This category’s sheet layout needs review before assignments can be edited.':'Assignments loaded · '+new Date().toLocaleTimeString());
@@ -63,6 +64,7 @@
   finally{if(current===generation){loading=false;controls();}}
  }
  function closeManage(){
+  iconGeneration++;iconLoading=false;
   const dialog=$('manage-dialog');if(dialog.open){if(typeof dialog.close==='function')dialog.close();else dialog.removeAttribute('open');}
   $('number').value='';$('serial').value='';$('maker-serial').value='';$('manage-error').textContent='';
  }
@@ -70,25 +72,30 @@
   if(busy||loading||!confirmDiscard())return;
   if(change!=='add'&&!selected)return;
   if(dirty){dirty=false;if(selected)show(selected);}
-  manageChange=change;$('manage-error').textContent='';
+  iconGeneration++;iconLoading=false;manageChange=change;$('manage-error').textContent='';
   $('manage-title').textContent=change==='add'?'Add '+names[type].toLowerCase():change==='remove'?'Remove '+names[type].toLowerCase():'Edit equipment details';
   $('manage-save').textContent=change==='add'?'Add equipment':change==='remove'?'Remove equipment':'Save equipment details';
   $('number-label').textContent=idLabel;$('serial-label').textContent=serialLabel;
   $('number').value=change==='add'?'':selected.number;$('serial').value=change==='add'?'':selected.serial||'';$('serial').required=type==='computers';$('maker-field').hidden=type!=='printers';$('maker-serial').value=change==='add'?'':selected.makerSerial||'';
-  $('manage-fields').hidden=change==='remove';
+  $('manage-fields').hidden=change==='remove';if($('machine-fields')){$('machine-fields').hidden=type!=='machines';$('machine-type').value=change==='add'?'3d-printer':selected?.machineType||'other';$('machine-profile').value=change==='add'?'':selected?.profile||'';machineIcon=change==='add'?'':selected?.icon||'';machineIconPreview();machineTypeFields();}
   $('manage-help').textContent=change==='remove'?'Remove '+selected.number+' from active equipment? Its saved details remain in the equipment history. Existing assignments must be cleared first.':change==='add'?'Add an item to this category, then select it to assign students or update its details.':'Update the equipment identifier or serial number. Existing student assignments stay with this item.';
   const dialog=$('manage-dialog');if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');
   if(change!=='remove')$('number').focus();else $('manage-cancel').focus();
  }
+ function machineTypeFields(){if($('machine-profile-field'))$('machine-profile-field').hidden=$('machine-type').value!=='3d-printer';}
+ function machineIconPreview(){if(!$('machine-icon-preview'))return;const img=$('machine-icon-preview');img.hidden=!machineIcon;$('machine-icon-remove').hidden=!machineIcon;if(machineIcon)img.src=machineIcon;else img.removeAttribute('src');$('machine-icon').value='';$('machine-icon-status').textContent='';}
+ $('machine-type')?.addEventListener('change',machineTypeFields);
+ $('machine-icon-remove')?.addEventListener('click',()=>{iconGeneration++;iconLoading=false;machineIcon='';machineIconPreview();controls();});
+ $('machine-icon')?.addEventListener('change',async event=>{const file=event.target.files[0];if(!file)return;const field=$('machine-icon-status'),generationAtStart=generation,iconAtStart=++iconGeneration;iconLoading=true;controls();try{if(file.size>10000000||!['image/png','image/jpeg','image/webp'].includes(file.type))throw Error('Choose a PNG, JPEG, or WebP image under 10 MB.');const bitmap=await createImageBitmap(file),canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const scale=Math.min(128/bitmap.width,128/bitmap.height);canvas.getContext('2d').drawImage(bitmap,(128-bitmap.width*scale)/2,(128-bitmap.height*scale)/2,bitmap.width*scale,bitmap.height*scale);bitmap.close();let icon=canvas.toDataURL('image/webp',.75);if(icon.length>20000)icon=canvas.toDataURL('image/webp',.35);if(icon.length>20000)throw Error('Choose a simpler icon.');if(generationAtStart!==generation||iconAtStart!==iconGeneration)return;machineIcon=icon;machineIconPreview();field.textContent='Icon ready to save with this machine.';}catch(error){if(iconAtStart===iconGeneration)field.textContent=error.message;}finally{if(iconAtStart===iconGeneration){iconLoading=false;controls();}}});
  $('add').addEventListener('click',()=>openManage('add'));
  $('details').addEventListener('click',()=>openManage('edit'));
  $('remove').addEventListener('click',()=>openManage('remove'));
  $('manage-cancel').addEventListener('click',()=>{if(!busy)closeManage();});
  $('manage-dialog').addEventListener('cancel',event=>{if(busy)event.preventDefault();});
  $('manage-form').addEventListener('submit',async event=>{
-  event.preventDefault();if(busy||loading||!catalogVersion)return;
+  event.preventDefault();if(busy||loading||iconLoading||!catalogVersion)return;
   const current=generation,change=manageChange;
-  const body={operation:'manage',type,change,...(change==='add'?{catalogVersion}:{id:selected.id,version:selected.version}),...(change==='remove'?{}:{number:$('number').value.trim(),serial:$('serial').value.trim(),...(type==='printers'?{makerSerial:$('maker-serial').value.trim()}:{})})};
+  const body={operation:'manage',type,change,...(change==='add'?{catalogVersion}:{id:selected.id,version:selected.version}),...(change==='remove'?{}:{number:$('number').value.trim(),serial:$('serial').value.trim(),...(type==='printers'?{makerSerial:$('maker-serial').value.trim()}:type==='machines'?{machineType:$('machine-type').value,profile:$('machine-profile').value,icon:machineIcon}:{})})};
   busy=true;controls();$('manage-error').textContent='';message('Saving equipment…');
   try{
    const result=await request(body);if(current!==generation||!signedIn())return;if(!result.saved)throw new Error('Equipment save could not be confirmed. Refresh to check the register.');

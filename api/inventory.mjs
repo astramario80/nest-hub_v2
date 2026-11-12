@@ -1,5 +1,5 @@
 import { COOKIE, cookies, validToken, bridge, originAllowed } from '../lib/nest-auth.mjs';
-const types=new Set(['kits','drones','laptops','usbs','radios','computers','printers']);
+const types=new Set(['kits','drones','laptops','usbs','radios','computers','printers','machines']);
 export default async function handler(req,res){
  res.setHeader('Cache-Control','private, no-store, max-age=0');res.setHeader('Vercel-CDN-Cache-Control','no-store');res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');
  if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'});}
@@ -14,11 +14,11 @@ export default async function handler(req,res){
   if(!String(req.headers['content-type']||'').startsWith('application/json'))return res.status(400).json({error:'Invalid request.'});
   let body;try{body=typeof req.body==='string'?JSON.parse(req.body):req.body;}catch{return res.status(400).json({error:'Invalid request.'});}
   if(body?.operation==='manage'){
-   if(!types.has(body.type)||!['add','edit','remove'].includes(body.change)||JSON.stringify(body).length>5000)return res.status(400).json({error:'Choose an equipment action.'});
+   if(!types.has(body.type)||!['add','edit','remove'].includes(body.change)||JSON.stringify(body).length>(body.type==='machines'?35000:5000))return res.status(400).json({error:'Choose an equipment action.'});
    if(body.change==='add'?!validToken(body.catalogVersion):!validToken(body.id)||!validToken(body.version))return res.status(400).json({error:'Refresh equipment before continuing.'});
    if(body.change!=='remove'&&(typeof body.number!=='string'||body.number.length>80||typeof body.serial!=='string'||body.serial.length>100))return res.status(400).json({error:'Enter an equipment ID and serial number.'});
    if(body.type==='printers'&&body.change!=='remove'&&(typeof body.makerSerial!=='string'||body.makerSerial.length>100))return res.status(400).json({error:'Check the manufacturer serial number.'});
-   payload={action:'auth-inventory',operation:'manage',session,type:body.type,change:body.change,id:body.id,version:body.version,catalogVersion:body.catalogVersion,number:body.number,serial:body.serial,makerSerial:body.makerSerial};
+   payload={action:'auth-inventory',operation:'manage',session,type:body.type,change:body.change,id:body.id,version:body.version,catalogVersion:body.catalogVersion,number:body.number,serial:body.serial,makerSerial:body.makerSerial,...(body.type==='machines'?{machineType:body.machineType,profile:body.profile,icon:body.icon}:{})};
   }else if(body?.operation==='sync'){
    if(!types.has(body.type)||Object.keys(body).some(key=>!['operation','type'].includes(key)))return res.status(400).json({error:'Choose an equipment category.'});
    payload={action:'auth-inventory',operation:'sync',session,type:body.type};
